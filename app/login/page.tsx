@@ -19,7 +19,7 @@ export default function LoginPage() {
               width={50}
             />
           </div>
-          Better Auth Starter
+          JobMatch
         </Link>
         <LoginForm />
       </div>
