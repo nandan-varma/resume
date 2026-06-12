@@ -1,13 +1,10 @@
 import "server-only";
 
 import { neonConfig, Pool } from "@neondatabase/serverless";
-import { config } from "dotenv";
 import { DefaultLogger } from "drizzle-orm/logger";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import ws from "ws";
 import { schema } from "./schema";
-
-config({ path: ".env" });
 
 neonConfig.webSocketConstructor = ws;
 

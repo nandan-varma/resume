@@ -2,7 +2,6 @@ import { getCurrentUser, getJobs } from "@/server/users";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Briefcase, BarChart3, Target, CheckCircle2 } from "lucide-react";
-import { Navigation } from "@/components/navigation";
 import type { JobStatus } from "@/db/schema";
 
 export default async function Dashboard() {
@@ -51,9 +50,7 @@ export default async function Dashboard() {
   };
 
   return (
-    <>
-      <Navigation activeTab="dashboard" />
-      <div className="min-h-screen bg-background p-6 md:p-10">
+    <div className="min-h-screen bg-background p-6 md:p-10">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">
@@ -145,6 +142,5 @@ export default async function Dashboard() {
           )}
         </div>
       </div>
-    </>
   );
 }

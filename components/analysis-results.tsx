@@ -20,27 +20,32 @@ interface AnalysisResultsProps {
 export function AnalysisResults({ result }: AnalysisResultsProps) {
   const [copied, setCopied] = useState(false);
 
-  const copyResults = () => {
-    const text = `
-Match Score: ${result.match_percentage}%
+  const copyResults = async () => {
+    const text = [
+      `Match Score: ${result.match_percentage}%`,
+      "",
+      `Summary: ${result.summary}`,
+      "",
+      "Strengths:",
+      ...result.strengths.map((s) => `• ${s}`),
+      "",
+      "Missing Keywords:",
+      ...result.missing_keywords.map((k) => `• ${k}`),
+      "",
+      "Improvement Suggestions:",
+      ...result.improvement_suggestions.map((s) => `• ${s}`),
+      ...(result.additional_insights
+        ? ["", `Additional Insights: ${result.additional_insights}`]
+        : []),
+    ].join("\n");
 
-Summary: ${result.summary}
-
-Strengths:
-${result.strengths.map((s) => `• ${s}`).join("\n")}
-
-Missing Keywords:
-${result.missing_keywords.map((k) => `• ${k}`).join("\n")}
-
-Improvement Suggestions:
-${result.improvement_suggestions.map((s) => `• ${s}`).join("\n")}
-
-${result.additional_insights ? `Additional Insights: ${result.additional_insights}` : ""}
-    `.trim();
-
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable (non-HTTPS or denied)
+    }
   };
 
   const getScoreColor = (score: number) => {

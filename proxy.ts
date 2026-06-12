@@ -2,36 +2,27 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = [
-  "/dashboard",
-  "/jobs",
-  "/analyze",
-  "/settings",
-  "/resume",
-];
-
-const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
+const PROTECTED = ["/dashboard", "/jobs", "/analyze", "/settings", "/resume"];
+const AUTH_ONLY = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const session = await getSessionCookie(request);
 
-  const sessionCookie = await getSessionCookie(request);
-
-  const isProtected = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  const isProtected = PROTECTED.some(
+    (r) => pathname === r || pathname.startsWith(`${r}/`)
+  );
+  const isAuthOnly = AUTH_ONLY.some(
+    (r) => pathname === r || pathname.startsWith(`${r}/`)
   );
 
-  const isAuthRoute = authRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  if (isProtected && !sessionCookie) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (isProtected && !session) {
+    const url = new URL("/login", request.url);
+    url.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(url);
   }
 
-  if (isAuthRoute && sessionCookie) {
+  if (isAuthOnly && session) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
