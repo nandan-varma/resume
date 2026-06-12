@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { lastLoginMethod } from "better-auth/plugins";
 import { Resend } from "resend";
-import ForgotPasswordEmail from "@/components/emails/reset-password";
+import ResetPasswordEmail from "@/components/emails/reset-password";
 import VerifyEmail from "@/components/emails/verify-email";
 import { db } from "@/db/drizzle";
 import { schema } from "@/db/schema";
@@ -35,7 +35,7 @@ export const auth = betterAuth({
         from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
         to: user.email,
         subject: "Reset your password",
-        react: ForgotPasswordEmail({
+        react: ResetPasswordEmail({
           username: user.name,
           resetUrl: url,
           userEmail: user.email,
