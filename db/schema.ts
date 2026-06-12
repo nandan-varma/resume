@@ -41,7 +41,7 @@ export const jobs = pgTable(
     jobTitle: text("job_title").notNull(),
     jobDescription: text("job_description").notNull(),
     link: text("link"),
-    status: text("status").notNull().default("waiting for response"),
+    status: text("status").$type<JobStatus>().notNull().default("waiting for response"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

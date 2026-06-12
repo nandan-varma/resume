@@ -29,7 +29,7 @@ import type { JobStatus } from "@/db/schema";
 import { Navigation } from "@/components/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 
-const jobStatuses: JobStatus[] = [
+const JOB_STATUSES: JobStatus[] = [
   "submitted",
   "waiting for response",
   "rejected",
@@ -49,161 +49,138 @@ interface Job {
   updatedAt: Date;
 }
 
-const getStatusColor = (status: JobStatus) => {
-  const colors: Record<JobStatus, string> = {
-    submitted: "bg-primary/10 text-primary hover:bg-primary/20",
-    "waiting for response": "bg-warning/10 text-warning hover:bg-warning/20",
-    rejected: "bg-destructive/10 text-destructive hover:bg-destructive/20",
-    interview: "bg-info/10 text-info hover:bg-info/20",
-    offer: "bg-success/10 text-success hover:bg-success/20",
-    accepted: "bg-success/10 text-success hover:bg-success/20",
-    withdrawn: "bg-muted text-foreground hover:bg-muted",
-  };
-  return colors[status] || "bg-muted text-foreground";
+const STATUS_COLORS: Record<JobStatus, string> = {
+  submitted: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  "waiting for response": "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  rejected: "bg-destructive/10 text-destructive",
+  interview: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  offer: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  accepted: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  withdrawn: "bg-muted text-muted-foreground",
 };
 
-const getStatusIcon = (status: JobStatus) => {
-  switch (status) {
-    case "submitted":
-      return "📤";
-    case "waiting for response":
-      return "⏳";
-    case "rejected":
-      return "❌";
-    case "interview":
-      return "🎤";
-    case "offer":
-      return "🎉";
-    case "accepted":
-      return "✅";
-    case "withdrawn":
-      return "🚪";
-    default:
-      return "📄";
-  }
+const STATUS_ICONS: Record<JobStatus, string> = {
+  submitted: "📤",
+  "waiting for response": "⏳",
+  rejected: "❌",
+  interview: "🎤",
+  offer: "🎉",
+  accepted: "✅",
+  withdrawn: "🚪",
 };
+
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+const EMPTY_FORM = { jobTitle: "", jobDescription: "", link: "" };
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    jobTitle: "",
-    jobDescription: "",
-    link: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
-    loadJobs();
+    getJobs()
+      .then((data) => setJobs(data as Job[]))
+      .catch(() => toast.error("Failed to load applications"))
+      .finally(() => setLoading(false));
   }, []);
-
-  const loadJobs = async () => {
-    try {
-      setLoading(true);
-      const data = await getJobs();
-      setJobs(data as Job[]);
-    } catch (error) {
-      toast.error("Failed to load jobs");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!formData.jobTitle.trim() || !formData.jobDescription.trim()) {
-      toast.error("Please fill in all required fields");
+      toast.error("Job title and description are required");
       return;
     }
+    setCreating(true);
+    const result = await createJob(
+      formData.jobTitle.trim(),
+      formData.jobDescription.trim(),
+      formData.link.trim() || undefined
+    );
+    setCreating(false);
 
-    try {
-      setCreating(true);
-      const result = await createJob(
-        formData.jobTitle,
-        formData.jobDescription,
-        formData.link || undefined
-      );
-
-      if (result.success && result.job) {
-        setJobs([...jobs, result.job as Job]);
-        setFormData({ jobTitle: "", jobDescription: "", link: "" });
-        setOpen(false);
-        toast.success("Job created successfully!");
-      } else {
-        toast.error(result.message || "Failed to create job");
-      }
-    } catch (error) {
-      toast.error("Failed to create job");
-    } finally {
-      setCreating(false);
+    if (result.success && result.job) {
+      setJobs((prev) => [result.job as Job, ...prev]);
+      setFormData(EMPTY_FORM);
+      setOpen(false);
+      toast.success("Application added");
+    } else {
+      toast.error(result.message || "Failed to add application");
     }
   };
 
   const handleDelete = async (jobId: number) => {
-    if (!confirm("Are you sure you want to delete this job?")) return;
-
-    try {
-      const result = await deleteJob(jobId);
-      if (result.success) {
-        setJobs(jobs.filter((j) => j.id !== jobId));
-        toast.success("Job deleted successfully!");
-      } else {
-        toast.error(result.message || "Failed to delete job");
-      }
-    } catch (error) {
-      toast.error("Failed to delete job");
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    const result = await deleteJob(jobId);
+    if (!result.success) {
+      // Reload to restore state if deletion failed
+      getJobs().then((data) => setJobs(data as Job[]));
+      toast.error(result.message || "Failed to delete");
+    } else {
+      toast.success("Application removed");
     }
   };
 
   const handleStatusChange = async (jobId: number, newStatus: JobStatus) => {
-    try {
-      const result = await updateJobStatus(jobId, newStatus);
-      if (result.success && result.job) {
-        setJobs(jobs.map((j) => (j.id === jobId ? (result.job as Job) : j)));
-        toast.success("Job status updated!");
-      } else {
-        toast.error(result.message || "Failed to update job");
-      }
-    } catch (error) {
-      toast.error("Failed to update job status");
+    // Optimistic update
+    setJobs((prev) =>
+      prev.map((j) => (j.id === jobId ? { ...j, status: newStatus } : j))
+    );
+    const result = await updateJobStatus(jobId, newStatus);
+    if (!result.success) {
+      // Reload to restore correct state
+      getJobs().then((data) => setJobs(data as Job[]));
+      toast.error(result.message || "Failed to update status");
     }
   };
 
-  const statusCounts = jobStatuses.reduce((acc, status) => {
-    acc[status] = jobs.filter((j) => j.status === status).length;
-    return acc;
-  }, {} as Record<JobStatus, number>);
+  const statusCounts = JOB_STATUSES.reduce<Record<JobStatus, number>>(
+    (acc, s) => ({ ...acc, [s]: jobs.filter((j) => j.status === s).length }),
+    {} as Record<JobStatus, number>
+  );
 
   return (
     <AuthGuard>
       <Navigation activeTab="jobs" />
       <div className="min-h-screen bg-background p-6 md:p-10">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto max-w-4xl">
+          {/* Header */}
+          <div className="mb-8 flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Job Tracker</h1>
-              <p className="text-muted-foreground">Track and manage your job applications</p>
+              <h1 className="text-3xl font-bold text-foreground">Applications</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {jobs.length > 0
+                  ? `${jobs.length} application${jobs.length !== 1 ? "s" : ""} tracked`
+                  : "Track your job applications"}
+              </p>
             </div>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button size="sm">
                   <Plus className="mr-2 size-4" />
                   Add Job
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Add New Job</DialogTitle>
+                  <DialogTitle>Add Application</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 pt-1">
                   <div>
                     <Label htmlFor="title">Job Title *</Label>
                     <Input
                       id="title"
-                      placeholder="e.g., Senior React Developer"
+                      placeholder="Senior React Developer at Acme Corp"
                       value={formData.jobTitle}
                       onChange={(e) =>
-                        setFormData({ ...formData, jobTitle: e.target.value })
+                        setFormData((f) => ({ ...f, jobTitle: e.target.value }))
                       }
                       className="mt-1"
                     />
@@ -212,43 +189,33 @@ export default function JobsPage() {
                     <Label htmlFor="description">Job Description *</Label>
                     <Textarea
                       id="description"
-                      placeholder="Paste the job description here..."
+                      placeholder="Paste the job description here…"
                       value={formData.jobDescription}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          jobDescription: e.target.value,
-                        })
+                        setFormData((f) => ({ ...f, jobDescription: e.target.value }))
                       }
                       rows={6}
                       className="mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="link">Job Link (Optional)</Label>
+                    <Label htmlFor="link">Job Posting URL (optional)</Label>
                     <Input
                       id="link"
-                      placeholder="https://..."
+                      placeholder="https://…"
                       type="url"
                       value={formData.link}
                       onChange={(e) =>
-                        setFormData({ ...formData, link: e.target.value })
+                        setFormData((f) => ({ ...f, link: e.target.value }))
                       }
                       className="mt-1"
                     />
                   </div>
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={creating}
-                    className="w-full"
-                  >
+                  <Button onClick={handleSubmit} disabled={creating} className="w-full">
                     {creating ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Creating...
-                      </>
+                      <><Loader2 className="mr-2 size-4 animate-spin" />Adding…</>
                     ) : (
-                      "Create Job"
+                      "Add Application"
                     )}
                   </Button>
                 </div>
@@ -256,93 +223,116 @@ export default function JobsPage() {
             </Dialog>
           </div>
 
-          {/* Status Summary */}
+          {/* Status summary — non-zero only */}
           {!loading && jobs.length > 0 && (
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
-              {jobStatuses.map((status) => (
-                <Card key={status} className="p-3 text-center">
-                  <p className="text-xl">{getStatusIcon(status)}</p>
-                  <p className="text-lg font-bold text-foreground">{statusCounts[status]}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{status}</p>
-                </Card>
+            <div className="mb-6 flex flex-wrap gap-2">
+              {JOB_STATUSES.filter((s) => statusCounts[s] > 0).map((s) => (
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
+                >
+                  <span>{STATUS_ICONS[s]}</span>
+                  <span className="font-medium text-foreground">{statusCounts[s]}</span>
+                  <span className="capitalize">{s}</span>
+                </span>
               ))}
             </div>
           )}
 
+          {/* Content */}
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-40" />
-              ))}
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-36" />)}
             </div>
           ) : jobs.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Briefcase className="mx-auto mb-4 size-12 text-muted-foreground/50" />
-              <h3 className="mb-2 text-lg font-semibold text-foreground">No jobs yet</h3>
-              <p className="mb-6 text-muted-foreground">Start tracking your first job application to see your progress.</p>
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="mr-2 size-4" />
-                Add Your First Job
-              </Button>
+            <Card className="py-16 text-center">
+              <Briefcase className="mx-auto mb-3 size-10 text-muted-foreground/30" />
+              <h3 className="mb-1 font-semibold text-foreground">No applications yet</h3>
+              <p className="mb-5 text-sm text-muted-foreground">
+                Track your first application or{" "}
+                <a
+                  href="/analyze"
+                  className="text-primary underline underline-offset-3 hover:no-underline"
+                >
+                  analyze a job
+                </a>{" "}
+                to get started.
+              </p>
+              <div className="flex justify-center">
+                <Button size="sm" onClick={() => setOpen(true)}>
+                  <Plus className="mr-2 size-4" />
+                  Add Application
+                </Button>
+              </div>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="space-y-3">
               {jobs.map((job) => (
-                <Card key={job.id} className="p-6 transition-shadow hover:shadow-md">
+                <Card key={job.id} className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-foreground truncate">
+                      {/* Title row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold text-foreground truncate">
                           {job.jobTitle}
                         </h3>
-                        <Badge className={getStatusColor(job.status)}>
-                          {getStatusIcon(job.status)} {job.status}
+                        <Badge className={`${STATUS_COLORS[job.status]} border-0 text-xs`}>
+                          {STATUS_ICONS[job.status]} {job.status}
                         </Badge>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
+
+                      {/* Meta row */}
+                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>Added {formatDate(job.createdAt)}</span>
+                        {job.link && (
+                          <a
+                            href={job.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
+                            View posting <ExternalLink className="size-3" />
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Description preview */}
+                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                         {job.jobDescription}
                       </p>
-                      {job.link && (
-                        <a
-                          href={job.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          View Job <ExternalLink className="size-3" />
-                        </a>
-                      )}
-                      <div className="mt-4 flex items-center gap-2">
-                        <Label className="text-muted-foreground text-sm">Update Status:</Label>
+
+                      {/* Status selector */}
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Status:</span>
                         <Select
                           value={job.status}
-                          onValueChange={(value) =>
-                            handleStatusChange(job.id, value as JobStatus)
+                          onValueChange={(v) =>
+                            handleStatusChange(job.id, v as JobStatus)
                           }
                         >
-                          <SelectTrigger className="w-48">
+                          <SelectTrigger className="h-7 w-44 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {jobStatuses.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {getStatusIcon(status)} {status}
+                            {JOB_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s} className="text-xs">
+                                {STATUS_ICONS[s]} {s}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(job.id)}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
+
+                    {/* Delete */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(job.id)}
+                      className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
                 </Card>
               ))}

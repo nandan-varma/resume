@@ -1,38 +1,38 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from "node:crypto";
 
 const r2Client = new S3Client({
-  region: process.env.R2_REGION || 'auto',
+  region: process.env.R2_REGION ?? "auto",
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
   },
-  endpoint: process.env.R2_ENDPOINT || '',
+  endpoint: process.env.R2_ENDPOINT ?? "",
 });
+
+function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .slice(0, 100);
+}
 
 export async function uploadToR2(
   fileName: string,
   fileBuffer: Buffer,
   contentType: string
 ): Promise<string> {
-  const key = `${Date.now()}-${fileName}`;
+  const safe = sanitizeFileName(fileName);
+  const key = `resumes/${randomUUID()}-${safe}`;
 
-  const command = new PutObjectCommand({
-    Bucket: process.env.R2_BUCKET_NAME || 'resume',
-    Key: key,
-    Body: fileBuffer,
-    ContentType: contentType,
-  });
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME ?? "resume",
+      Key: key,
+      Body: fileBuffer,
+      ContentType: contentType,
+    })
+  );
 
-  try {
-    await r2Client.send(command);
-    const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
-    return publicUrl;
-  } catch (error) {
-    console.error('R2 upload error:', error);
-    throw new Error('Failed to upload file to R2');
-  }
-}
-
-export function generateR2Url(key: string): string {
   return `${process.env.R2_PUBLIC_URL}/${key}`;
 }
