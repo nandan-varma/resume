@@ -6,6 +6,7 @@ import { authClient, useSession } from "@/lib/auth-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ModeSwitcher } from "@/components/mode-switcher";
+import { Logo } from "@/components/logo";
 
 export type Tab = "dashboard" | "analyze" | "jobs" | "resume" | "settings";
 
@@ -62,11 +63,8 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
     <nav className="border-border border-b bg-background">
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link
-            href="/dashboard"
-            className="font-semibold text-foreground text-lg hover:text-foreground/80 transition-colors"
-          >
-            JobMatch
+          <Link href="/dashboard" aria-label="JobMatch — home">
+            <Logo iconSize={26} />
           </Link>
           <div
             aria-label="Navigation tabs"

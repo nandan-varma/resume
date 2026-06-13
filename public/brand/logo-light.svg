@@ -1,0 +1,16 @@
+<svg viewBox="0 0 220 44" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon mark (44×44) -->
+  <rect width="44" height="44" rx="10" fill="#0A0A0A"/>
+  <line x1="14.5" y1="9.5" x2="29.5" y2="9.5"
+        stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 29.5 9.5 L 29.5 28.5 Q 29.5 35 23 35 Q 16.5 35 16 30"
+        stroke="white" stroke-width="5.5" stroke-linecap="round"
+        stroke-linejoin="round" fill="none"/>
+  <!-- Wordmark white -->
+  <text x="56" y="31"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="22"
+        font-weight="600"
+        letter-spacing="-0.3"
+        fill="white">JobMatch</text>
+</svg>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 
 export default function NotFound() {
   return (
@@ -21,11 +22,8 @@ export default function NotFound() {
           <Button variant="outline">Home</Button>
         </Link>
       </div>
-      <Link
-        href="/"
-        className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-      >
-        JobMatch
+      <Link href="/" aria-label="JobMatch — home">
+        <Logo iconSize={22} />
       </Link>
     </div>
   );
