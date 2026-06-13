@@ -131,7 +131,7 @@ export default function JobsPage() {
   return (
     <AuthGuard>
       <Navigation activeTab="jobs" />
-      <div className="min-h-screen bg-background p-6 md:p-10">
+      <div className="min-h-screen p-6 md:p-10">
         <div className="mx-auto max-w-4xl">
           {/* Header */}
           <div className="mb-8 flex items-start justify-between gap-4 animate-enter-up">
@@ -207,13 +207,14 @@ export default function JobsPage() {
 
           {/* Status summary — non-zero only */}
           {!loading && jobs.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2 animate-enter [animation-delay:80ms]">
+            <div className="mb-6 flex flex-wrap gap-2 animate-enter [animation-delay:80ms]" role="list" aria-label="Application status summary">
               {JOB_STATUSES.filter((s) => statusCounts[s] > 0).map((s) => (
                 <span
                   key={s}
+                  role="listitem"
                   className="inline-flex items-center gap-1.5 border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
                 >
-                  <span>{STATUS_ICONS[s]}</span>
+                  <span aria-hidden="true">{STATUS_ICONS[s]}</span>
                   <span className="font-medium text-foreground">{statusCounts[s]}</span>
                   <span className="capitalize">{s}</span>
                 </span>
@@ -315,6 +316,7 @@ export default function JobsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(job.id)}
+                      aria-label={`Delete ${job.jobTitle}`}
                       className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="size-4" />

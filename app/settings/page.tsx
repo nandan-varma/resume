@@ -47,7 +47,7 @@ export default function SettingsPage() {
     return (
       <AuthGuard>
         <Navigation activeTab="settings" />
-        <div className="min-h-screen bg-background p-6 md:p-10">
+        <div className="min-h-screen p-6 md:p-10">
           <div className="mx-auto max-w-xl space-y-4">
             <Skeleton className="h-8 w-28" />
             <Skeleton className="h-28" />
@@ -61,7 +61,7 @@ export default function SettingsPage() {
   return (
     <AuthGuard>
       <Navigation activeTab="settings" />
-      <div className="min-h-screen bg-background p-6 md:p-10">
+      <div className="min-h-screen p-6 md:p-10">
         <div className="mx-auto max-w-xl">
           <div className="mb-8 animate-enter-up">
             <h1 className="text-3xl font-bold text-foreground">Settings</h1>
@@ -104,7 +104,7 @@ export default function SettingsPage() {
               placeholder='e.g. "I am targeting senior backend engineering roles at startups. I have 5 years of Python and Go experience. Emphasize distributed systems work and de-emphasize frontend."'
             />
             <div className="mt-4 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
+              <span className={`text-xs ${isDirty ? "text-warning" : "text-muted-foreground"}`}>
                 {isDirty ? "Unsaved changes" : ""}
               </span>
               <Button

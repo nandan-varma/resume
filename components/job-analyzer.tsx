@@ -2,6 +2,7 @@
 
 import type { AnalysisResult } from "@/app/api/analyze/route";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -162,137 +163,140 @@ export function JobAnalyzer() {
         </div>
       )}
 
-      {/* Step 1: Job input */}
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="job-url" className="text-sm font-medium">
-            Job posting URL
-            <span className="ml-2 font-normal text-muted-foreground text-xs">
-              auto-fills the description below
-            </span>
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              className="flex-1"
+      {/* Form card */}
+      <Card className="p-5 sm:p-6 space-y-5">
+        {/* Step 1: Job input */}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="job-url" className="text-sm font-medium">
+              Job posting URL
+              <span className="ml-2 font-normal text-muted-foreground text-xs">
+                auto-fills the description below
+              </span>
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                className="flex-1 min-w-0"
+                disabled={urlLoading}
+                id="job-url"
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleFetchDescription()}
+                placeholder="https://www.linkedin.com/jobs/view/…"
+                type="url"
+                value={url}
+              />
+              <Button
+                disabled={urlLoading || !url.trim()}
+                onClick={handleFetchDescription}
+                type="button"
+                variant="outline"
+                className="shrink-0"
+              >
+                {urlLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Search className="size-4" />
+                )}
+                <span className="ml-1.5">Fetch</span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="job-description" className="text-sm font-medium">
+              Job description
+              <span className="ml-2 font-normal text-muted-foreground text-xs">
+                or paste directly
+              </span>
+            </Label>
+            <Textarea
+              className="min-h-[200px] resize-y"
               disabled={urlLoading}
-              id="job-url"
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleFetchDescription()}
-              placeholder="https://www.linkedin.com/jobs/view/…"
-              type="url"
-              value={url}
+              id="job-description"
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste the full job description here…"
+              value={jobDescription}
             />
-            <Button
-              disabled={urlLoading || !url.trim()}
-              onClick={handleFetchDescription}
-              type="button"
-              variant="outline"
-              className="shrink-0"
-            >
-              {urlLoading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Search className="size-4" />
-              )}
-              <span className="ml-1.5">Fetch</span>
-            </Button>
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="job-description" className="text-sm font-medium">
-            Job description
-            <span className="ml-2 font-normal text-muted-foreground text-xs">
-              or paste directly
-            </span>
-          </Label>
-          <Textarea
-            className="min-h-[200px] resize-y"
-            disabled={urlLoading}
-            id="job-description"
-            onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the full job description here…"
-            value={jobDescription}
-          />
-        </div>
-      </div>
+        {/* Step 2: Options + action */}
+        <div className="flex flex-wrap items-end gap-3">
+          {jobs.length > 0 && (
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Link2 className="size-3" />
+                Link to tracked job
+              </Label>
+              <Select value={linkedJobId} onValueChange={setLinkedJobId}>
+                <SelectTrigger className="h-8 w-48 text-sm">
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No link</SelectItem>
+                  {jobs.map((job) => (
+                    <SelectItem key={job.id} value={String(job.id)}>
+                      {job.jobTitle}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-      {/* Step 2: Options + action */}
-      <div className="flex flex-wrap items-end gap-3 pt-1">
-        {jobs.length > 0 && (
           <div className="space-y-1">
-            <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Link2 className="size-3" />
-              Link to tracked job
-            </Label>
-            <Select value={linkedJobId} onValueChange={setLinkedJobId}>
-              <SelectTrigger className="h-8 w-48 text-sm">
-                <SelectValue placeholder="Optional" />
+            <Label className="text-xs text-muted-foreground">AI model</Label>
+            <Select onValueChange={handleModelChange} value={modelId}>
+              <SelectTrigger className="h-8 w-56 text-sm">
+                <SelectValue>
+                  <span className="truncate">{currentModel?.name ?? modelId}</span>
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No link</SelectItem>
-                {jobs.map((job) => (
-                  <SelectItem key={job.id} value={String(job.id)}>
-                    {job.jobTitle}
+                {(models as readonly Model[]).map((model: Model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    <div className="flex flex-col">
+                      <span>{model.name}</span>
+                      <span className="text-xs text-muted-foreground uppercase">
+                        {model.provider}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">AI model</Label>
-          <Select onValueChange={handleModelChange} value={modelId}>
-            <SelectTrigger className="h-8 w-56 text-sm">
-              <SelectValue>
-                <span className="truncate">{currentModel?.name ?? modelId}</span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {(models as readonly Model[]).map((model: Model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span>{model.name}</span>
-                    <span className="text-xs text-muted-foreground uppercase">
-                      {model.provider}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Button
+            disabled={loading || !jobDescription.trim()}
+            onClick={analyzeMatch}
+            className="ml-auto h-8 sm:w-auto w-full"
+            title={!jobDescription.trim() ? "Paste a job description first" : undefined}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Analyzing…
+              </>
+            ) : (
+              <>
+                <Search className="mr-2 size-4" />
+                Analyze Match
+              </>
+            )}
+          </Button>
         </div>
 
-        <Button
-          disabled={loading || !jobDescription.trim()}
-          onClick={analyzeMatch}
-          className="ml-auto h-8"
-          title={!jobDescription.trim() ? "Paste a job description first" : undefined}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Analyzing…
-            </>
-          ) : (
-            <>
-              <Search className="mr-2 size-4" />
-              Analyze Match
-            </>
-          )}
-        </Button>
-      </div>
-
-      {error && (
-        <p className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-enter">
-          {error}
-        </p>
-      )}
+        {error && (
+          <p className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-enter">
+            {error}
+          </p>
+        )}
+      </Card>
 
       {result && (
         <>
-          <div className="border-t border-border pt-5 animate-enter-up">
+          <div className="animate-enter-up">
             <AnalysisResults result={result} />
           </div>
 

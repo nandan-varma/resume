@@ -93,7 +93,7 @@ export default function ResumePage() {
     return (
       <AuthGuard>
         <Navigation activeTab="resume" />
-        <div className="min-h-screen bg-background p-6 md:p-10">
+        <div className="min-h-screen p-6 md:p-10">
           <div className="mx-auto max-w-2xl space-y-4">
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-32" />
@@ -107,7 +107,7 @@ export default function ResumePage() {
   return (
     <AuthGuard>
       <Navigation activeTab="resume" />
-      <div className="min-h-screen bg-background p-6 md:p-10">
+      <div className="min-h-screen p-6 md:p-10">
         <div className="mx-auto max-w-2xl">
           <div className="mb-8 animate-enter-up">
             <h1 className="text-3xl font-bold text-foreground">Resume</h1>
@@ -135,9 +135,10 @@ export default function ResumePage() {
             </div>
 
             {!info?.resumeUrl && (
-              <p className="mb-3 text-sm text-warning">
-                No resume uploaded yet — required for AI analysis.
-              </p>
+              <div className="mb-4 flex items-start gap-2.5 border border-warning/20 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                <Upload className="size-4 shrink-0 mt-0.5" />
+                <span>No resume uploaded yet — required for AI analysis.</span>
+              </div>
             )}
 
             <label className={cn(

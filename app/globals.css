@@ -27,7 +27,6 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  /* Zero radius everywhere — sharp corners are the design */
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;
@@ -36,11 +35,13 @@
 
 :root {
   --radius: 0px;
+
+  /* Colours */
   --background: oklch(1 0 0);
   --foreground: oklch(0.09 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(1 0 0 / 0.82);
   --card-foreground: oklch(0.09 0 0);
-  --popover: oklch(1 0 0);
+  --popover: oklch(1 0 0 / 0.88);
   --popover-foreground: oklch(0.09 0 0);
   --primary: oklch(0.09 0 0);
   --primary-foreground: oklch(0.99 0 0);
@@ -57,14 +58,29 @@
   --success: oklch(0.52 0.15 150);
   --warning: oklch(0.60 0.13 75);
   --info: oklch(0.52 0.14 240);
+
+  /* Shimmer skeleton surfaces */
+  --shimmer-base: oklch(0.96 0 0);
+  --shimmer-peak: oklch(1 0 0);
+
+  /* Button shine overlay */
+  --btn-shine: rgba(255, 255, 255, 0.07);
+
+  /* Spotlight card glow */
+  --spotlight: oklch(0.09 0 0 / 0.04);
+
+  /* Background grid */
+  --grid-dot:   oklch(0 0 0 / 0.12);
+  --grid-line:  oklch(0 0 0 / 0.055);
+  --grid-shine: oklch(0 0 0 / 0.022);
 }
 
 .dark {
   --background: oklch(0.09 0 0);
   --foreground: oklch(0.97 0 0);
-  --card: oklch(0.12 0 0);
+  --card: oklch(0.12 0 0 / 0.85);
   --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.12 0 0);
+  --popover: oklch(0.12 0 0 / 0.88);
   --popover-foreground: oklch(0.97 0 0);
   --primary: oklch(0.97 0 0);
   --primary-foreground: oklch(0.09 0 0);
@@ -81,43 +97,194 @@
   --success: oklch(0.68 0.16 150);
   --warning: oklch(0.74 0.14 75);
   --info: oklch(0.68 0.15 240);
+  --shimmer-base: oklch(0.18 0 0);
+  --shimmer-peak: oklch(0.23 0 0);
+  --btn-shine: rgba(255, 255, 255, 0.05);
+  --spotlight: oklch(1 0 0 / 0.06);
+  --grid-dot:   oklch(1 0 0 / 0.10);
+  --grid-line:  oklch(1 0 0 / 0.045);
+  --grid-shine: oklch(1 0 0 / 0.028);
 }
 
+/* ─────────────────────────────────────────────
+   Base
+───────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    color: var(--foreground);
+    /* Background colour + grid pattern baked into the same layer */
+    background-color: var(--background);
+    background-image:
+      radial-gradient(circle at 0 0, var(--grid-dot) 1.5px, transparent 1.5px),
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 }
 
-/* ── Entrance animations ── */
-@keyframes enter {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes enter-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes enter-scale {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
+/* ─────────────────────────────────────────────
+   Keyframes
+───────────────────────────────────────────── */
+
+@keyframes enter        { from { opacity: 0 } to { opacity: 1 } }
+@keyframes enter-up     { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes enter-scale  { from { opacity: 0; transform: scale(0.96) } to { opacity: 1; transform: scale(1) } }
+@keyframes enter-blur   { from { opacity: 0; transform: translateY(6px); filter: blur(8px) } to { opacity: 1; transform: translateY(0); filter: blur(0px) } }
+
+@keyframes shimmer {
+  from { background-position:  200% center; }
+  to   { background-position: -200% center; }
 }
 
+@keyframes indicator-in {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Grid shine — sweeps slowly across the full page, pauses off-screen */
+@keyframes grid-shine {
+  0%        { transform: translateX(-250%); opacity: 0; }
+  6%        { opacity: 1; }
+  44%       { opacity: 1; }
+  50%       { transform: translateX(300%); opacity: 0; }
+  50.001%   { transform: translateX(-250%); opacity: 0; }
+  100%      { transform: translateX(-250%); opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────
+   Animation utilities
+───────────────────────────────────────────── */
 @layer utilities {
   .animate-enter       { animation: enter       0.25s ease                          both; }
   .animate-enter-up    { animation: enter-up    0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
   .animate-enter-scale { animation: enter-scale 0.3s  cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-enter-blur  { animation: enter-blur  0.5s  cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  .animate-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      var(--shimmer-base)  0%,
+      var(--shimmer-peak) 50%,
+      var(--shimmer-base) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  .animate-indicator-in {
+    animation: indicator-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: left center;
+  }
 }
 
-/* Respect reduced-motion preference — collapse duration, keep fill-mode */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-enter,
   .animate-enter-up,
-  .animate-enter-scale {
+  .animate-enter-scale,
+  .animate-enter-blur {
     animation-duration: 0.01ms !important;
     animation-delay:    0.01ms !important;
   }
+  .animate-shimmer       { animation: none; background-image: none; }
+  .animate-indicator-in  { animation: none; transform: none; }
+  .grid-shine-overlay::before { animation: none !important; }
 }
+
+/* ─────────────────────────────────────────────
+   Background grid shine overlay
+   Fixed element, pointer-events: none — sits above everything
+   at near-zero opacity so content remains fully readable.
+───────────────────────────────────────────── */
+.grid-shine-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.grid-shine-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* 40% wide strip; at translateX(-250%) it's fully off-screen left */
+  width: 40%;
+  background: linear-gradient(
+    to right,
+    transparent    0%,
+    var(--grid-shine) 50%,
+    transparent  100%
+  );
+  animation: grid-shine 22s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────
+   Button shine sweep
+───────────────────────────────────────────── */
+[data-slot="button"][data-variant="default"],
+[data-slot="button"][data-variant="destructive"] {
+  position: relative;
+  overflow: hidden;
+}
+[data-slot="button"][data-variant="default"]::after,
+[data-slot="button"][data-variant="destructive"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent     30%,
+    var(--btn-shine) 50%,
+    transparent     70%
+  );
+  transform: translateX(-110%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+[data-slot="button"][data-variant="default"]:hover::after,
+[data-slot="button"][data-variant="destructive"]:hover::after {
+  transform: translateX(110%);
+}
+
+/* ─────────────────────────────────────────────
+   Focus glow for form elements
+───────────────────────────────────────────── */
+[data-slot="input"]:focus-visible,
+[data-slot="textarea"]:focus-visible,
+[data-slot="select-trigger"]:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring), 0 0 0 4px oklch(from var(--ring) l c h / 0.10);
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────
+   Sonner toast — frosted glass
+───────────────────────────────────────────── */
+[data-sonner-toast] {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* ─────────────────────────────────────────────
+   Spotlight card (cursor-following glow)
+───────────────────────────────────────────── */
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  background: radial-gradient(
+    200px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    var(--spotlight),
+    transparent 70%
+  );
+}
+.spotlight-card:hover::before { opacity: 1; }
