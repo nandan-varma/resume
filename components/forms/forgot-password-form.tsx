@@ -64,7 +64,7 @@ export function ForgotPasswordForm({
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col items-center gap-4 py-4 text-center">
-              <CheckCircle2 className="size-10 text-emerald-500" />
+              <CheckCircle2 className="size-10 text-success" />
               <div>
                 <p className="font-semibold text-foreground">Check your email</p>
                 <p className="mt-1 text-sm text-muted-foreground">

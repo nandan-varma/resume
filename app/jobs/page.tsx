@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Loader2, ExternalLink, Briefcase } from "lucide-react";
 import { createJob, getJobs, deleteJob, updateJobStatus } from "@/server/users";
 import type { JobStatus } from "@/db/schema";
+import { STATUS_COLORS, STATUS_ICONS } from "@/lib/status";
 import { Navigation } from "@/components/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 
@@ -49,25 +50,6 @@ interface Job {
   updatedAt: Date;
 }
 
-const STATUS_COLORS: Record<JobStatus, string> = {
-  submitted: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "waiting for response": "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  rejected: "bg-destructive/10 text-destructive",
-  interview: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
-  offer: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  accepted: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  withdrawn: "bg-muted text-muted-foreground",
-};
-
-const STATUS_ICONS: Record<JobStatus, string> = {
-  submitted: "📤",
-  "waiting for response": "⏳",
-  rejected: "❌",
-  interview: "🎤",
-  offer: "🎉",
-  accepted: "✅",
-  withdrawn: "🚪",
-};
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -152,7 +134,7 @@ export default function JobsPage() {
       <div className="min-h-screen bg-background p-6 md:p-10">
         <div className="mx-auto max-w-4xl">
           {/* Header */}
-          <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="mb-8 flex items-start justify-between gap-4 animate-enter-up">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Applications</h1>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -225,11 +207,11 @@ export default function JobsPage() {
 
           {/* Status summary — non-zero only */}
           {!loading && jobs.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
+            <div className="mb-6 flex flex-wrap gap-2 animate-enter [animation-delay:80ms]">
               {JOB_STATUSES.filter((s) => statusCounts[s] > 0).map((s) => (
                 <span
                   key={s}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
+                  className="inline-flex items-center gap-1.5 border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
                 >
                   <span>{STATUS_ICONS[s]}</span>
                   <span className="font-medium text-foreground">{statusCounts[s]}</span>
@@ -267,8 +249,12 @@ export default function JobsPage() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {jobs.map((job) => (
-                <Card key={job.id} className="p-5">
+              {jobs.map((job, i) => (
+                <Card
+                  key={job.id}
+                  className="p-5 animate-enter-up"
+                  style={{ animationDelay: `${Math.min(i * 50, 250)}ms` }}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       {/* Title row */}

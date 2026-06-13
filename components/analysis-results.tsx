@@ -70,7 +70,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-enter">
         <h2 className="font-semibold text-foreground text-lg">
           Analysis Results
         </h2>
@@ -90,7 +90,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
       </div>
 
       {/* Match Score */}
-      <Card className={`p-6 ${getScoreBg(result.match_percentage)}`}>
+      <Card className={`p-6 animate-enter-scale ${getScoreBg(result.match_percentage)}`}>
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium text-muted-foreground text-sm">
@@ -102,16 +102,16 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
               {result.match_percentage}%
             </p>
           </div>
-          <div className="flex size-16 items-center justify-center rounded-full bg-background">
+          <div className="flex size-14 items-center justify-center bg-background/60">
             <TrendingUp
-              className={`size-8 ${getScoreColor(result.match_percentage)}`}
+              className={`size-7 ${getScoreColor(result.match_percentage)}`}
             />
           </div>
         </div>
         <p className="mt-4 text-foreground text-sm">{result.summary}</p>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 animate-enter-up [animation-delay:80ms]">
         {/* Strengths */}
         <Card className="p-4">
           <div className="mb-3 flex items-center gap-2">
@@ -140,7 +140,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
           <div className="flex flex-wrap gap-2">
             {result.missing_keywords.map((keyword) => (
               <span
-                className="inline-flex items-center rounded-full border border-destructive/20 bg-destructive/10 px-2.5 py-0.5 font-medium text-destructive text-xs"
+                className="inline-flex items-center border border-destructive/20 bg-destructive/10 px-2 py-0.5 font-medium text-destructive text-xs"
                 key={keyword}
               >
                 {keyword}
@@ -151,7 +151,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
       </div>
 
       {/* Improvement Suggestions */}
-      <Card className="p-4">
+      <Card className="p-4 animate-enter-up [animation-delay:150ms]">
         <div className="mb-3 flex items-center gap-2">
           <Lightbulb className="size-4 text-primary" />
           <h3 className="font-medium text-foreground">How to Improve</h3>
@@ -162,7 +162,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
               className="flex items-start gap-2 text-muted-foreground text-sm"
               key={suggestion}
             >
-              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 font-medium text-primary text-xs">
+              <span className="inline-flex size-5 shrink-0 items-center justify-center bg-muted font-medium text-muted-foreground text-xs tabular-nums">
                 {idx + 1}
               </span>
               <span>{suggestion}</span>
@@ -173,7 +173,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
 
       {/* Additional Insights */}
       {result.additional_insights && (
-        <Card className="bg-muted/50 p-4">
+        <Card className="bg-muted/50 p-4 animate-enter-up [animation-delay:200ms]">
           <p className="text-muted-foreground text-sm">
             <strong className="text-foreground">Pro tip:</strong>{" "}
             {result.additional_insights}

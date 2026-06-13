@@ -10,13 +10,15 @@ export default function AnalyzePage() {
       <Navigation activeTab="analyze" />
       <div className="min-h-screen bg-background p-6 md:p-10">
         <div className="mx-auto max-w-3xl">
-          <div className="mb-8">
+          <div className="mb-8 animate-enter-up">
             <h1 className="text-3xl font-bold text-foreground">Analyze Match</h1>
             <p className="mt-1 text-muted-foreground">
               See how well your resume fits a job posting
             </p>
           </div>
-          <JobAnalyzer />
+          <div className="animate-enter-up [animation-delay:80ms]">
+            <JobAnalyzer />
+          </div>
         </div>
       </div>
     </AuthGuard>

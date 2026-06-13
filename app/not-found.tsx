@@ -5,7 +5,7 @@ import { Logo } from "@/components/logo";
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6 text-center">
-      <div className="space-y-3">
+      <div className="space-y-3 animate-enter-up">
         <p className="text-6xl font-bold tracking-tight text-foreground">404</p>
         <h1 className="text-xl font-semibold text-foreground">
           Page not found
@@ -14,7 +14,7 @@ export default function NotFound() {
           This page doesn&apos;t exist or has been moved.
         </p>
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-3 animate-enter-up [animation-delay:80ms]">
         <Link href="/dashboard">
           <Button>Go to Dashboard</Button>
         </Link>

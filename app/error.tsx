@@ -15,7 +15,7 @@ export default function Error({ error, reset }: ErrorProps) {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6 text-center">
-      <div className="space-y-3">
+      <div className="space-y-3 animate-enter-up">
         <h2 className="text-xl font-semibold text-foreground">
           Something went wrong
         </h2>
@@ -24,7 +24,7 @@ export default function Error({ error, reset }: ErrorProps) {
           homepage.
         </p>
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-3 animate-enter-up [animation-delay:80ms]">
         <Button onClick={reset}>Try again</Button>
         <Button
           variant="outline"

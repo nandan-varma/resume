@@ -150,8 +150,8 @@ export function JobAnalyzer() {
     <div className="space-y-5">
       {/* Resume status warning */}
       {hasResume === false && (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
-          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning animate-enter">
+          <AlertTriangle className="size-4 shrink-0 mt-0.5 text-warning" />
           <span>
             No resume uploaded yet.{" "}
             <Link href="/resume" className="font-medium underline underline-offset-3 hover:no-underline">
@@ -285,20 +285,20 @@ export function JobAnalyzer() {
       </div>
 
       {error && (
-        <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <p className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-enter">
           {error}
         </p>
       )}
 
       {result && (
         <>
-          <div className="border-t border-border pt-5">
+          <div className="border-t border-border pt-5 animate-enter-up">
             <AnalysisResults result={result} />
           </div>
 
           {/* Post-analysis save bar */}
           {(!linkedJobId || linkedJobId === "none") && !saved && jobs.length > 0 && (
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
+            <div className="flex items-center gap-3 border border-border bg-muted/50 px-4 py-3 animate-enter">
               <p className="text-sm text-muted-foreground flex-1">
                 Save this analysis to a tracked job?
               </p>
@@ -323,7 +323,7 @@ export function JobAnalyzer() {
           )}
 
           {saved && (
-            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            <p className="text-sm font-medium text-success">
               ✓ Analysis saved to job
             </p>
           )}

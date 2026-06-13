@@ -2,68 +2,67 @@ import Link from "next/link";
 import { ModeSwitcher } from "@/components/mode-switcher";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Briefcase, Target } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border/40">
-        <Link href="/" aria-label="JobMatch — home">
-          <Logo iconSize={26} />
+      <header className="flex h-12 items-center justify-between border-b border-border px-6 animate-enter">
+        <Link href="/" aria-label="JobMatch — home" className="transition-opacity hover:opacity-70">
+          <Logo iconSize={24} />
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <ModeSwitcher />
           <Link href="/login">
-            <Button variant="ghost" size="sm">Sign In</Button>
+            <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
           <Link href="/signup">
-            <Button size="sm">Get Started</Button>
+            <Button size="sm">Get started</Button>
           </Link>
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center gap-10 px-5 py-12 text-center">
-        <div className="mx-auto max-w-2xl space-y-5">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Land more interviews<br />with AI-powered resume matching
+      <main className="flex flex-1 flex-col items-center justify-center gap-16 px-5 py-16 text-center">
+        <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl animate-enter-up">
+            Land more interviews<br />with AI resume matching
           </h1>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed animate-enter-up [animation-delay:80ms]">
             Paste any job description. Get a match score, missing keywords, and
             concrete edits — in seconds.
           </p>
-          <div className="flex justify-center gap-3 pt-2">
+          <div className="flex justify-center gap-3 pt-2 animate-enter-up [animation-delay:150ms]">
             <Link href="/signup">
-              <Button size="lg">Get Started Free</Button>
+              <Button size="lg">Get started free</Button>
             </Link>
             <Link href="/login">
-              <Button size="lg" variant="outline">Sign In</Button>
+              <Button size="lg" variant="outline">Sign in</Button>
             </Link>
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-3 w-full">
-          <Card className="p-5 text-left">
-            <Sparkles className="mb-3 size-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Match Score</h3>
-            <p className="text-muted-foreground text-sm mt-1">
+        <div className="mx-auto grid max-w-3xl gap-px sm:grid-cols-3 w-full border border-border animate-enter-up [animation-delay:220ms]">
+          <div className="p-6 text-left bg-card">
+            <Sparkles className="mb-4 size-4 text-muted-foreground" />
+            <h3 className="font-medium text-foreground text-sm">Match Score</h3>
+            <p className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
               See exactly how well your resume fits a role — and what's missing.
             </p>
-          </Card>
-          <Card className="p-5 text-left">
-            <Target className="mb-3 size-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Keyword Gaps</h3>
-            <p className="text-muted-foreground text-sm mt-1">
+          </div>
+          <div className="p-6 text-left bg-card border-l border-r border-border">
+            <Target className="mb-4 size-4 text-muted-foreground" />
+            <h3 className="font-medium text-foreground text-sm">Keyword Gaps</h3>
+            <p className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
               Identify the exact terms recruiters and ATS scanners look for.
             </p>
-          </Card>
-          <Card className="p-5 text-left">
-            <Briefcase className="mb-3 size-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Application Tracker</h3>
-            <p className="text-muted-foreground text-sm mt-1">
+          </div>
+          <div className="p-6 text-left bg-card">
+            <Briefcase className="mb-4 size-4 text-muted-foreground" />
+            <h3 className="font-medium text-foreground text-sm">Application Tracker</h3>
+            <p className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
               Track every application from submission to offer in one place.
             </p>
-          </Card>
+          </div>
         </div>
       </main>
     </div>

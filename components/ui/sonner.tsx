@@ -14,6 +14,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
+          "--toast-border-radius": "0px",
         } as React.CSSProperties
       }
       theme={theme as ToasterProps["theme"]}

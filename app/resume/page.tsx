@@ -109,7 +109,7 @@ export default function ResumePage() {
       <Navigation activeTab="resume" />
       <div className="min-h-screen bg-background p-6 md:p-10">
         <div className="mx-auto max-w-2xl">
-          <div className="mb-8">
+          <div className="mb-8 animate-enter-up">
             <h1 className="text-3xl font-bold text-foreground">Resume</h1>
             <p className="mt-1 text-muted-foreground">
               Your resume is used for all AI analysis
@@ -117,7 +117,7 @@ export default function ResumePage() {
           </div>
 
           {/* PDF Resume */}
-          <Card className="mb-4 p-6">
+          <Card className="mb-4 p-6 animate-enter-up [animation-delay:80ms]">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-foreground">PDF Resume</h2>
               {info?.resumeUrl && (
@@ -135,13 +135,13 @@ export default function ResumePage() {
             </div>
 
             {!info?.resumeUrl && (
-              <p className="mb-3 text-sm text-amber-600 dark:text-amber-400">
+              <p className="mb-3 text-sm text-warning">
                 No resume uploaded yet — required for AI analysis.
               </p>
             )}
 
             <label className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border px-5 py-4",
+              "flex cursor-pointer items-center gap-3 border border-dashed border-border px-5 py-4",
               "hover:border-primary/40 hover:bg-muted/30 transition-colors",
               uploading && "pointer-events-none opacity-60"
             )}>
@@ -168,7 +168,7 @@ export default function ResumePage() {
           </Card>
 
           {/* LaTeX — collapsible */}
-          <Card className="p-6">
+          <Card className="p-6 animate-enter-up [animation-delay:150ms]">
             <button
               type="button"
               onClick={() => setLatexOpen((v) => !v)}

@@ -60,11 +60,11 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   };
 
   return (
-    <nav className="border-border border-b bg-background">
-      <div className="flex h-14 items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" aria-label="JobMatch — home">
-            <Logo iconSize={26} />
+    <nav className="border-b border-border bg-background animate-enter">
+      <div className="flex h-12 items-center justify-between px-6">
+        <div className="flex items-center gap-8">
+          <Link href="/dashboard" aria-label="JobMatch — home" className="transition-opacity hover:opacity-70">
+            <Logo iconSize={24} />
           </Link>
           <div
             aria-label="Navigation tabs"
@@ -78,11 +78,10 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
                 aria-selected={activeTab === tab.id}
                 role="tab"
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-sm transition-all duration-200",
-                  "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                  "px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   activeTab === tab.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}
@@ -91,29 +90,29 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <ModeSwitcher />
           {isLoading ? null : session?.user ? (
             <>
               <div
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold"
+                className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-background text-xs font-semibold"
                 title={session.user.email}
               >
                 {(session.user.name ?? session.user.email).charAt(0).toUpperCase()}
               </div>
               <button
-                className="rounded-md border border-border px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 onClick={handleSignOut}
               >
-                Sign Out
+                Sign out
               </button>
             </>
           ) : (
             <Link
-              className="rounded-md border border-border px-3 py-1 text-sm text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="text-sm text-foreground transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               href="/login"
             >
-              Sign In
+              Sign in
             </Link>
           )}
         </div>

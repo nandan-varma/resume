@@ -63,14 +63,14 @@ export default function SettingsPage() {
       <Navigation activeTab="settings" />
       <div className="min-h-screen bg-background p-6 md:p-10">
         <div className="mx-auto max-w-xl">
-          <div className="mb-8">
+          <div className="mb-8 animate-enter-up">
             <h1 className="text-3xl font-bold text-foreground">Settings</h1>
             <p className="mt-1 text-muted-foreground">
               Manage your profile and AI preferences
             </p>
           </div>
 
-          <Card className="mb-5 p-6">
+          <Card className="mb-5 p-6 animate-enter-up [animation-delay:80ms]">
             <h2 className="mb-4 text-base font-semibold text-foreground">Profile</h2>
             <div className="space-y-3">
               <div>
@@ -88,7 +88,7 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 animate-enter-up [animation-delay:150ms]">
             <div className="mb-4">
               <h2 className="text-base font-semibold text-foreground">
                 AI Analysis Preferences
