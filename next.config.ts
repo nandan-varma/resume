@@ -19,6 +19,19 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // Prevent Node.js-only packages from being bundled into the client
+  serverExternalPackages: [
+    "ws",
+    "bufferutil",
+    "@aws-sdk/client-s3",
+    "@neondatabase/serverless",
+  ],
+
+  experimental: {
+    // Better tree-shaking for icon libraries
+    optimizePackageImports: ["lucide-react"],
+  },
+
   async headers() {
     return [
       {

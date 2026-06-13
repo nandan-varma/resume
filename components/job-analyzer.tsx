@@ -15,17 +15,16 @@ import {
 } from "@/components/ui/select";
 import { AlertTriangle, Link2, Loader2, Search, Upload } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AnalysisResults } from "@/components/analysis-results";
 import {
   DEFAULT_MODEL_ID,
   isValidModelId,
-  type Model,
   type ModelId,
   models,
 } from "@/lib/models";
-import { getJobs, getPersonalInformation, saveAnalysis } from "@/server/users";
+import { saveAnalysis } from "@/server/users";
 
 const MODEL_STORAGE_KEY = "job-match-ai-model";
 
@@ -34,29 +33,28 @@ interface Job {
   jobTitle: string;
 }
 
-export function JobAnalyzer() {
+interface JobAnalyzerProps {
+  initialJobs: Job[];
+  hasResume: boolean;
+}
+
+export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs] = useState<Job[]>(initialJobs);
   const [linkedJobId, setLinkedJobId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [hasResume, setHasResume] = useState<boolean | null>(null);
 
   const [modelId, setModelId] = useState<ModelId>(() => {
     if (typeof window === "undefined") return DEFAULT_MODEL_ID;
     const stored = localStorage.getItem(MODEL_STORAGE_KEY);
     return stored && isValidModelId(stored) ? (stored as ModelId) : DEFAULT_MODEL_ID;
   });
-
-  useEffect(() => {
-    getJobs().then((data) => setJobs(data as Job[]));
-    getPersonalInformation().then((info) => setHasResume(!!info?.resumeUrl));
-  }, []);
 
   const handleModelChange = (value: string) => {
     if (isValidModelId(value)) {
@@ -150,7 +148,7 @@ export function JobAnalyzer() {
   return (
     <div className="space-y-5">
       {/* Resume status warning */}
-      {hasResume === false && (
+      {!hasResume && (
         <div className="flex items-start gap-3 border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning animate-enter">
           <AlertTriangle className="size-4 shrink-0 mt-0.5 text-warning" />
           <span>
@@ -253,7 +251,7 @@ export function JobAnalyzer() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {(models as readonly Model[]).map((model: Model) => (
+                {models.map((model) => (
                   <SelectItem key={model.id} value={model.id}>
                     <div className="flex flex-col">
                       <span>{model.name}</span>

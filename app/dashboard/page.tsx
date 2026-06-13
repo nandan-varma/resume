@@ -9,8 +9,7 @@ import { SpotlightCard } from "@/components/spotlight-card";
 import { CountUp } from "@/components/count-up";
 
 export default async function Dashboard() {
-  const userData = await getCurrentUser();
-  const jobs = await getJobs();
+  const [userData, jobs] = await Promise.all([getCurrentUser(), getJobs()]);
 
   const interviewCount = jobs.filter((j) => j.status === "interview").length;
   const offerCount     = jobs.filter((j) => j.status === "offer").length;

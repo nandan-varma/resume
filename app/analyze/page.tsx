@@ -1,12 +1,16 @@
-"use client";
-
 import { JobAnalyzer } from "@/components/job-analyzer";
 import { Navigation } from "@/components/navigation";
-import { AuthGuard } from "@/components/auth-guard";
+import { getCurrentUser, getJobs, getPersonalInformation } from "@/server/users";
 
-export default function AnalyzePage() {
+export default async function AnalyzePage() {
+  const [, jobs, personalInfo] = await Promise.all([
+    getCurrentUser(), // redirects to /login if unauthenticated
+    getJobs(),
+    getPersonalInformation(),
+  ]);
+
   return (
-    <AuthGuard>
+    <>
       <Navigation activeTab="analyze" />
       <div className="min-h-screen p-6 md:p-10">
         <div className="mx-auto max-w-3xl">
@@ -17,10 +21,13 @@ export default function AnalyzePage() {
             </p>
           </div>
           <div className="animate-enter-up [animation-delay:80ms]">
-            <JobAnalyzer />
+            <JobAnalyzer
+              initialJobs={jobs.map((j) => ({ id: j.id, jobTitle: j.jobTitle }))}
+              hasResume={!!personalInfo?.resumeUrl}
+            />
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </>
   );
 }

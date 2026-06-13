@@ -73,27 +73,6 @@ export const personalInformation = pgTable(
   (table) => [index("personalInformation_userId_idx").on(table.userId)]
 );
 
-export const resumes = pgTable(
-  "resumes",
-  {
-    id: serial("id").primaryKey(),
-    resumeLatex: text("resume_latex").notNull(),
-    resumeUrl: text("resume_url"),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    jobId: integer("job_id").references(() => jobs.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("resumes_userId_idx").on(table.userId),
-    index("resumes_jobId_idx").on(table.jobId),
-  ]
-);
 
 export const session = pgTable(
   "session",
@@ -187,7 +166,6 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   jobs: many(jobs),
   personalInformation: many(personalInformation),
-  resumes: many(resumes),
   analysis: many(analysis),
 }));
 
@@ -210,7 +188,6 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     fields: [jobs.userId],
     references: [user.id],
   }),
-  resumes: many(resumes),
   analysis: many(analysis),
 }));
 
@@ -223,17 +200,6 @@ export const personalInformationRelations = relations(
     }),
   })
 );
-
-export const resumesRelations = relations(resumes, ({ one }) => ({
-  user: one(user, {
-    fields: [resumes.userId],
-    references: [user.id],
-  }),
-  job: one(jobs, {
-    fields: [resumes.jobId],
-    references: [jobs.id],
-  }),
-}));
 
 export const analysisRelations = relations(analysis, ({ one }) => ({
   user: one(user, {
@@ -253,6 +219,5 @@ export const schema = {
   verification,
   jobs,
   personalInformation,
-  resumes,
   analysis,
 };

@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { eq, and, desc } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -9,8 +10,13 @@ import type { JobStatus } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { uploadToR2 } from "@/lib/r2";
 
+// Deduplicates session lookups within a single request/render
+const getSession = cache(async () =>
+  auth.api.getSession({ headers: await headers() })
+);
+
 async function requireSession() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession();
   if (!session) redirect("/login");
   const currentUser = await db.query.user.findFirst({
     where: eq(user.id, session.user.id),
@@ -48,7 +54,7 @@ export const signUp = async (email: string, password: string, username: string) 
 
 export const uploadResume = async (fileBuffer: Buffer, fileName: string) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     const resumeUrl = await uploadToR2(fileName, fileBuffer, "application/pdf");
@@ -75,7 +81,7 @@ export const uploadResume = async (fileBuffer: Buffer, fileName: string) => {
 
 export const getPersonalInformation = async () => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return null;
     return await db.query.personalInformation.findFirst({
       where: eq(personalInformation.userId, session.user.id),
@@ -87,7 +93,7 @@ export const getPersonalInformation = async () => {
 
 export const saveAiPreferences = async (aiPreferences: string) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     const existing = await db.query.personalInformation.findFirst({
@@ -112,7 +118,7 @@ export const saveAiPreferences = async (aiPreferences: string) => {
 
 export const saveResumeLatex = async (resumeLatex: string) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     const existing = await db.query.personalInformation.findFirst({
@@ -143,7 +149,7 @@ export const createJob = async (
   link?: string
 ) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     const [job] = await db
@@ -160,7 +166,7 @@ export const createJob = async (
 
 export const getJobs = async () => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return [];
     return await db.query.jobs.findMany({
       where: eq(jobs.userId, session.user.id),
@@ -173,7 +179,7 @@ export const getJobs = async () => {
 
 export const updateJobStatus = async (jobId: number, status: JobStatus) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     const [job] = await db
@@ -191,7 +197,7 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
 
 export const deleteJob = async (jobId: number) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     await db
@@ -219,7 +225,7 @@ export const saveAnalysis = async (
   }
 ) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return { success: false, message: "Unauthorized" };
 
     const [result] = await db
@@ -245,7 +251,7 @@ export const saveAnalysis = async (
 
 export const getAnalysisByJobId = async (jobId: number) => {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await getSession();
     if (!session?.user.id) return null;
 
     const result = await db.query.analysis.findFirst({
