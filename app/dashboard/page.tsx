@@ -37,7 +37,7 @@ export default async function Dashboard() {
         </div>
 
         {/* Stat cards */}
-        <Link href="/jobs">
+        <Link href="/jobs" aria-label="View all applications">
           <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map(({ label, value, icon: Icon, color }, i) => (
               <SpotlightCard

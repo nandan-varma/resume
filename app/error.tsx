@@ -14,7 +14,7 @@ export default function Error({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
+    <main id="main-content" className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
       <div className="space-y-3 animate-enter-up">
         <h2 className="text-xl font-semibold text-foreground">
           Something went wrong
@@ -35,6 +35,6 @@ export default function Error({ error, reset }: ErrorProps) {
           Go home
         </Button>
       </div>
-    </div>
+    </main>
   );
 }

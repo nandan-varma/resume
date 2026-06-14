@@ -1,6 +1,8 @@
+import { after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { uploadResume } from "@/server/users";
-import { NextRequest, NextResponse } from "next/server";
+import { generateLatexFromPdf } from "@/lib/resume-latex";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46]); // %PDF
@@ -42,6 +44,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await uploadResume(buffer, fileName);
+    if (result.success && result.resumeUrl) {
+      // Generate LaTeX from the uploaded PDF in the background —
+      // response is sent to the client before this runs.
+      after(() => generateLatexFromPdf(session.user.id, result.resumeUrl!));
+    }
     return NextResponse.json(result);
   } catch (error) {
     console.error("Upload resume error:", error);

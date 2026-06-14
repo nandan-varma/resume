@@ -8,7 +8,7 @@ export default function DashboardLayout({
   return (
     <>
       <Navigation activeTab="dashboard" />
-      {children}
+      <main id="main-content">{children}</main>
     </>
   );
 }

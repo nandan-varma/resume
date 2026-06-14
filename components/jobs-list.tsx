@@ -114,7 +114,7 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
   );
 
   return (
-    <div className="min-h-screen p-6 md:p-10">
+    <main id="main-content" className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-start justify-between gap-4 animate-enter-up">
           <div>
@@ -298,6 +298,6 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

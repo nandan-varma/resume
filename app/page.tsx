@@ -8,11 +8,11 @@ import { SpotlightCard } from "@/components/spotlight-card";
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex h-12 items-center justify-between border-b border-border px-6 animate-enter">
+      <header className="flex h-12 items-center justify-between border-b border-border px-4 sm:px-6 animate-enter">
         <Link href="/" aria-label="JobMatch — home" className="transition-opacity hover:opacity-70">
           <Logo iconSize={24} />
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <ModeSwitcher />
           <Link href="/login">
             <Button variant="ghost" size="sm">Sign in</Button>
@@ -23,7 +23,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center gap-16 px-5 py-16 text-center">
+      <main id="main-content" className="flex flex-1 flex-col items-center justify-center gap-16 px-5 py-16 text-center">
 
         {/* Hero */}
         <div className="relative mx-auto max-w-2xl space-y-6">

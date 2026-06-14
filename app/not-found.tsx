@@ -4,7 +4,7 @@ import { Logo } from "@/components/logo";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
+    <main id="main-content" className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
       <div className="space-y-3 animate-enter-up">
         <p className="text-6xl font-bold tracking-tight text-foreground">404</p>
         <h1 className="text-xl font-semibold text-foreground">
@@ -25,6 +25,6 @@ export default function NotFound() {
       <Link href="/" aria-label="JobMatch — home">
         <Logo iconSize={22} />
       </Link>
-    </div>
+    </main>
   );
 }

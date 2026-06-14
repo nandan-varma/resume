@@ -35,7 +35,7 @@ export function SettingsClient({ userName, userEmail, initialPreferences }: Sett
   const isDirty = aiPreferences !== originalPrefs;
 
   return (
-    <div className="min-h-screen p-6 md:p-10">
+    <main id="main-content" className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-xl">
         <div className="mb-8 animate-enter-up">
           <h1 className="text-3xl font-bold text-foreground">Settings</h1>
@@ -95,6 +95,6 @@ export function SettingsClient({ userName, userEmail, initialPreferences }: Sett
           </div>
         </Card>
       </div>
-    </div>
+    </main>
   );
 }

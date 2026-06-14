@@ -127,7 +127,7 @@ export function LoginForm({
                             )}
                           </div>
                           <FormControl>
-                            <Input placeholder="m@example.com" {...field} />
+                            <Input placeholder="m@example.com" autoComplete="email" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -145,8 +145,9 @@ export function LoginForm({
                             <FormControl>
                               <Input
                                 placeholder="********"
-                                {...field}
                                 type="password"
+                                autoComplete="current-password"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
