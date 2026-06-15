@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { NetworkBackground } from "@/components/network-background";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,8 +53,10 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <div aria-hidden="true" className="grid-shine-overlay" />
-        <Providers>{children}</Providers>
+        <NetworkBackground />
+        <div className="relative z-[1]">
+          <Providers>{children}</Providers>
+        </div>
       </body>
     </html>
   );

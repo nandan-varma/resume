@@ -69,10 +69,6 @@
   /* Spotlight card glow */
   --spotlight: oklch(0.09 0 0 / 0.04);
 
-  /* Background grid */
-  --grid-dot:   oklch(0 0 0 / 0.12);
-  --grid-line:  oklch(0 0 0 / 0.055);
-  --grid-shine: oklch(0 0 0 / 0.022);
 }
 
 .dark {
@@ -101,9 +97,6 @@
   --shimmer-peak: oklch(0.23 0 0);
   --btn-shine: rgba(255, 255, 255, 0.05);
   --spotlight: oklch(1 0 0 / 0.06);
-  --grid-dot:   oklch(1 0 0 / 0.10);
-  --grid-line:  oklch(1 0 0 / 0.045);
-  --grid-shine: oklch(1 0 0 / 0.028);
 }
 
 /* ─────────────────────────────────────────────
@@ -115,13 +108,7 @@
   }
   body {
     color: var(--foreground);
-    /* Background colour + grid pattern baked into the same layer */
     background-color: var(--background);
-    background-image:
-      radial-gradient(circle at 0 0, var(--grid-dot) 1.5px, transparent 1.5px),
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
   }
 }
 
@@ -142,16 +129,6 @@
 @keyframes indicator-in {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
-}
-
-/* Grid shine — sweeps slowly across the full page, pauses off-screen */
-@keyframes grid-shine {
-  0%        { transform: translateX(-250%); opacity: 0; }
-  6%        { opacity: 1; }
-  44%       { opacity: 1; }
-  50%       { transform: translateX(300%); opacity: 0; }
-  50.001%   { transform: translateX(-250%); opacity: 0; }
-  100%      { transform: translateX(-250%); opacity: 0; }
 }
 
 /* ─────────────────────────────────────────────
@@ -191,36 +168,6 @@
   }
   .animate-shimmer       { animation: none; background-image: none; }
   .animate-indicator-in  { animation: none; transform: none; }
-  .grid-shine-overlay::before { animation: none !important; }
-}
-
-/* ─────────────────────────────────────────────
-   Background grid shine overlay
-   Fixed element, pointer-events: none — sits above everything
-   at near-zero opacity so content remains fully readable.
-───────────────────────────────────────────── */
-.grid-shine-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.grid-shine-overlay::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  /* 40% wide strip; at translateX(-250%) it's fully off-screen left */
-  width: 40%;
-  background: linear-gradient(
-    to right,
-    transparent    0%,
-    var(--grid-shine) 50%,
-    transparent  100%
-  );
-  animation: grid-shine 22s ease-in-out infinite;
 }
 
 /* ─────────────────────────────────────────────
