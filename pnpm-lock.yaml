@@ -86,6 +86,9 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
+      texlyre-busytex:
+        specifier: ^1.1.1
+        version: 1.1.1
       ws:
         specifier: ^8.20.1
         version: 8.20.1(bufferutil@4.1.0)
@@ -2679,6 +2682,10 @@ packages:
     resolution: {integrity: sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==}
     engines: {node: '>=6'}
 
+  texlyre-busytex@1.1.1:
+    resolution: {integrity: sha512-gIVTQVlf0jJRuAP6AyvIC9wSHndfIkJZTczvFTDkExXPFALttFdDXKZB7g3m+/hRfb5U97syXwL0kyDwhqCWWg==}
+    hasBin: true
+
   tinyexec@1.1.2:
     resolution: {integrity: sha512-dAqSqE/RabpBKI8+h26GfLq6Vb3JVXs30XYQjdMjaj/c2tS8IYYMbIzP599KtRj7c57/wYApb3QjgRgXmrCukA==}
     engines: {node: '>=18'}
@@ -5062,6 +5069,8 @@ snapshots:
   tailwindcss@4.3.0: {}
 
   tapable@2.3.3: {}
+
+  texlyre-busytex@1.1.1: {}
 
   tinyexec@1.1.2: {}
 

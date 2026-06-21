@@ -63,5 +63,5 @@ packages/*/.turbo
 # electron-builder
 builder-debug.yml
 
-# LaTeX assets (~400MB, downloaded at runtime to IndexedDB via S3)
-.busytex-cache/
+# LaTeX WASM engine assets (~125MB, downloaded during build)
+public/core/
