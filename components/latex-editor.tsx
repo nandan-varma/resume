@@ -120,13 +120,11 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
           setEngine({ phase: "error", message: "Compilation failed — see log below" });
         }
       } catch (err) {
-        if (engine.phase !== "error") {
-          const message = err instanceof Error ? err.message : String(err);
-          setEngine({ phase: "error", message });
-        }
+        const message = err instanceof Error ? err.message : String(err);
+        setEngine({ phase: "error", message });
       }
     },
-    [initEngine, engine.phase],
+    [initEngine],
   );
 
   // Pre-initialize engine on mount so it's ready when user starts typing
