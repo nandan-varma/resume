@@ -32,6 +32,17 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
 
+  async redirects() {
+    return [
+      {
+        source: "/core/busytex/texlive-extra.data",
+        destination:
+          "https://qujr12qsco.ufs.sh/f/fthLDAMTNUTlo2DzZXfKNuBGPq0OUSh5TDr7YsjQ9HmIvzRL",
+        permanent: false,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

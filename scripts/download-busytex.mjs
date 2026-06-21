@@ -7,14 +7,14 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEST = path.resolve(__dirname, '../public/core/busytex');
 
-// Engine + texlive-extra (cumulative: includes basic + recommended + latexextra + fontsrecommended).
-// ~363MB total; browser caches in IndexedDB after first download.
+// Engine files + package loader JS. texlive-extra.data (324 MB) is NOT downloaded here —
+// Next.js redirects /core/busytex/texlive-extra.data to external object storage so it
+// is served directly to the browser without using Vercel bandwidth.
 const REQUIRED = [
   'busytex.wasm',
   'busytex.js',
   'busytex_pipeline.js',
   'busytex_worker.js',
-  'texlive-extra.data',
   'texlive-extra.js',
   'texmf.cnf',
   'dvipdfmx.cfg',
