@@ -1,13 +1,14 @@
 "use client";
 
 import { Briefcase } from "lucide-react";
+import { memo } from "react";
 import type { EditorJob } from "./types";
 
 interface JobBannerProps {
   job: EditorJob | null;
 }
 
-export function JobBanner({ job }: JobBannerProps) {
+function JobBanner({ job }: JobBannerProps) {
   if (!job) {
     return null;
   }
@@ -24,3 +25,5 @@ export function JobBanner({ job }: JobBannerProps) {
     </div>
   );
 }
+
+export default memo(JobBanner);

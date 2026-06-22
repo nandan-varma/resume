@@ -150,8 +150,6 @@ export const DEFAULT_MODEL_ID: ModelId = "gemini-3-flash-preview";
  */
 export const MODEL_STORAGE_KEY = "job-match-ai-model";
 
-export type { ModelId };
-
 /**
  * Resolve a model ID to a model instance.
  * If the provided ID is invalid, falls back to the default model.

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Loader2, Terminal } from "lucide-react";
+import { memo, useMemo } from "react";
 import type { EnginePhase } from "./types";
 
 interface PdfPreviewProps {
@@ -56,17 +57,17 @@ function renderPreviewBody(
 
   if (pdfUrl) {
     return (
-      <div className="flex-1 overflow-auto">
+      <div className="flex h-full flex-1 overflow-auto">
         <div
           style={{
             transform: `scale(${zoom / 100})`,
             transformOrigin: "top left",
             width: `${10_000 / zoom}%`,
-            minHeight: "100%",
+            height: "100%",
           }}
         >
           <iframe
-            className="h-[calc(100vh-7rem)] w-full border-0"
+            className="h-full min-h-screen w-full border-0"
             src={pdfUrl}
             title="LaTeX PDF preview"
           />
@@ -85,7 +86,7 @@ function renderPreviewBody(
   );
 }
 
-export function PdfPreview({
+function PdfPreview({
   engine,
   compileLog,
   showLog,
@@ -98,17 +99,44 @@ export function PdfPreview({
     engine.phase === "loading" || engine.phase === "compiling";
   const hasError = engine.phase === "error";
 
-  let statusLabel: string | null;
-  if (engine.phase === "loading") {
-    statusLabel = engine.label;
-  } else if (engine.phase === "compiling") {
-    statusLabel = "Compiling…";
-  } else {
-    statusLabel = null;
-  }
+  const statusLabel = useMemo(() => {
+    if (engine.phase === "loading") {
+      return engine.label;
+    }
+    if (engine.phase === "compiling") {
+      return "Compiling…";
+    }
+    return null;
+  }, [engine]);
+
+  const body = useMemo(
+    () =>
+      renderPreviewBody(
+        isEmpty,
+        hasError,
+        engine,
+        pdfUrl,
+        compileLog,
+        showLog,
+        zoom,
+        onShowLogChange,
+        statusLabel
+      ),
+    [
+      isEmpty,
+      hasError,
+      engine,
+      pdfUrl,
+      compileLog,
+      showLog,
+      zoom,
+      onShowLogChange,
+      statusLabel,
+    ]
+  );
 
   return (
-    <div className="relative flex w-1/2 flex-col overflow-hidden">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex items-center justify-between border-border/50 border-b px-3 py-1">
         <span className="text-muted-foreground text-xs">Preview</span>
         <div className="flex items-center gap-2">
@@ -144,17 +172,9 @@ export function PdfPreview({
         </div>
       )}
 
-      {renderPreviewBody(
-        isEmpty,
-        hasError,
-        engine,
-        pdfUrl,
-        compileLog,
-        showLog,
-        zoom,
-        onShowLogChange,
-        statusLabel
-      )}
+      {body}
     </div>
   );
 }
+
+export default memo(PdfPreview);

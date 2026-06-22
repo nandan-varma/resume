@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
@@ -51,10 +51,12 @@ export async function POST(req: Request) {
       : "";
 
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: resolveModel(modelId),
-      schema: responseSchema,
-      schemaName: "ConsultationDecision",
+      output: Output.object({
+        schema: responseSchema,
+        name: "ConsultationDecision",
+      }),
       // Disable thinking — this is a simple yes/no structured decision.
       providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
       system: `You are a resume customization assistant checking whether you have all concrete facts needed before editing.
@@ -68,7 +70,7 @@ Rules:
       prompt: `Resume:\n\`\`\`latex\n${latex.slice(0, 4000)}\`\`\`\n\nJob Description:\n${jobDescription.slice(0, 3000)}${answersSection}\n\nDo you need one more concrete fact to avoid fabricating? If yes, ask it. If no, proceed.`,
     });
 
-    return Response.json(object);
+    return Response.json(output);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     const isQuota =

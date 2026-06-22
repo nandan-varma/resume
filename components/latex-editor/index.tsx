@@ -1,9 +1,11 @@
 "use client";
 
-import { EditorHeader } from "./editor-header";
-import { EditorPane } from "./editor-pane";
-import { JobBanner } from "./job-banner";
-import { PdfPreview } from "./pdf-preview";
+import EditorHeader from "./editor-header";
+import EditorPane from "./editor-pane";
+import { ErrorBoundary } from "./error-boundary";
+import JobBanner from "./job-banner";
+import PdfPreview from "./pdf-preview";
+import { ResizablePanel } from "./resizable-panel";
 import type { EditorJob } from "./types";
 import { useLatexEditor } from "./use-latex-editor";
 
@@ -21,6 +23,7 @@ export function LatexEditor({
   isNewJobResume = false,
 }: LatexEditorProps) {
   const {
+    autoSaving,
     latex,
     pdfUrl,
     engine,
@@ -49,50 +52,57 @@ export function LatexEditor({
   } = useLatexEditor(initialLatex, initialResumeUrl, job, isNewJobResume);
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <EditorHeader
-        dirty={dirty}
-        job={job}
-        onSave={handleSave}
-        onZoomChange={setZoom}
-        pdfUrl={pdfUrl}
-        saving={saving}
-        zoom={zoom}
-      />
-
-      <JobBanner job={job} />
-
-      <div className="flex min-h-0 flex-1">
-        <EditorPane
-          activeTab={activeTab}
-          chatInput={chatInput}
-          chatLoading={chatLoading}
-          chatMessages={chatMessages}
-          initialResumeUrl={initialResumeUrl}
-          isEmpty={isEmpty}
+    <ErrorBoundary>
+      <div className="flex h-screen flex-col bg-background">
+        <EditorHeader
+          autoSaving={autoSaving}
+          dirty={dirty}
           job={job}
-          latex={latex}
-          onChatInputChange={setChatInput}
-          onChatSend={handleChatSend}
-          onConsultPick={handleConsultPick}
-          onConsultSkip={handleConsultSkip}
-          onKeyDown={handleKeyDown}
-          onLatexChange={handleLatexChange}
-          onTabChange={setActiveTab}
-          pendingQuestion={pendingQuestion}
-          textareaRef={textareaRef}
-        />
-
-        <PdfPreview
-          compileLog={compileLog}
-          engine={engine}
-          isEmpty={isEmpty}
-          onShowLogChange={setShowLog}
+          onSave={handleSave}
+          onZoomChange={setZoom}
           pdfUrl={pdfUrl}
-          showLog={showLog}
+          saving={saving}
           zoom={zoom}
         />
+
+        <JobBanner job={job} />
+
+        <ResizablePanel
+          defaultLeftPercent={50}
+          left={
+            <EditorPane
+              activeTab={activeTab}
+              chatInput={chatInput}
+              chatLoading={chatLoading}
+              chatMessages={chatMessages}
+              initialResumeUrl={initialResumeUrl}
+              isEmpty={isEmpty}
+              job={job}
+              latex={latex}
+              onChatInputChange={setChatInput}
+              onChatSend={handleChatSend}
+              onConsultPick={handleConsultPick}
+              onConsultSkip={handleConsultSkip}
+              onKeyDown={handleKeyDown}
+              onLatexChange={handleLatexChange}
+              onTabChange={setActiveTab}
+              pendingQuestion={pendingQuestion}
+              textareaRef={textareaRef}
+            />
+          }
+          right={
+            <PdfPreview
+              compileLog={compileLog}
+              engine={engine}
+              isEmpty={isEmpty}
+              onShowLogChange={setShowLog}
+              pdfUrl={pdfUrl}
+              showLog={showLog}
+              zoom={zoom}
+            />
+          }
+        />
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

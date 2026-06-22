@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Loader2, Send, Sparkles } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { AssistantBubble, LoadingBubble, QuestionBubble } from "./chat-bubbles";
 import type { ChatMsg } from "./types";
@@ -84,7 +84,7 @@ function renderMessage(
   );
 }
 
-export function EditorPane({
+function EditorPane({
   activeTab,
   onTabChange,
   latex,
@@ -109,34 +109,36 @@ export function EditorPane({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   });
 
-  let placeholder: string;
-  if (pendingQuestion) {
-    placeholder = "Pick an option above…";
-  } else if (job) {
-    placeholder = "Ask for more changes…";
-  } else {
-    placeholder = "e.g. Add a skills section…";
-  }
+  const placeholder = useMemo(() => {
+    if (pendingQuestion) {
+      return "Pick an option above…";
+    }
+    if (job) {
+      return "Ask for more changes…";
+    }
+    return "e.g. Add a skills section…";
+  }, [pendingQuestion, job]);
 
-  let chatBody: React.ReactNode;
-  if (chatMessages.length === 0) {
-    chatBody = chatLoading ? (
-      <LoadingBubble label="Reviewing resume…" />
-    ) : (
-      <p className="py-4 text-center text-muted-foreground text-xs">
-        {job
-          ? "Resume customized — ask for further changes."
-          : "Describe what you'd like to change and AI will edit your LaTeX."}
-      </p>
-    );
-  } else {
-    chatBody = chatMessages.map((msg, i) =>
+  const chatBody = useMemo(() => {
+    if (chatMessages.length === 0) {
+      if (chatLoading) {
+        return <LoadingBubble label="Reviewing resume…" />;
+      }
+      return (
+        <p className="py-4 text-center text-muted-foreground text-xs">
+          {job
+            ? "Resume customized — ask for further changes."
+            : "Describe what you'd like to change and AI will edit your LaTeX."}
+        </p>
+      );
+    }
+    return chatMessages.map((msg, i) =>
       renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
     );
-  }
+  }, [chatMessages, chatLoading, job, onConsultPick, onConsultSkip]);
 
   return (
-    <div className="flex min-h-0 w-1/2 flex-col border-border border-r">
+    <div className="flex min-h-0 flex-1 flex-col border-border border-r">
       <div className="flex shrink-0 items-center border-border/50 border-b">
         {(["editor", "chat"] as const).map((tab) => (
           <button
@@ -159,9 +161,7 @@ export function EditorPane({
       <textarea
         aria-label="LaTeX source"
         className={`min-h-0 flex-1 resize-none bg-background p-4 font-mono text-foreground text-sm focus:outline-none ${activeTab === "chat" ? "hidden" : ""}`}
-        onChange={(e) => {
-          onLatexChange(e.target.value);
-        }}
+        onChange={(e) => onLatexChange(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder={
           latex.trim() === "" && initialResumeUrl
@@ -215,3 +215,5 @@ export function EditorPane({
     </div>
   );
 }
+
+export default memo(EditorPane);

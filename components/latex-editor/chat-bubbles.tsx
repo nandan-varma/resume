@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 interface QuestionBubbleProps {
   answered?: string;
@@ -12,13 +12,13 @@ interface QuestionBubbleProps {
   question: string;
 }
 
-export function QuestionBubble({
-  question,
-  options,
+function RawQuestionBubble({
   answered,
   loading,
   onPick,
   onSkip,
+  options,
+  question,
 }: QuestionBubbleProps) {
   const [showCustom, setShowCustom] = useState(false);
   const [custom, setCustom] = useState("");
@@ -100,10 +100,7 @@ interface AssistantBubbleProps {
   editsApplied?: number;
 }
 
-export function AssistantBubble({
-  content,
-  editsApplied,
-}: AssistantBubbleProps) {
+function RawAssistantBubble({ content, editsApplied }: AssistantBubbleProps) {
   return (
     <span className="whitespace-pre-wrap">
       {content}
@@ -124,7 +121,7 @@ interface LoadingBubbleProps {
   label?: string;
 }
 
-export function LoadingBubble({ label = "Thinking…" }: LoadingBubbleProps) {
+function RawLoadingBubble({ label = "Thinking…" }: LoadingBubbleProps) {
   return (
     <div className="flex justify-start">
       <span className="inline-flex items-center gap-1.5 rounded bg-muted px-2.5 py-1.5 text-muted-foreground text-xs">
@@ -134,3 +131,7 @@ export function LoadingBubble({ label = "Thinking…" }: LoadingBubbleProps) {
     </div>
   );
 }
+
+export const QuestionBubble = memo(RawQuestionBubble);
+export const AssistantBubble = memo(RawAssistantBubble);
+export const LoadingBubble = memo(RawLoadingBubble);

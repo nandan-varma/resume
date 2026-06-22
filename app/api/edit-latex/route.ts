@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
@@ -103,17 +103,19 @@ CRITICAL RULES:
   systemParts.push(`\nCurrent LaTeX resume:\n\`\`\`latex\n${latex}\n\`\`\``);
 
   try {
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: modelInstance,
-      schema: editSchema,
-      schemaName: "ResumeEdits",
-      schemaDescription:
-        "Targeted find-and-replace edits to apply to the LaTeX resume",
+      output: Output.object({
+        schema: editSchema,
+        name: "ResumeEdits",
+        description:
+          "Targeted find-and-replace edits to apply to the LaTeX resume",
+      }),
       system: systemParts.join("\n"),
       messages: [...history, { role: "user", content: instruction.trim() }],
     });
 
-    return Response.json(object);
+    return Response.json(output);
   } catch (err) {
     console.error("[edit-latex]", err);
     const errorMessage =

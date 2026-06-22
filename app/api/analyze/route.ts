@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
@@ -80,9 +80,9 @@ export async function POST(req: Request) {
   try {
     const resumeBase64 = await fetchResumeBase64(session.user.id);
 
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: resolveModel(modelId),
-      schema: analysisSchema,
+      output: Output.object({ schema: analysisSchema }),
       messages: [
         {
           role: "user",
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
       ],
     });
 
-    return Response.json({ result: object });
+    return Response.json({ result: output });
   } catch (error) {
     console.error("[analyze]", error);
     const errorMessage =

@@ -11,10 +11,12 @@ import {
   ZoomOut,
 } from "lucide-react";
 import Link from "next/link";
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import type { EditorJob } from "./types";
 
 interface EditorHeaderProps {
+  autoSaving: boolean;
   dirty: boolean;
   job: EditorJob | null;
   onSave: () => void;
@@ -24,14 +26,15 @@ interface EditorHeaderProps {
   zoom: number;
 }
 
-export function EditorHeader({
-  job,
+function EditorHeader({
+  autoSaving,
   dirty,
+  job,
   pdfUrl,
   saving,
   zoom,
-  onZoomChange,
   onSave,
+  onZoomChange,
 }: EditorHeaderProps) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-border border-b px-4">
@@ -52,8 +55,9 @@ export function EditorHeader({
           </span>
         )}
         {dirty && (
-          <span className="text-xs text-yellow-500 dark:text-yellow-400">
-            Unsaved changes
+          <span className="inline-flex items-center gap-1 text-xs text-yellow-500 dark:text-yellow-400">
+            {autoSaving && <Loader2 className="size-3 animate-spin" />}
+            {autoSaving ? "Saving…" : "Unsaved changes"}
           </span>
         )}
       </div>
@@ -118,3 +122,5 @@ export function EditorHeader({
     </header>
   );
 }
+
+export default memo(EditorHeader);

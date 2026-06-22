@@ -76,6 +76,8 @@ export function useLatexEditor(
     () => !(job && isNewJobResume)
   );
 
+  const [autoSaving, setAutoSaving] = useState(false);
+
   const aiAppliedRef = useRef(false);
   const autoFixCountRef = useRef(0);
   const runAutoFixRef = useRef<(log: string) => void>(() => {
@@ -88,6 +90,8 @@ export function useLatexEditor(
   const pdfBlobUrlRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEditRef = useRef(Date.now());
 
   useEffect(() => {
     latexRef.current = latex;
@@ -450,17 +454,43 @@ export function useLatexEditor(
 
   const handleSave = useCallback(async () => {
     setSaving(true);
-    const result = job
-      ? await saveJobResumeLatex(job.id, latex)
-      : await saveResumeLatex(latex);
-    setSaving(false);
-    if (result.success) {
-      setDirty(false);
-      toast.success(job ? "Job resume saved" : "LaTeX saved");
-    } else {
-      toast.error(result.message ?? "Failed to save");
+    try {
+      const result = job
+        ? await saveJobResumeLatex(job.id, latex)
+        : await saveResumeLatex(latex);
+      if (result.success) {
+        setDirty(false);
+        setAutoSaving(false);
+        toast.success(job ? "Job resume saved" : "LaTeX saved");
+      } else {
+        toast.error(result.message ?? "Failed to save");
+      }
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
     }
   }, [job, latex]);
+
+  // ── Auto-save ──────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!dirty || saving) {
+      return;
+    }
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    autoSaveTimerRef.current = setTimeout(() => {
+      setAutoSaving(true);
+      handleSave();
+    }, 5000);
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [dirty, saving, handleSave]);
 
   // ── Text change ────────────────────────────────────────────────────────────
 
@@ -468,6 +498,7 @@ export function useLatexEditor(
     setLatex(value);
     setDirty(true);
     aiAppliedRef.current = false;
+    lastEditRef.current = Date.now();
   }, []);
 
   // ── Key handler ────────────────────────────────────────────────────────────
@@ -505,6 +536,7 @@ export function useLatexEditor(
     !consultDone && lastMsg?.role === "question" && !lastMsg.answered;
 
   return {
+    autoSaving,
     latex,
     pdfUrl,
     engine,
