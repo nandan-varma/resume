@@ -150,9 +150,9 @@ export const analysis = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     matchPercentage: integer("match_percentage").notNull(),
     summary: text("summary").notNull(),
-    strengths: text("strengths").notNull(), // JSON array stored as text
-    missingKeywords: text("missing_keywords").notNull(), // JSON array stored as text
-    improvementSuggestions: text("improvement_suggestions").notNull(), // JSON array stored as text
+    strengths: jsonb("strengths").$type<string[]>().notNull().default([]),
+    missingKeywords: jsonb("missing_keywords").$type<string[]>().notNull().default([]),
+    improvementSuggestions: jsonb("improvement_suggestions").$type<string[]>().notNull().default([]),
     additionalInsights: text("additional_insights"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

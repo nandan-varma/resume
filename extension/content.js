@@ -1,133 +1,260 @@
-// ponytail: APP_URL read from background to stay in sync
-const JD_SELECTORS = [
-  "#job-details",
-  '[class*="jobs-description__content"]',
-  '[class*="description__text"]',
-  "article",
-];
-
-let card = null;
-let currentUrl = location.href;
+// ponytail: card.css injected via manifest; tokens match app globals.css oklch values
+const CARD_ID = "jm-card";
 let appUrl = "http://localhost:3000";
+let currentUrl = location.href;
+let autoAnalyze = false;
+let autoSave = false;
 
-// Inject spinner keyframe once
-const style = document.createElement("style");
-style.textContent = "@keyframes jm-spin{to{transform:rotate(360deg)}}";
-document.head.appendChild(style);
+let lastAnalysis = null;
+let lastJd = null;
+let savedJobId = null;
+
+function resetPageState() { lastAnalysis = null; lastJd = null; savedJobId = null; }
+
+// ── Extraction ────────────────────────────────────────────────────────────────
 
 function extractJobDescription() {
-  for (const sel of JD_SELECTORS) {
-    const el = document.querySelector(sel);
-    if (el?.textContent?.trim()) return el.textContent.trim().slice(0, 8000);
+  const el = document.querySelector('[data-testid="expandable-text-box"]');
+  if (el?.textContent?.trim()) return el.textContent.trim().slice(0, 8000);
+  for (const sel of ["#job-details", "article"]) {
+    const fb = document.querySelector(sel);
+    if (fb?.textContent?.trim()) return fb.textContent.trim().slice(0, 8000);
   }
   return null;
 }
 
-function isJobPage() {
-  return /linkedin\.com\/jobs\/(view|collections)/.test(location.href);
+function extractJobTitle() {
+  const sel = document.querySelector('[aria-label^="Selected,"]');
+  if (sel) return sel.getAttribute("aria-label").replace(/^Selected,\s*/, "").replace(/\s*\(Verified job\)$/, "").trim();
+  return document.title.replace(/\s*\|\s*LinkedIn$/, "").trim() || "Job";
 }
 
-function removeCard() {
-  card?.remove();
-  card = null;
+// ── Card DOM ──────────────────────────────────────────────────────────────────
+
+function getCard() { return document.getElementById(CARD_ID); }
+function removeCard() { getCard()?.remove(); }
+function isFloat() { return getCard()?.dataset.mode === "float"; }
+
+function findAnchor() {
+  return document.querySelector('[componentkey*="JobDetails_AboutTheJob_"]');
 }
 
-function createTrigger() {
-  if (card) return;
-  card = document.createElement("div");
-  card.id = "jm-card";
-  card.style.cssText =
-    "position:fixed;bottom:20px;right:20px;z-index:2147483647;background:#18181b;color:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.5);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;overflow:hidden;cursor:pointer;";
-  card.innerHTML = `<div style="padding:10px 14px;display:flex;align-items:center;gap:8px;" id="jm-trigger">
-    <span style="font-size:20px">🎯</span>
-    <span style="font-weight:600;font-size:13px;">Match Score</span>
-  </div>`;
-  card.querySelector("#jm-trigger").addEventListener("click", runAnalysis);
-  document.body.appendChild(card);
+function injectCard() {
+  if (getCard()) return;
+  resetPageState();
+
+  const card = document.createElement("div");
+  card.id = CARD_ID;
+
+  const anchor = findAnchor();
+  if (anchor) {
+    card.dataset.mode = "inline";
+    anchor.parentElement.insertBefore(card, anchor);
+  } else {
+    card.dataset.mode = "float";
+    document.body.appendChild(card);
+  }
+
+  renderTrigger();
+  if (autoAnalyze) runAnalysis();
 }
 
-function renderResult(data) {
-  const { match_percentage, summary } = data.result;
-  const color =
-    match_percentage >= 70 ? "#22c55e" : match_percentage >= 50 ? "#f59e0b" : "#ef4444";
-  setCardHtml(`
-    <div style="padding:16px;width:280px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <span style="font-weight:700;font-size:11px;letter-spacing:.08em;color:#71717a;">MATCH SCORE</span>
-        <button id="jm-close" style="background:none;border:none;color:#71717a;cursor:pointer;font-size:18px;line-height:1;padding:0;">✕</button>
+// ── Render states ─────────────────────────────────────────────────────────────
+
+function setHtml(html) {
+  const c = getCard();
+  if (c) c.innerHTML = html;
+}
+
+// Wrap content for floating card (adds padding + fixed width)
+function wrap(inner) {
+  return isFloat() ? `<div class="jm-p jm-w280">${inner}</div>` : inner;
+}
+
+function renderTrigger() {
+  if (isFloat()) {
+    setHtml(`<div class="jm-p jm-row" id="jm-trigger" style="cursor:pointer;">
+      <span style="font-size:20px;">🎯</span>
+      <span class="jm-title">Match Score</span>
+    </div>`);
+    getCard().querySelector("#jm-trigger").addEventListener("click", runAnalysis);
+  } else {
+    setHtml(`<div class="jm-btwn" style="align-items:center;">
+      <div class="jm-row">
+        <span style="font-size:18px;">🎯</span>
+        <span class="jm-title">Check resume match</span>
       </div>
-      <div style="font-size:48px;font-weight:800;color:${color};line-height:1;margin-bottom:12px;">${match_percentage}%</div>
-      <p style="color:#d4d4d8;font-size:12px;line-height:1.55;margin:0 0 14px;">${summary}</p>
-      <a href="${appUrl}/analyze" target="_blank" style="display:block;text-align:center;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;padding:9px;font-size:12px;font-weight:600;">Full Analysis →</a>
-    </div>
-  `);
-  card.querySelector("#jm-close").addEventListener("click", (e) => {
-    e.stopPropagation();
+      <button class="jm-btn jm-btn-p" id="jm-analyze">Analyze →</button>
+    </div>`);
+    getCard().querySelector("#jm-analyze").addEventListener("click", runAnalysis);
+  }
+}
+
+function renderLoading(text = "Analyzing…") {
+  setHtml(wrap(`<div class="jm-row"><div class="jm-spin"></div><span class="jm-body">${text}</span></div>`));
+}
+
+function scoreClass(pct) {
+  return pct >= 70 ? "jm-c-ok" : pct >= 50 ? "jm-c-wa" : "jm-c-er";
+}
+
+function actionButtons(jobId) {
+  if (jobId) {
+    return `
+      <a href="${appUrl}/editor?jobId=${jobId}" target="_blank" class="jm-btn jm-btn-p${isFloat() ? " jm-full" : ""}">Customize Resume →</a>
+      <a href="${appUrl}/jobs" target="_blank" class="jm-btn jm-btn-o${isFloat() ? " jm-full" : ""}">View Tracker</a>`;
+  }
+  return `
+    <a href="${appUrl}/analyze" target="_blank" class="jm-btn jm-btn-p${isFloat() ? " jm-full" : ""}">Full Analysis →</a>
+    <button class="jm-btn jm-btn-o${isFloat() ? " jm-full" : ""}" id="jm-save">💾 Save Job</button>`;
+}
+
+function renderResult(data, jobId) {
+  const card = getCard();
+  if (!card) return;
+  const { match_percentage: pct, summary } = data.result;
+  const cls = scoreClass(pct);
+
+  const inner = isFloat()
+    ? `<div class="jm-btwn" style="margin-bottom:12px;">
+         <span class="jm-label">Match Score</span>
+         <button class="jm-btn-g" id="jm-close" style="font-size:18px;line-height:1;">✕</button>
+       </div>
+       <div class="jm-score-lg ${cls}">${pct}%</div>
+       <p class="jm-body" style="margin-bottom:14px;">${summary}</p>
+       <div class="jm-col">${actionButtons(jobId)}</div>`
+    : `<div class="jm-btwn">
+         <div class="jm-grow">
+           <div class="jm-row" style="align-items:baseline;margin-bottom:6px;">
+             <span class="jm-score ${cls}">${pct}%</span>
+             <span class="jm-badge">match</span>
+           </div>
+           <p class="jm-body">${summary}</p>
+         </div>
+         <div class="jm-col jm-shrink">
+           ${actionButtons(jobId)}
+           <button class="jm-btn-g" id="jm-close">dismiss</button>
+         </div>
+       </div>`;
+
+  setHtml(wrap(inner));
+
+  card.querySelector("#jm-save")?.addEventListener("click", doSaveJob);
+  card.querySelector("#jm-close")?.addEventListener("click", () => {
     removeCard();
-    setTimeout(createTrigger, 600);
+    if (isFloat()) setTimeout(() => injectCard(), 600);
   });
 }
 
 function renderError(msg) {
+  const card = getCard();
+  if (!card) return;
   const isAuth = msg === "Not logged in";
-  setCardHtml(`
-    <div style="padding:16px;width:240px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="font-weight:700;font-size:11px;letter-spacing:.08em;color:#71717a;">JOBMATCH</span>
-        <button id="jm-close" style="background:none;border:none;color:#71717a;cursor:pointer;font-size:18px;line-height:1;padding:0;">✕</button>
-      </div>
-      <p style="color:#f87171;font-size:12px;margin:0 0 12px;">${msg}</p>
-      ${isAuth ? `<a href="${appUrl}/login" target="_blank" style="display:block;text-align:center;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;padding:9px;font-size:12px;font-weight:600;">Log In →</a>` : ""}
-    </div>
-  `);
+
+  const inner = isFloat()
+    ? `<div class="jm-btwn" style="margin-bottom:10px;">
+         <span class="jm-label">JobMatch</span>
+         <button class="jm-btn-g" id="jm-close" style="font-size:18px;line-height:1;">✕</button>
+       </div>
+       <p class="jm-body jm-c-er" style="margin-bottom:12px;">${msg}</p>
+       ${isAuth ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p jm-full">Log In →</a>` : ""}`
+    : `<div class="jm-btwn" style="align-items:center;">
+         <p class="jm-body jm-c-er">${msg}</p>
+         ${isAuth
+           ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p">Log In →</a>`
+           : `<button class="jm-btn-g" id="jm-retry">Retry</button>`
+         }
+       </div>`;
+
+  setHtml(wrap(inner));
+  card.querySelector("#jm-retry")?.addEventListener("click", runAnalysis);
   card.querySelector("#jm-close")?.addEventListener("click", () => {
     removeCard();
-    setTimeout(createTrigger, 600);
+    if (isFloat()) setTimeout(() => injectCard(), 600);
   });
 }
 
-function renderLoading() {
-  setCardHtml(`
-    <div style="padding:16px;display:flex;align-items:center;gap:10px;min-width:170px;">
-      <div style="width:18px;height:18px;border:2px solid #6366f1;border-top-color:transparent;border-radius:50%;animation:jm-spin .8s linear infinite;flex-shrink:0;"></div>
-      <span style="color:#a1a1aa;font-size:13px;">Analyzing…</span>
-    </div>
-  `);
-}
+// ── Actions ───────────────────────────────────────────────────────────────────
 
-function setCardHtml(html) {
-  if (!card) return;
-  card.innerHTML = html;
+function sendMsg(payload) {
+  return new Promise((resolve) => chrome.runtime.sendMessage(payload, resolve));
 }
 
 async function runAnalysis() {
   const jd = extractJobDescription();
-  if (!jd) {
-    renderError("Could not read job description from this page.");
+  if (!jd) { renderError("Could not read job description from this page."); return; }
+
+  renderLoading("Analyzing your resume…");
+  const result = await sendMsg({ type: "ANALYZE", jobDescription: jd });
+  if (result?.error) { renderError(result.error); return; }
+
+  lastAnalysis = result.result;
+  lastJd = jd;
+
+  if (autoSave) {
+    renderLoading("Saving job…");
+    const saveRes = await sendMsg({
+      type: "SAVE_JOB",
+      jobTitle: extractJobTitle(),
+      jobDescription: jd,
+      link: location.href,
+      analysis: result.result,
+    });
+    if (!saveRes?.error) savedJobId = saveRes?.job?.id ?? null;
+  }
+
+  renderResult(result, savedJobId);
+}
+
+async function doSaveJob() {
+  const btn = getCard()?.querySelector("#jm-save");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+
+  const res = await sendMsg({
+    type: "SAVE_JOB",
+    jobTitle: extractJobTitle(),
+    jobDescription: lastJd,
+    link: location.href,
+    analysis: lastAnalysis,
+  });
+
+  if (res?.error) {
+    if (btn) { btn.disabled = false; btn.textContent = "💾 Save Job"; }
     return;
   }
-  renderLoading();
-  const result = await chrome.runtime.sendMessage({ type: "ANALYZE", jobDescription: jd });
-  if (result?.error) renderError(result.error);
-  else renderResult(result);
+  savedJobId = res?.job?.id ?? null;
+  renderResult({ result: lastAnalysis }, savedJobId);
 }
 
-function init() {
-  if (isJobPage()) createTrigger();
-  else removeCard();
+// ── Init & SPA navigation ─────────────────────────────────────────────────────
+
+function isJobPage() {
+  const u = new URL(location.href);
+  return u.pathname.startsWith("/jobs/") &&
+    (u.searchParams.has("currentJobId") || u.pathname.includes("/view/"));
 }
 
-// Sync appUrl from background and init
-chrome.runtime.sendMessage({ type: "CHECK_AUTH" }, (res) => {
-  if (res?.appUrl) appUrl = res.appUrl;
-  init();
-});
+let settleTimer = null;
+function scheduleInject() {
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => {
+    if (!isJobPage()) { removeCard(); return; }
+    if (!getCard() && findAnchor()) injectCard();
+  }, 800);
+}
 
-// Handle LinkedIn SPA navigation
-setInterval(() => {
+const observer = new MutationObserver(() => {
   if (location.href !== currentUrl) {
     currentUrl = location.href;
     removeCard();
-    setTimeout(init, 1200);
   }
-}, 1000);
+  if (isJobPage() && !getCard()) scheduleInject();
+});
+
+chrome.runtime.sendMessage({ type: "GET_INIT" }, (res) => {
+  if (res?.appUrl) appUrl = res.appUrl;
+  if (res?.settings?.autoAnalyze) autoAnalyze = true;
+  if (res?.settings?.autoSave) autoSave = true;
+  observer.observe(document.body, { childList: true, subtree: true });
+  scheduleInject();
+});

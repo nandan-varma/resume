@@ -7,6 +7,10 @@ const DIST_SQ = CONNECT_DIST * CONNECT_DIST;
 const MAX_SPEED = 0.28;
 const BUCKETS = 5; // alpha tiers → 5 stroke() calls for all edges
 const MAX_N = 220; // upper cap for pre-allocation
+const ATTRACT_DIST = 180; // mouse attraction radius
+const ATTRACT_DIST_SQ = ATTRACT_DIST * ATTRACT_DIST;
+const NODE_GLOW_R = 130; // radius for per-node mouse glow
+const NODE_GLOW_SQ = NODE_GLOW_R * NODE_GLOW_R;
 
 // ─── Pre-allocated edge storage (module-level = allocated once, never GC'd) ──
 // Worst case: all MAX_N*(MAX_N-1)/2 edges land in one bucket.
@@ -63,6 +67,8 @@ export function NetworkBackground() {
     let raf = 0;
     let W = window.innerWidth;
     let H = window.innerHeight;
+    let mx = -9999;
+    let my = -9999;
 
     const nodes: Node[] = Array.from({ length: targetCount(W, H) }, () =>
       spawnNode(W, H)
@@ -98,7 +104,18 @@ export function NetworkBackground() {
       applySize();
     };
 
+    const onMouse = (e: MouseEvent) => {
+      mx = e.clientX;
+      my = e.clientY;
+    };
+    const onMouseLeave = () => {
+      mx = -9999;
+      my = -9999;
+    };
+
     window.addEventListener("resize", onResize);
+    window.addEventListener("mousemove", onMouse, { passive: true });
+    document.addEventListener("mouseleave", onMouseLeave);
 
     // ── Main loop ─────────────────────────────────────────────────────────────
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: intentional hot-path canvas animation
@@ -109,7 +126,20 @@ export function NetworkBackground() {
 
       ctx.clearRect(0, 0, W, H);
 
-      // Phase 1 — update positions, bounce off walls.
+      // Phase 0 — mouse spotlight: one radial gradient fill, trivial cost.
+      if (mx > -999) {
+        const grd = ctx.createRadialGradient(mx, my, 0, mx, my, 220);
+        grd.addColorStop(
+          0,
+          dark ? "rgba(180,200,255,0.06)" : "rgba(80,100,200,0.04)"
+        );
+        grd.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Phase 1 — update positions, bounce off walls, weak mouse attraction.
+      const maxSpeedBoosted = MAX_SPEED * 2.2;
       for (let i = 0; i < n; i++) {
         const nd = nodes[i];
         nd.x += nd.vx;
@@ -127,6 +157,24 @@ export function NetworkBackground() {
         } else if (nd.y > H) {
           nd.y = H;
           nd.vy = -nd.vy;
+        }
+        // Weak attraction toward mouse — O(n), one sqrt per attracted node.
+        if (mx > -999) {
+          const ddx = mx - nd.x;
+          const ddy = my - nd.y;
+          const dd2 = ddx * ddx + ddy * ddy;
+          if (dd2 < ATTRACT_DIST_SQ && dd2 > 1) {
+            const f = 0.012 / Math.sqrt(dd2);
+            nd.vx += ddx * f;
+            nd.vy += ddy * f;
+            // Soft speed cap — no hard clamp to avoid jerking.
+            const spd = Math.sqrt(nd.vx * nd.vx + nd.vy * nd.vy);
+            if (spd > maxSpeedBoosted) {
+              const inv = maxSpeedBoosted / spd;
+              nd.vx *= inv;
+              nd.vy *= inv;
+            }
+          }
         }
       }
 
@@ -211,6 +259,39 @@ export function NetworkBackground() {
       }
       ctx.fill();
 
+      // Phase 4b — mouse-proximity glow: two batched arc passes (inner/outer zone).
+      // ponytail: two fixed thresholds instead of per-node alpha avoids per-shape fill() calls
+      if (mx > -999) {
+        const innerSq = NODE_GLOW_R * 0.45 * (NODE_GLOW_R * 0.45);
+        ctx.fillStyle = dark ? "rgba(180,210,255,1)" : "rgba(80,110,220,1)";
+
+        // Outer zone: large faint halo
+        ctx.globalAlpha = dark ? 0.13 : 0.08;
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const mdx = nodes[i].x - mx,
+            mdy = nodes[i].y - my;
+          if (mdx * mdx + mdy * mdy < NODE_GLOW_SQ) {
+            ctx.moveTo(nodes[i].x + 8, nodes[i].y);
+            ctx.arc(nodes[i].x, nodes[i].y, 8, 0, TAU);
+          }
+        }
+        ctx.fill();
+
+        // Inner zone: brighter core
+        ctx.globalAlpha = dark ? 0.85 : 0.65;
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const mdx = nodes[i].x - mx,
+            mdy = nodes[i].y - my;
+          if (mdx * mdx + mdy * mdy < innerSq) {
+            ctx.moveTo(nodes[i].x + 2.5, nodes[i].y);
+            ctx.arc(nodes[i].x, nodes[i].y, 2.5, 0, TAU);
+          }
+        }
+        ctx.fill();
+      }
+
       ctx.globalAlpha = 1;
       raf = requestAnimationFrame(tick);
     };
@@ -220,6 +301,8 @@ export function NetworkBackground() {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("mousemove", onMouse);
+      document.removeEventListener("mouseleave", onMouseLeave);
     };
   }, []);
 

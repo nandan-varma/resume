@@ -52,11 +52,9 @@ export const saveAnalysis = async (
         userId: session.user.id,
         matchPercentage: parsed.data.match_percentage,
         summary: parsed.data.summary,
-        strengths: JSON.stringify(parsed.data.strengths),
-        missingKeywords: JSON.stringify(parsed.data.missing_keywords),
-        improvementSuggestions: JSON.stringify(
-          parsed.data.improvement_suggestions
-        ),
+        strengths: parsed.data.strengths,
+        missingKeywords: parsed.data.missing_keywords,
+        improvementSuggestions: parsed.data.improvement_suggestions,
         additionalInsights: parsed.data.additional_insights ?? null,
       })
       .returning();
@@ -90,18 +88,9 @@ export const getAnalysisByJobId = async (jobId: number) => {
       ),
     });
 
-    if (!result) {
-      return null;
-    }
+    if (!result) return null;
 
-    return {
-      ...result,
-      strengths: JSON.parse(result.strengths) as string[],
-      missingKeywords: JSON.parse(result.missingKeywords) as string[],
-      improvementSuggestions: JSON.parse(
-        result.improvementSuggestions
-      ) as string[],
-    };
+    return result;
   } catch {
     return null;
   }

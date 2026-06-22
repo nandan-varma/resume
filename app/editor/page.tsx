@@ -1,9 +1,13 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getQueryClient } from "@/app/get-query-client";
 import { LatexEditor } from "@/components/latex-editor";
+import { getAnalysisByJobId } from "@/server/analysis";
 import { getJobById } from "@/server/jobs";
 import { getJobResume, getPersonalInformation } from "@/server/resume";
 import { getCurrentUser } from "@/server/users";
+import { jobResumeQueryKey, personalInfoQueryKey } from "@/lib/queries/resume";
 
 export const metadata: Metadata = {
   title: "LaTeX Editor",
@@ -40,34 +44,48 @@ export default async function EditorPage({
   const { jobId: jobIdStr } = await searchParams;
   const jobId = jobIdStr ? Number(jobIdStr) : null;
 
-  const [, personalInfo, job, jobResume] = await Promise.all([
+  const queryClient = getQueryClient();
+
+  // Prefetch into TanStack cache so mutations have a base to update
+  // and navigating back to the editor is instant (no re-fetch)
+  const [, personalInfo, job, jobResume, existingAnalysis] = await Promise.all([
     getCurrentUser(),
     getPersonalInformation(),
     jobId ? getJobById(jobId) : Promise.resolve(null),
     jobId ? getJobResume(jobId) : Promise.resolve(null),
+    jobId ? getAnalysisByJobId(jobId) : Promise.resolve(null),
   ]);
 
-  const initialLatex =
-    jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
-  const initialChatMessages =
-    jobResume?.chatMessages ?? personalInfo?.chatMessages;
+  // Seed the query cache with what we already fetched
+  if (jobId && jobResume !== undefined) {
+    queryClient.setQueryData(jobResumeQueryKey(jobId), jobResume);
+  }
+  if (personalInfo !== undefined) {
+    queryClient.setQueryData(personalInfoQueryKey, personalInfo);
+  }
+
+  const initialLatex = jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
+  // Each job's chatMessages lives in its own JSONB column — no cross-contamination
+  const initialChatMessages = jobId
+    ? (jobResume?.chatMessages ?? [])
+    : (personalInfo?.chatMessages ?? []);
+
+  const isNewJobResume = !!job && !jobResume && !existingAnalysis;
 
   return (
-    <Suspense fallback={<EditorSkeleton />}>
-      <LatexEditor
-        initialChatMessages={initialChatMessages}
-        initialLatex={initialLatex}
-        isNewJobResume={!!job && !jobResume}
-        job={
-          job
-            ? {
-                id: job.id,
-                title: job.jobTitle,
-                description: job.jobDescription,
-              }
-            : null
-        }
-      />
-    </Suspense>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <Suspense fallback={<EditorSkeleton />}>
+        <LatexEditor
+          initialChatMessages={initialChatMessages}
+          initialLatex={initialLatex}
+          isNewJobResume={isNewJobResume}
+          job={
+            job
+              ? { id: job.id, title: job.jobTitle, description: job.jobDescription }
+              : null
+          }
+        />
+      </Suspense>
+    </HydrationBoundary>
   );
 }

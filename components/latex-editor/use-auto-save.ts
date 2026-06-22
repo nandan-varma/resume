@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { saveJobResumeLatex, saveResumeLatex } from "@/server/resume";
+import { useSaveEditorState } from "@/lib/queries/resume";
 import type { ChatMsg, EditorJob } from "./types";
 
 export function useAutoSave(
@@ -10,66 +10,39 @@ export function useAutoSave(
   chatMessages: ChatMsg[],
   job: EditorJob | null
 ) {
-  const [saving, setSaving] = useState(false);
+  const { mutateAsync, isPending: saving } = useSaveEditorState(job?.id ?? null);
+
   const [dirty, setDirty] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
 
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatMessagesRef = useRef(chatMessages);
   chatMessagesRef.current = chatMessages;
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSave = useCallback(async () => {
-    setSaving(true);
     try {
-      const latex = getLatex();
-      const messages = chatMessagesRef.current;
-      const result = job
-        ? await saveJobResumeLatex(job.id, latex, messages)
-        : await saveResumeLatex(latex, messages);
-      if (result.success) {
-        setDirty(false);
-        setAutoSaving(false);
-        toast.success(job ? "Job resume saved" : "LaTeX saved");
-      } else {
-        toast.error(result.message ?? "Failed to save");
-      }
-    } catch {
-      toast.error("Failed to save");
-    } finally {
-      setSaving(false);
+      await mutateAsync({ latex: getLatex(), chatMessages: chatMessagesRef.current });
+      setDirty(false);
+      setAutoSaving(false);
+      toast.success(job ? "Job resume saved" : "LaTeX saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
     }
-  }, [job, getLatex]);
+  }, [mutateAsync, getLatex, job]);
 
-  const markDirty = useCallback(() => {
-    setDirty(true);
-  }, []);
+  const markDirty = useCallback(() => setDirty(true), []);
 
   useEffect(() => {
-    if (!dirty || saving) {
-      return;
-    }
-
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
+    if (!dirty || saving) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       setAutoSaving(true);
       handleSave();
     }, 5000);
-
     return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
   }, [dirty, saving, handleSave]);
 
-  return {
-    saving,
-    dirty,
-    autoSaving,
-    handleSave,
-    markDirty,
-  };
+  return { saving, dirty, autoSaving, handleSave, markDirty };
 }
