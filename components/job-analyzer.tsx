@@ -85,7 +85,7 @@ const SaveAnalysisBar = memo(function SaveAnalysisBar({
   onSave,
 }: SaveAnalysisBarProps) {
   return (
-    <div className="flex animate-enter items-center gap-3 border border-border bg-muted/50 px-4 py-3">
+    <div className="flex animate-enter items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
       <p className="flex-1 text-muted-foreground text-sm">
         Save this analysis to a tracked job?
       </p>
@@ -126,7 +126,7 @@ const CustomizeCta = memo(function CustomizeCta({
   onCustomize,
 }: CustomizeCtaProps) {
   return (
-    <div className="flex animate-enter-up items-center gap-3 border border-primary/20 bg-primary/5 px-4 py-3 [animation-delay:320ms]">
+    <div className="flex animate-enter-up items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 [animation-delay:320ms]">
       <div className="min-w-0 flex-1">
         <p className="font-medium text-foreground text-sm">
           Customize your resume for this role
@@ -307,7 +307,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
   return (
     <div className="space-y-5">
       {!hasResume && (
-        <div className="flex animate-enter items-start gap-3 border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning">
+        <div className="flex animate-enter items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
           <span>
             No resume uploaded yet.{" "}
@@ -322,131 +322,137 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         </div>
       )}
 
-      <Card className="space-y-5 p-5 sm:p-6">
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="font-medium text-sm" htmlFor="job-url">
-              Job posting URL
-              <span className="ml-2 font-normal text-muted-foreground text-xs">
-                auto-fills the description below
-              </span>
-            </Label>
-            <UrlFetcher
-              disabled={urlLoading}
-              onFetch={handleFetchDescription}
-              onUrlChange={setUrl}
-              url={url}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="font-medium text-sm" htmlFor="job-description">
-              Job description
-              <span className="ml-2 font-normal text-muted-foreground text-xs">
-                or paste directly
-              </span>
-            </Label>
-            <Textarea
-              className="min-h-[200px] resize-y"
-              disabled={urlLoading}
-              id="job-description"
-              onChange={(e) => setJobDescription(e.target.value)}
-              placeholder="Paste the full job description here…"
-              value={jobDescription}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          {jobs.length > 0 && (
-            <div className="space-y-1">
-              <Label className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                <Link2 className="size-3" />
-                Link to tracked job
+      <div
+        className={
+          result
+            ? "grid gap-5 xl:grid-cols-[2fr_3fr] xl:items-start xl:gap-8"
+            : "mx-auto max-w-3xl"
+        }
+      >
+        <Card className="space-y-4 p-5 sm:p-6">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="font-medium text-sm" htmlFor="job-url">
+                Job posting URL
+                <span className="ml-2 font-normal text-muted-foreground text-xs">
+                  auto-fills description
+                </span>
               </Label>
-              <Select onValueChange={setLinkedJobId} value={linkedJobId}>
-                <SelectTrigger className="h-8 w-48 text-sm">
-                  <SelectValue placeholder="Optional" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No link</SelectItem>
-                  {jobs.map((job) => (
-                    <SelectItem key={job.id} value={String(job.id)}>
-                      {job.jobTitle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="ml-auto flex flex-col items-end gap-1">
-            <Button
-              className="h-8 w-full sm:w-auto"
-              disabled={loading || !jobDescription.trim()}
-              onClick={analyzeMatch}
-              title={
-                jobDescription.trim()
-                  ? undefined
-                  : "Paste a job description first"
-              }
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Analyzing…
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 size-4" />
-                  Analyze Match
-                </>
-              )}
-            </Button>
-            <p className="text-muted-foreground text-xs">
-              Model: {modelId} ·{" "}
-              <Link className="underline hover:no-underline" href="/settings">
-                change
-              </Link>
-            </p>
-          </div>
-        </div>
-
-        {error && (
-          <p className="animate-enter border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive text-sm">
-            {error}
-          </p>
-        )}
-      </Card>
-
-      {result && (
-        <>
-          <div className="animate-enter-up">
-            <AnalysisResults result={result} />
-          </div>
-
-          {(!linkedJobId || linkedJobId === "none") &&
-            !saved &&
-            jobs.length > 0 && (
-              <SaveAnalysisBar
-                jobs={jobs}
-                onSave={handleSaveToJob}
-                saving={saving}
+              <UrlFetcher
+                disabled={urlLoading}
+                onFetch={handleFetchDescription}
+                onUrlChange={setUrl}
+                url={url}
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="font-medium text-sm" htmlFor="job-description">
+                Job description
+                <span className="ml-2 font-normal text-muted-foreground text-xs">
+                  or paste directly
+                </span>
+              </Label>
+              <Textarea
+                className={`resize-y transition-all duration-300 ${result ? "min-h-[100px]" : "min-h-[200px]"}`}
+                disabled={urlLoading}
+                id="job-description"
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste the full job description here…"
+                value={jobDescription}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            {jobs.length > 0 && (
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                  <Link2 className="size-3" />
+                  Link to tracked job
+                </Label>
+                <Select onValueChange={setLinkedJobId} value={linkedJobId}>
+                  <SelectTrigger className="h-8 w-44 text-sm">
+                    <SelectValue placeholder="Optional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No link</SelectItem>
+                    {jobs.map((job) => (
+                      <SelectItem key={job.id} value={String(job.id)}>
+                        {job.jobTitle}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
-          {saved && (
-            <p className="font-medium text-sm text-success">
-              ✓ Analysis saved to job
+            <div className="ml-auto flex flex-col items-end gap-1">
+              <Button
+                className="h-8 w-full sm:w-auto"
+                disabled={loading || !jobDescription.trim()}
+                onClick={analyzeMatch}
+                title={
+                  jobDescription.trim()
+                    ? undefined
+                    : "Paste a job description first"
+                }
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Analyzing…
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 size-4" />
+                    {result ? "Re-analyze" : "Analyze Match"}
+                  </>
+                )}
+              </Button>
+              <p className="text-muted-foreground text-xs">
+                Model: {modelId} ·{" "}
+                <Link className="underline hover:no-underline" href="/settings">
+                  change
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {error && (
+            <p className="animate-enter rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive text-sm">
+              {error}
             </p>
           )}
+        </Card>
 
-          <CustomizeCta
-            creatingJob={creatingJob}
-            onCustomize={handleCustomize}
-          />
-        </>
-      )}
+        {result && (
+          <div className="animate-enter-up space-y-4">
+            <AnalysisResults result={result} />
+
+            {(!linkedJobId || linkedJobId === "none") &&
+              !saved &&
+              jobs.length > 0 && (
+                <SaveAnalysisBar
+                  jobs={jobs}
+                  onSave={handleSaveToJob}
+                  saving={saving}
+                />
+              )}
+
+            {saved && (
+              <p className="font-medium text-sm text-success">
+                ✓ Analysis saved to job
+              </p>
+            )}
+
+            <CustomizeCta
+              creatingJob={creatingJob}
+              onCustomize={handleCustomize}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

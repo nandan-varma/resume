@@ -166,7 +166,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
           <div className="flex flex-wrap gap-1.5">
             {result.missing_keywords.map((kw, i) => (
               <span
-                className="inline-flex animate-enter items-center border border-destructive/20 bg-destructive/8 px-2 py-0.5 font-medium text-destructive text-xs"
+                className="inline-flex animate-enter items-center rounded-full border border-destructive/20 bg-destructive/8 px-2.5 py-0.5 font-medium text-destructive text-xs"
                 key={kw}
                 style={{ animationDelay: `${120 + i * 30}ms` }}
               >
@@ -192,7 +192,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
               key={s}
               style={{ animationDelay: `${200 + idx * 45}ms` }}
             >
-              <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center bg-muted font-medium text-[11px] text-muted-foreground tabular-nums">
+              <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-medium text-[11px] text-muted-foreground tabular-nums">
                 {idx + 1}
               </span>
               <span>{s}</span>

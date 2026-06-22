@@ -46,12 +46,15 @@ async function DashboardContent() {
 
   return (
     <>
-      <Link aria-label="View all applications" href="/jobs">
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map(({ label, value, icon: Icon, color }, i) => (
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map(({ label, value, icon: Icon, color }, i) => (
+          <Link
+            aria-label={`${label}: ${value}. View all applications`}
+            href="/jobs"
+            key={label}
+          >
             <SpotlightCard
               className="animate-enter-up p-5 transition-all duration-200 hover:-translate-y-0.5"
-              key={label}
               style={{ animationDelay: `${60 + i * 60}ms` }}
             >
               <div className="flex items-center justify-between">
@@ -66,9 +69,9 @@ async function DashboardContent() {
                 <Icon className={`size-6 ${color} opacity-80`} />
               </div>
             </SpotlightCard>
-          ))}
-        </div>
-      </Link>
+          </Link>
+        ))}
+      </div>
 
       {jobs.length === 0 ? (
         <Card className="animate-enter-up p-10 text-center [animation-delay:320ms]">
@@ -113,10 +116,13 @@ async function DashboardContent() {
                     {job.jobTitle}
                   </p>
                   <span
-                    className={`px-2 py-0.5 font-medium text-xs capitalize ${
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs capitalize ${
                       STATUS_CONFIG[job.status].color
                     }`}
                   >
+                    <span aria-hidden="true">
+                      {STATUS_CONFIG[job.status].icon}
+                    </span>
                     {job.status}
                   </span>
                 </div>
@@ -132,7 +138,7 @@ async function DashboardContent() {
 function DashboardSkeleton() {
   return (
     <>
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {["a", "b", "c", "d"].map((id) => (
           <Skeleton className="h-[90px]" key={id} />
         ))}
@@ -145,22 +151,26 @@ function DashboardSkeleton() {
 
 export default function Dashboard() {
   return (
-    <main className="min-h-screen p-6 md:p-10" id="main-content">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 animate-enter-up">
-          <h1 className="font-bold text-3xl text-foreground">
+    <main className="min-h-screen" id="main-content">
+      <div className="animate-enter-up border-border/40 border-b px-4 py-5 md:px-6 md:py-6">
+        <div className="mx-auto max-w-5xl">
+          <h1 className="font-bold text-3xl text-foreground tracking-tight">
             Welcome back
             <Suspense fallback={null}>
               <UserName />
             </Suspense>
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-0.5 text-muted-foreground text-sm">
             Here's your job search at a glance
           </p>
         </div>
-        <Suspense fallback={<DashboardSkeleton />}>
-          <DashboardContent />
-        </Suspense>
+      </div>
+      <div className="px-4 py-6 md:px-6 md:py-8">
+        <div className="mx-auto max-w-5xl">
+          <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardContent />
+          </Suspense>
+        </div>
       </div>
     </main>
   );

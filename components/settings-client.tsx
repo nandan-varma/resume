@@ -5,7 +5,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -65,23 +64,21 @@ function SettingsClientInner({
   const isDirty = aiPreferences !== originalPrefs;
 
   return (
-    <div className="mx-auto max-w-xl px-6 pb-10 md:px-10">
+    <div className="mx-auto max-w-2xl px-4 pb-10 md:px-6">
       <Card className="mb-5 animate-enter-up p-6 [animation-delay:80ms]">
         <h2 className="mb-4 font-semibold text-base text-foreground">
           Profile
         </h2>
-        <div className="space-y-3">
-          <div>
-            <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-              Name
-            </Label>
-            <p className="mt-1 text-foreground text-sm">{userName}</p>
+        <div className="flex items-center gap-4">
+          <div
+            aria-hidden="true"
+            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground font-bold text-background text-lg"
+          >
+            {(userName || userEmail).charAt(0).toUpperCase()}
           </div>
           <div>
-            <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-              Email
-            </Label>
-            <p className="mt-1 text-foreground text-sm">{userEmail}</p>
+            <p className="font-medium text-foreground">{userName}</p>
+            <p className="mt-0.5 text-muted-foreground text-sm">{userEmail}</p>
           </div>
         </div>
       </Card>

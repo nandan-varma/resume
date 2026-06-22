@@ -43,9 +43,7 @@ function ResumeClientInner({
   const [latexDirty, setLatexDirty] = useState(false);
   const [latexOpen, setLatexOpen] = useState(!!initialLatex);
 
-  const uploadLabel = resumeUrl
-    ? "Replace resume (PDF only)"
-    : "Upload resume (PDF only)";
+  const uploadLabel = resumeUrl ? "Replace resume" : "Upload your resume";
   let latexStatusLabel = "";
   if (latexDirty) {
     latexStatusLabel = "Unsaved changes";
@@ -103,7 +101,7 @@ function ResumeClientInner({
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-6 pb-10 md:px-10">
+    <div className="mx-auto max-w-3xl px-4 pb-10 md:px-6">
       <Card className="mb-4 animate-enter-up p-6 [animation-delay:80ms]">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold text-base text-foreground">
@@ -132,15 +130,8 @@ function ResumeClientInner({
           </div>
         </div>
 
-        {!resumeUrl && (
-          <div className="mb-4 flex items-start gap-2.5 border border-warning/20 bg-warning/10 px-3 py-2.5 text-sm text-warning">
-            <Upload className="mt-0.5 size-4 shrink-0" />
-            <span>No resume uploaded yet — required for AI analysis.</span>
-          </div>
-        )}
-
         {resumeUrl && (
-          <div className="mb-4 flex items-start gap-2.5 border border-info/20 bg-info/10 px-3 py-2.5 text-info text-sm">
+          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-info/20 bg-info/10 px-3 py-2.5 text-info text-sm">
             <FileText className="mt-0.5 size-4 shrink-0" />
             <span>
               After uploading, AI auto-generates editable LaTeX in the{" "}
@@ -157,19 +148,24 @@ function ResumeClientInner({
 
         <label
           className={cn(
-            "flex cursor-pointer items-center gap-3 border border-border border-dashed px-5 py-4",
-            "transition-colors hover:border-primary/40 hover:bg-muted/30",
+            "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-border border-dashed py-10",
+            "transition-all hover:border-primary/40 hover:bg-primary/5",
             uploading && "pointer-events-none opacity-60"
           )}
         >
           {uploading ? (
-            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <Loader2 className="size-8 animate-spin text-muted-foreground" />
           ) : (
-            <Upload className="size-4 shrink-0 text-muted-foreground" />
+            <Upload className="size-8 text-muted-foreground" />
           )}
-          <span className="text-muted-foreground text-sm">
-            {uploading ? "Uploading…" : uploadLabel}
-          </span>
+          <div className="text-center">
+            <p className="font-medium text-foreground text-sm">
+              {uploading ? "Uploading…" : uploadLabel}
+            </p>
+            <p className="mt-0.5 text-muted-foreground text-xs">
+              PDF only · max 10 MB
+            </p>
+          </div>
           <input
             accept=".pdf"
             className="hidden"

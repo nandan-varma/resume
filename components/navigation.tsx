@@ -212,7 +212,7 @@ export function Navigation({ user }: NavigationProps) {
             <Link
               aria-current={activeTab === tab.id ? "page" : undefined}
               className={cn(
-                "relative flex items-center px-3 text-sm transition-colors duration-200",
+                "relative flex items-center gap-1.5 px-3 text-sm transition-colors duration-200",
                 "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                 activeTab === tab.id
                   ? "font-medium text-foreground"
@@ -228,6 +228,7 @@ export function Navigation({ user }: NavigationProps) {
                 }
               }}
             >
+              <tab.Icon aria-hidden="true" className="size-3.5 shrink-0" />
               {tab.label}
             </Link>
           ))}
