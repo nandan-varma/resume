@@ -5,6 +5,7 @@ import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
+import { getAnalysisByJobId } from "@/server/analysis";
 
 const analysisSchema = z.object({
   short_title: z
@@ -35,6 +36,7 @@ export type AnalysisResult = z.infer<typeof analysisSchema>;
 const requestSchema = z.object({
   jobDescription: z.string().min(1, "Job description is required").max(8000),
   modelId: z.string(),
+  jobId: z.number().positive().optional(),
 });
 
 const MAX_JD_LENGTH = 8000;
@@ -83,7 +85,25 @@ export async function POST(req: Request) {
     );
   }
 
-  const { jobDescription, modelId } = parsed.data;
+  const { jobDescription, modelId, jobId } = parsed.data;
+
+  // Return cached analysis if one exists for the given job
+  if (jobId) {
+    const cached = await getAnalysisByJobId(jobId);
+    if (cached) {
+      return Response.json({
+        result: {
+          short_title: "",
+          match_percentage: cached.matchPercentage,
+          summary: cached.summary,
+          missing_keywords: cached.missingKeywords,
+          improvement_suggestions: cached.improvementSuggestions,
+          strengths: cached.strengths,
+          additional_insights: cached.additionalInsights ?? null,
+        },
+      });
+    }
+  }
 
   try {
     const resumeBase64 = await fetchResumeBase64(session.user.id);

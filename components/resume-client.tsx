@@ -64,14 +64,12 @@ function ResumeClientInner({
     }
     setUploading(true);
     try {
-      const arrayBuffer = await file.arrayBuffer();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("fileName", file.name);
       const response = await fetch("/api/upload-resume", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileBuffer: Array.from(new Uint8Array(arrayBuffer)),
-        }),
+        body: formData,
       });
       if (!response.ok) {
         const err = await response.json();

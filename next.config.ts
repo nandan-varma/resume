@@ -35,6 +35,16 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/core/busytex/busytex.wasm",
+        destination: "https://resume-storage.nandan.fyi/public/busytex.wasm",
+        permanent: false,
+      },
+      {
+        source: "/core/busytex/busytex.js",
+        destination: "https://resume-storage.nandan.fyi/public/busytex.js",
+        permanent: false,
+      },
+      {
         source: "/core/busytex/texlive-extra.data",
         destination:
           "https://qujr12qsco.ufs.sh/f/fthLDAMTNUTlo2DzZXfKNuBGPq0OUSh5TDr7YsjQ9HmIvzRL",

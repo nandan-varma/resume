@@ -34,15 +34,10 @@ Output ONLY the raw LaTeX source. No markdown fences, no commentary.`;
 
 export async function generateLatexFromPdf(
   userId: string,
-  resumeUrl: string
+  pdfBuffer: Buffer
 ): Promise<void> {
   try {
-    const res = await fetch(resumeUrl);
-    if (!res.ok) {
-      return;
-    }
-
-    const base64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+    const base64 = pdfBuffer.toString("base64");
 
     const { text } = await generateText({
       model: getModelInstanceById("gemini-2.5-flash"),

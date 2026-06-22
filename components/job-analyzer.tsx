@@ -249,6 +249,10 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         body: JSON.stringify({
           jobDescription: jobDescription.trim(),
           modelId,
+          jobId:
+            linkedJobId && linkedJobId !== "none"
+              ? Number(linkedJobId)
+              : undefined,
         }),
       });
       if (!response.ok) {
