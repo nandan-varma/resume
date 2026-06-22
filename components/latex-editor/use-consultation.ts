@@ -52,10 +52,18 @@ export function useConsultation(
           : "";
       setChatMessages((prev) => [
         ...prev,
-        userMsg("Customize my resume for this job"),
+        userMsg("Tailor my resume for this job"),
       ]);
       executeAIEdit(
-        `Customize my resume for this job.${ctx}`,
+        `Tailor this resume to maximize ATS keyword match and human reviewer impact for the target job.
+
+PRIORITIES (in order):
+1. Insert the job's required keywords and exact technology/tool names naturally into existing bullet points and the Skills section.
+2. Strengthen weak or vague bullet points with quantifiable metrics where available.
+3. Align experience descriptions to mirror the terminology and language used in the job description.
+4. Ensure the most relevant experience and skills are prominent and easy to find.
+
+Do NOT fabricate metrics, technologies, company names, or accomplishments not already in the resume.${ctx}`,
         [],
         undefined,
         job?.description
@@ -128,10 +136,9 @@ export function useConsultation(
         { key, question, answer },
       ];
       setConsultAnswers(next);
-      setChatMessages((prev) => [
-        ...prev.map((m, i) => (i === idx ? { ...m, answered: answer } : m)),
-        userMsg(answer),
-      ]);
+      setChatMessages((prev) =>
+        prev.map((m, i) => (i === idx ? { ...m, answered: answer } : m))
+      );
       fetchNextQuestion(next);
     },
     [consultAnswers, fetchNextQuestion, setChatMessages]

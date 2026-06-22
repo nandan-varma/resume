@@ -24,22 +24,19 @@ function RawQuestionBubble({
   const [custom, setCustom] = useState("");
 
   return (
-    <div className="max-w-[90%] space-y-2 rounded bg-muted px-2.5 py-2 text-xs">
-      <p
-        className={
-          answered ? "text-muted-foreground" : "font-medium text-foreground"
-        }
-      >
-        {question}
-      </p>
+    <div className="max-w-[90%] space-y-2.5 rounded-lg border border-border/60 bg-muted/60 px-3 py-2.5 text-xs">
+      <p className="font-medium text-foreground leading-snug">{question}</p>
       {answered ? (
-        <span className="text-primary">→ {answered}</span>
+        <div className="flex items-center gap-1.5">
+          <CheckCircle2 className="size-3 shrink-0 text-primary" />
+          <span className="font-medium text-primary">{answered}</span>
+        </div>
       ) : (
         <>
           <div className="flex flex-wrap gap-1.5">
             {options.map((opt) => (
               <button
-                className="rounded border border-border px-2.5 py-1 transition-colors hover:border-primary/60 disabled:opacity-50"
+                className="rounded-md border border-border bg-background px-2.5 py-1 transition-colors hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50"
                 disabled={loading}
                 key={opt}
                 onClick={() => onPick(opt)}
@@ -102,18 +99,16 @@ interface AssistantBubbleProps {
 
 function RawAssistantBubble({ content, editsApplied }: AssistantBubbleProps) {
   return (
-    <span className="whitespace-pre-wrap">
-      {content}
+    <div className="flex flex-col gap-2">
+      <span className="whitespace-pre-wrap leading-relaxed">{content}</span>
       {!!editsApplied && (
-        <>
-          {" "}
-          <span className="inline-flex items-center gap-1 font-medium text-green-600 dark:text-green-400">
-            <CheckCircle2 className="size-3 shrink-0" />
-            Applied to editor
-          </span>
-        </>
+        <span className="inline-flex items-center gap-1 font-medium text-green-600 text-xs dark:text-green-400">
+          <CheckCircle2 className="size-3 shrink-0" />
+          Applied {editsApplied} {editsApplied === 1 ? "change" : "changes"} to
+          editor
+        </span>
       )}
-    </span>
+    </div>
   );
 }
 
@@ -124,7 +119,7 @@ interface LoadingBubbleProps {
 function RawLoadingBubble({ label = "Thinking…" }: LoadingBubbleProps) {
   return (
     <div className="flex justify-start">
-      <span className="inline-flex items-center gap-1.5 rounded bg-muted px-2.5 py-1.5 text-muted-foreground text-xs">
+      <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-muted-foreground text-xs">
         <Loader2 className="size-3 animate-spin" />
         {label}
       </span>

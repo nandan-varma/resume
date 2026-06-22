@@ -17,18 +17,35 @@ const analysisSchema = z.object({
     .number()
     .min(0)
     .max(100)
-    .describe("Match percentage 0–100"),
-  summary: z.string().describe("2–3 sentence explanation of the match"),
+    .describe(
+      "ATS keyword match score 0–100. Weight: required skills/tools explicitly named in the JD (45%), experience alignment and years (25%), role title similarity (15%), education/certifications (15%). 70+ = ATS-competitive, 50–69 = fixable gaps, <50 = significant keyword or experience mismatch."
+    ),
+  summary: z
+    .string()
+    .describe(
+      "2–3 sentences covering: overall ATS keyword match strength, the candidate's most compelling qualification for this role, and the single most critical gap to address."
+    ),
   missing_keywords: z
     .array(z.string())
-    .describe("Keywords from the job description absent from the resume"),
+    .describe(
+      "Exact keywords and phrases from the job description absent from the resume. Prioritize: required technologies, frameworks, tools, certifications, methodologies, and role-specific jargon that ATS systems scan for as exact or near-exact string matches."
+    ),
   improvement_suggestions: z
     .array(z.string())
-    .describe("Actionable bullet points to improve the match"),
+    .describe(
+      "Concrete, high-impact edits — each targeting ATS keyword insertion or measurable human reviewer impact. Examples: 'Add React and TypeScript to your Skills section to match JD requirements', 'Rewrite the first bullet under [Company] to include a metric: e.g. reduced build time by 40%', 'Replace \"worked on\" with \"Architected\" and include the exact tool named in the JD'."
+    ),
   strengths: z
     .array(z.string())
-    .describe("Candidate strengths relevant to this role"),
-  additional_insights: z.string().nullable().describe("Optional extra advice"),
+    .describe(
+      "Resume elements that score well for both ATS parsing and human review: matched keywords present, quantified achievements, strong action verbs, relevant depth of experience, certifications that align with requirements."
+    ),
+  additional_insights: z
+    .string()
+    .nullable()
+    .describe(
+      "ATS formatting risks (multi-column layout, tables, graphics, contact info in headers/footers, non-standard section headings) and overall competitiveness for this role against a typical applicant pool. Null if no notable issues."
+    ),
 });
 
 export type AnalysisResult = z.infer<typeof analysisSchema>;
@@ -111,13 +128,23 @@ export async function POST(req: Request) {
     const { output } = await generateText({
       model: resolveModel(modelId),
       output: Output.object({ schema: analysisSchema }),
+      system: `You are an expert ATS (Applicant Tracking System) analyst and senior career coach with deep knowledge of how modern ATS software parses, ranks, and scores resumes.
+
+Your analysis must reflect how real ATS systems evaluate candidates — keyword frequency and exactness, section recognition, experience alignment, and formatting compatibility — combined with how a human hiring manager would assess the resume.
+
+ANALYSIS GUIDELINES:
+- missing_keywords: List exact terms and phrases from the JD that are absent. ATS matches on precise strings — synonyms do not substitute. Focus on required technical skills, tools, certifications, and role-specific jargon.
+- strengths: Identify what the resume already does well for both ATS scoring and human review — keywords already present, quantified achievements with metrics, strong action verbs, clear career progression.
+- improvement_suggestions: Prioritize changes with the highest ATS impact — adding missing required keywords naturally into bullet points, quantifying vague achievements with numbers, aligning job title and skill terminology to mirror the JD's exact language.
+- match_percentage: Be calibrated. A resume missing multiple required technologies should score below 60 even if the experience is otherwise strong.
+- additional_insights: Flag ATS formatting risks such as multi-column layouts, graphics, tables for main content, or contact info placed in headers/footers that ATS parsers cannot read.`,
       messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `You are an expert career coach. Analyze the attached resume against the job description and provide detailed, actionable feedback.\n\nJob Description:\n${jobDescription.slice(0, MAX_JD_LENGTH)}`,
+              text: `Analyze this resume against the following job description.\n\nJob Description:\n${jobDescription.slice(0, MAX_JD_LENGTH)}`,
             },
             {
               type: "file",

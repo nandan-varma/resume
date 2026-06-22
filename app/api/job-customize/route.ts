@@ -91,15 +91,16 @@ export async function POST(req: Request) {
       }),
       // Disable thinking — this is a simple yes/no structured decision.
       providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
-      system: `You are a resume customization assistant checking whether you have all concrete facts needed before editing.
+      system: `You are an ATS optimization specialist reviewing a resume before tailoring it to a specific job description. Your goal is to gather concrete facts needed to naturally insert job-matching keywords and quantifiable achievements — without fabricating anything.
 
 Rules:
-- Ask ONLY if you genuinely cannot make a good tailored edit without that specific fact.
-- Never ask about preferences or style — only concrete facts (metrics, project names, tech you'd have to invent).
-- Make options specific and grounded in what's already in the resume.
-- If you have enough info, respond with type "proceed".
+- Ask ONLY for a concrete missing fact that would directly enable a higher-quality ATS-targeted edit: a specific metric (%, $, users, time saved), an exact technology name from the JD you cannot confirm is in the resume, or a role-specific accomplishment you would otherwise have to invent.
+- Prioritize questions about measurable outcomes and exact tool/technology names that appear in the job description but are ambiguous or absent in the resume.
+- Make answer options specific and grounded in what is already present in the resume — never generic.
+- Never ask about preferences, style, formatting, or subjective choices.
+- If you have enough information to insert the job's required keywords accurately and naturally, respond with type "proceed".
 - Ask at most one question per turn.`,
-      prompt: `Resume:\n\`\`\`latex\n${truncatedLatex}\`\`\`\n\nJob Description:\n${truncatedJobDesc}${answersSection}\n\nDo you need one more concrete fact to avoid fabricating? If yes, ask it. If no, proceed.`,
+      prompt: `Resume:\n\`\`\`latex\n${truncatedLatex}\`\`\`\n\nJob Description:\n${truncatedJobDesc}${answersSection}\n\nDo you need one concrete fact to write an accurate, ATS-optimized edit? If yes, ask it. If no, proceed.`,
     });
 
     return Response.json(output);

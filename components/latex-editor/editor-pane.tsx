@@ -43,7 +43,7 @@ function renderMessage(
   if (msg.role === "notice") {
     return (
       <div
-        className="flex items-center justify-center gap-1.5 py-0.5 text-muted-foreground text-xs"
+        className="flex items-center justify-center gap-1.5 py-1 text-muted-foreground text-xs"
         key={msg.id}
       >
         <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
@@ -70,8 +70,8 @@ function renderMessage(
       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
       key={msg.id}
     >
-      <span
-        className={`inline-block max-w-[85%] rounded px-2.5 py-1.5 text-xs leading-relaxed ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
+      <div
+        className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}
       >
         {msg.role === "assistant" ? (
           <AssistantBubble
@@ -79,9 +79,9 @@ function renderMessage(
             editsApplied={msg.editsApplied}
           />
         ) : (
-          msg.content
+          <span className="leading-relaxed">{msg.content}</span>
         )}
-      </span>
+      </div>
     </div>
   );
 }
@@ -126,16 +126,16 @@ function EditorPane({
     if (chatMessages.length > 0) {
       return (
         <>
-          <div className="flex-1 space-y-2 overflow-y-auto p-3">
+          <div className="flex-1 space-y-3 overflow-y-auto p-3">
             {chatMessages.map((msg, i) =>
               renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
             )}
             {chatLoading && lastMsg?.role === "user" && <LoadingBubble />}
             <div ref={chatEndRef} />
           </div>
-          <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2">
+          <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2.5">
             <input
-              className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              className="h-8 flex-1 rounded-lg border border-border bg-background px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
               disabled={chatLoading || pendingQuestion}
               onChange={(e) => onChatInputChange(e.target.value)}
               onKeyDown={(e) => {
@@ -150,7 +150,7 @@ function EditorPane({
             />
             <Button
               aria-label="Send"
-              className="h-7 w-7 shrink-0 p-0"
+              className="h-8 w-8 shrink-0 rounded-lg p-0"
               disabled={chatLoading || !chatInput.trim() || pendingQuestion}
               onClick={onChatSend}
               size="sm"
