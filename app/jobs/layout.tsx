@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   description: "Track and manage your job applications.",
 };
 
-export default function JobsLayout({ children }: { children: React.ReactNode }) {
+export default function JobsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

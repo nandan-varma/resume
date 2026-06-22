@@ -14,23 +14,26 @@ export default function Error({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
-    <main id="main-content" className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
-      <div className="space-y-3 animate-enter-up">
-        <h2 className="text-xl font-semibold text-foreground">
+    <main
+      className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center"
+      id="main-content"
+    >
+      <div className="animate-enter-up space-y-3">
+        <h2 className="font-semibold text-foreground text-xl">
           Something went wrong
         </h2>
-        <p className="text-muted-foreground max-w-sm">
+        <p className="max-w-sm text-muted-foreground">
           An unexpected error occurred. You can try again or return to the
           homepage.
         </p>
       </div>
-      <div className="flex gap-3 animate-enter-up [animation-delay:80ms]">
+      <div className="flex animate-enter-up gap-3 [animation-delay:80ms]">
         <Button onClick={reset}>Try again</Button>
         <Button
-          variant="outline"
           onClick={() => {
             window.location.href = "/";
           }}
+          variant="outline"
         >
           Go home
         </Button>

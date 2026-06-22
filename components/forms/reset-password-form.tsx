@@ -124,7 +124,7 @@ export function ResetPasswordForm({
                   "Update password"
                 )}
               </Button>
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-muted-foreground text-sm">
                 <Link
                   className="text-foreground underline underline-offset-4 hover:text-primary"
                   href="/login"

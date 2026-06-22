@@ -1,22 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowLeft,
-  Download,
-  Loader2,
-  Save,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Terminal,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Download,
+  Loader2,
+  RotateCcw,
+  Save,
+  Send,
+  Sparkles,
+  Terminal,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { saveResumeLatex } from "@/server/users";
+import { DEFAULT_MODEL_ID, isValidModelId, type ModelId } from "@/lib/models";
+import { saveResumeLatex } from "@/server/resume";
+
+const MODEL_STORAGE_KEY = "job-match-ai-model";
 
 const DEBOUNCE_MS = 2500;
 // texlive-extra is the cumulative tier: includes collection-latex, collection-latexrecommended,
@@ -30,12 +37,61 @@ type EnginePhase =
   | { phase: "compiling" }
   | { phase: "error"; message: string };
 
+type ChatMsg =
+  | { role: "user" | "assistant"; content: string }
+  | { role: "notice"; content: string };
+
+const MAX_AUTO_FIX = 2;
+
+// Strips the latex code block so we don't re-send huge content in history
+function toHistoryContent(content: string) {
+  return content
+    .replace(/```latex[\s\S]*?```/g, "[latex applied to editor]")
+    .trim();
+}
+
+// Shows explanation text and an "applied" indicator instead of raw latex
+function AssistantBubble({
+  content,
+  streaming,
+}: {
+  content: string;
+  streaming: boolean;
+}) {
+  const latexStart = content.indexOf("```latex");
+  const hasBlock = latexStart !== -1;
+  const explanation = hasBlock ? content.slice(0, latexStart).trim() : content;
+  const closed =
+    hasBlock && content.indexOf("```", latexStart + 7) > latexStart + 7;
+
+  return (
+    <span className="whitespace-pre-wrap">
+      {explanation}
+      {hasBlock && (
+        <>
+          {explanation ? " " : ""}
+          <span className="inline-flex items-center gap-1 font-medium text-green-600 dark:text-green-400">
+            <CheckCircle2 className="size-3 shrink-0" />
+            {closed ? "Applied to editor" : "Applying…"}
+          </span>
+        </>
+      )}
+      {!hasBlock && streaming && (
+        <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-current align-middle" />
+      )}
+    </span>
+  );
+}
+
 interface LatexEditorProps {
   initialLatex: string;
   initialResumeUrl: string | null;
 }
 
-export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps) {
+export function LatexEditor({
+  initialLatex,
+  initialResumeUrl,
+}: LatexEditorProps) {
   const [latex, setLatex] = useState(initialLatex);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [engine, setEngine] = useState<EnginePhase>({ phase: "idle" });
@@ -44,6 +100,26 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [zoom, setZoom] = useState(100);
+
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [modelId] = useState<ModelId>(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_MODEL_ID;
+    }
+    const stored = localStorage.getItem(MODEL_STORAGE_KEY);
+    return stored && isValidModelId(stored)
+      ? (stored as ModelId)
+      : DEFAULT_MODEL_ID;
+  });
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const aiAppliedRef = useRef(false);
+  const autoFixCountRef = useRef(0);
+  // Holds the latest runAutoFix so the compile-error effect never captures a stale closure
+  const runAutoFixRef = useRef<(log: string) => void>(() => {});
 
   const runnerRef = useRef<any>(null);
   const compilerRef = useRef<any>(null);
@@ -60,14 +136,21 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
   };
 
   const initEngine = useCallback((): Promise<void> => {
-    if (runnerRef.current) return Promise.resolve();
-    if (initPromiseRef.current) return initPromiseRef.current;
+    if (runnerRef.current) {
+      return Promise.resolve();
+    }
+    if (initPromiseRef.current) {
+      return initPromiseRef.current;
+    }
 
     initPromiseRef.current = (async () => {
       setEngine({ phase: "loading", label: "Loading LaTeX engine…" });
       const { BusyTexRunner, PdfLatex } = await import("texlyre-busytex");
 
-      setEngine({ phase: "loading", label: "Downloading TeX packages (first time only)…" });
+      setEngine({
+        phase: "loading",
+        label: "Downloading TeX packages (first time only)…",
+      });
       const runner = new BusyTexRunner({
         busytexBasePath: "/core/busytex",
         preloadDataPackages: [PACKAGES_JS],
@@ -117,14 +200,17 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
           setPdfUrl(url);
           setEngine({ phase: "ready" });
         } else {
-          setEngine({ phase: "error", message: "Compilation failed — see log below" });
+          setEngine({
+            phase: "error",
+            message: "Compilation failed — see log below",
+          });
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setEngine({ phase: "error", message });
       }
     },
-    [initEngine],
+    [initEngine]
   );
 
   // Pre-initialize engine on mount so it's ready when user starts typing
@@ -134,7 +220,9 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
 
   // Debounced compile on latex change
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
     if (!latex.trim()) {
       revokePdf();
       setPdfUrl(null);
@@ -142,12 +230,189 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
     }
     debounceRef.current = setTimeout(() => compile(latex), DEBOUNCE_MS);
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
     };
   }, [latex, compile]);
 
   // Cleanup blob URL on unmount
   useEffect(() => () => revokePdf(), []);
+
+  // Scroll chat to bottom on new messages
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  // Shared fetch+stream logic used by both user chat and auto-fix
+  const executeAIEdit = useCallback(
+    async (
+      instruction: string,
+      currentLatex: string,
+      history: { role: "user" | "assistant"; content: string }[],
+      noticeMsg?: string
+    ) => {
+      if (noticeMsg) {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "notice" as const, content: noticeMsg },
+        ]);
+      }
+      setChatLoading(true);
+
+      try {
+        const response = await fetch("/api/edit-latex", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            instruction,
+            latex: currentLatex,
+            modelId,
+            history,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error ?? "Request failed");
+        }
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "" },
+        ]);
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          accumulated += decoder.decode(value, { stream: true });
+          setChatMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              role: "assistant",
+              content: accumulated,
+            };
+            return updated;
+          });
+        }
+
+        const match = accumulated.match(/```latex\n([\s\S]*?)\n?```/);
+        if (match) {
+          setLatex(match[1].trim());
+          setDirty(true);
+          aiAppliedRef.current = true;
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "AI request failed";
+        toast.error(message);
+        setChatMessages((prev) =>
+          prev[prev.length - 1]?.content === "" ? prev.slice(0, -1) : prev
+        );
+      } finally {
+        setChatLoading(false);
+      }
+    },
+    [modelId]
+  );
+
+  const handleChatSend = async () => {
+    const instruction = chatInput.trim();
+    if (!instruction || chatLoading) {
+      return;
+    }
+
+    setChatInput("");
+    autoFixCountRef.current = 0;
+    setChatMessages((prev) => [
+      ...prev,
+      { role: "user", content: instruction },
+    ]);
+
+    const history = chatMessages
+      .filter(
+        (m): m is Extract<ChatMsg, { role: "user" | "assistant" }> =>
+          m.role === "user" || m.role === "assistant"
+      )
+      .map((m) => ({
+        role: m.role,
+        content:
+          m.role === "assistant" ? toHistoryContent(m.content) : m.content,
+      }));
+
+    await executeAIEdit(instruction, latex, history);
+  };
+
+  const runAutoFix = useCallback(
+    (errorLog: string) => {
+      if (chatLoading) {
+        return;
+      }
+
+      const instruction = `The LaTeX you generated has compilation errors. Fix them so the document compiles successfully.\n\nCompilation error log:\n${errorLog.slice(0, 2000)}`;
+
+      const history = chatMessages
+        .filter(
+          (m): m is Extract<ChatMsg, { role: "user" | "assistant" }> =>
+            m.role === "user" || m.role === "assistant"
+        )
+        .map((m) => ({
+          role: m.role,
+          content:
+            m.role === "assistant" ? toHistoryContent(m.content) : m.content,
+        }));
+
+      executeAIEdit(
+        instruction,
+        latex,
+        history,
+        "Compilation error — fixing automatically…"
+      );
+    },
+    [latex, chatMessages, chatLoading, executeAIEdit]
+  );
+
+  // Keep the ref current so the compile-error effect always calls the latest version
+  useEffect(() => {
+    runAutoFixRef.current = runAutoFix;
+  }, [runAutoFix]);
+
+  // After an AI edit, watch for compile errors and auto-fix (up to MAX_AUTO_FIX times)
+  useEffect(() => {
+    if (engine.phase !== "error" && engine.phase !== "ready") {
+      return;
+    }
+
+    const wasAiApplied = aiAppliedRef.current;
+    aiAppliedRef.current = false;
+
+    if (!wasAiApplied) {
+      return;
+    }
+
+    if (engine.phase === "error" && compileLog) {
+      if (autoFixCountRef.current < MAX_AUTO_FIX) {
+        autoFixCountRef.current += 1;
+        runAutoFixRef.current(compileLog);
+      } else {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            role: "notice" as const,
+            content:
+              "Could not fix compilation errors automatically — please edit manually or try a different instruction.",
+          },
+        ]);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.phase, compileLog]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -162,7 +427,9 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
   };
 
   const handleDownload = () => {
-    if (!pdfUrl) return;
+    if (!pdfUrl) {
+      return;
+    }
     const a = document.createElement("a");
     a.href = pdfUrl;
     a.download = "resume.pdf";
@@ -174,7 +441,9 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
       if (e.key === "Tab") {
         e.preventDefault();
         const ta = textareaRef.current;
-        if (!ta) return;
+        if (!ta) {
+          return;
+        }
         const { selectionStart: s, selectionEnd: end } = ta;
         const next = latex.slice(0, s) + "  " + latex.slice(end);
         setLatex(next);
@@ -185,15 +454,16 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        if (dirty && !saving) handleSave();
+        if (dirty && !saving) {
+          handleSave();
+        }
       }
     },
-    [latex, dirty, saving],
+    [latex, dirty, saving]
   );
 
   const isEmpty = !latex.trim();
-  const isLoading =
-    engine.phase === "loading" || engine.phase === "compiling";
+  const isLoading = engine.phase === "loading" || engine.phase === "compiling";
   const hasError = engine.phase === "error";
 
   const statusLabel =
@@ -206,17 +476,17 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* ── Header ── */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-border border-b px-4">
         <div className="flex items-center gap-4">
           <Link
+            className="flex items-center gap-1.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
             href="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-3.5" />
             Dashboard
           </Link>
           <span className="select-none text-border">|</span>
-          <span className="text-sm font-medium">LaTeX Editor</span>
+          <span className="font-medium text-sm">LaTeX Editor</span>
           {dirty && (
             <span className="text-xs text-yellow-500 dark:text-yellow-400">
               Unsaved changes
@@ -227,29 +497,29 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-1 sm:flex">
             <button
-              type="button"
-              onClick={() => setZoom((z) => Math.max(50, z - 10))}
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => setZoom((z) => Math.max(50, z - 10))}
               title="Zoom out preview"
+              type="button"
             >
               <ZoomOut className="size-3.5" />
             </button>
-            <span className="min-w-[3ch] text-center text-xs text-muted-foreground">
+            <span className="min-w-[3ch] text-center text-muted-foreground text-xs">
               {zoom}%
             </span>
             <button
-              type="button"
-              onClick={() => setZoom((z) => Math.min(200, z + 10))}
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => setZoom((z) => Math.min(200, z + 10))}
               title="Zoom in preview"
+              type="button"
             >
               <ZoomIn className="size-3.5" />
             </button>
             <button
-              type="button"
-              onClick={() => setZoom(100)}
               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => setZoom(100)}
               title="Reset zoom"
+              type="button"
             >
               <RotateCcw className="size-3" />
             </button>
@@ -258,16 +528,16 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
           <div className="h-4 w-px bg-border" />
 
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
             disabled={!pdfUrl}
+            onClick={handleDownload}
+            size="sm"
             title="Download compiled PDF"
+            variant="outline"
           >
             <Download className="size-3.5" />
             <span className="ml-1.5 hidden sm:inline">Download PDF</span>
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
+          <Button disabled={saving || !dirty} onClick={handleSave} size="sm">
             {saving ? (
               <Loader2 className="mr-1.5 size-3.5 animate-spin" />
             ) : (
@@ -281,48 +551,158 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
       {/* ── Split pane ── */}
       <div className="flex min-h-0 flex-1">
         {/* LaTeX source editor */}
-        <div className="flex w-1/2 flex-col border-r border-border">
-          <div className="flex items-center justify-between border-b border-border/50 px-3 py-1">
-            <span className="text-xs text-muted-foreground">LaTeX Source</span>
-            <span className="text-xs text-muted-foreground">
-              {latex.split("\n").length} lines
-            </span>
+        <div className="flex min-h-0 w-1/2 flex-col border-border border-r">
+          <div className="flex shrink-0 items-center justify-between border-border/50 border-b px-3 py-1">
+            <span className="text-muted-foreground text-xs">LaTeX Source</span>
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground text-xs">
+                {latex.split("\n").length} lines
+              </span>
+              <button
+                className="flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
+                onClick={() => setChatOpen((v) => !v)}
+                title="Toggle AI chat"
+                type="button"
+              >
+                <Sparkles className="size-3" />
+                AI
+                {chatOpen ? (
+                  <ChevronDown className="size-3" />
+                ) : (
+                  <ChevronUp className="size-3" />
+                )}
+              </button>
+            </div>
           </div>
+
           <textarea
-            ref={textareaRef}
-            value={latex}
+            aria-label="LaTeX source"
+            className="min-h-0 flex-1 resize-none bg-background p-4 font-mono text-foreground text-sm focus:outline-none"
             onChange={(e) => {
               setLatex(e.target.value);
               setDirty(true);
+              aiAppliedRef.current = false; // cancel pending auto-fix if user edits manually
             }}
             onKeyDown={handleKeyDown}
-            className="flex-1 resize-none bg-background p-4 font-mono text-sm text-foreground focus:outline-none"
-            spellCheck={false}
-            aria-label="LaTeX source"
             placeholder={
               isEmpty && initialResumeUrl
                 ? "AI is generating LaTeX from your uploaded PDF — check back in a moment…"
                 : "Paste or type your LaTeX here…\n\nExample:\n\\documentclass{article}\n\\begin{document}\nHello World\n\\end{document}"
             }
+            ref={textareaRef}
+            spellCheck={false}
+            value={latex}
           />
+
+          {/* AI chat panel */}
+          {chatOpen && (
+            <div className="flex h-64 shrink-0 flex-col border-border border-t">
+              {/* Message list */}
+              <div className="flex-1 space-y-2 overflow-y-auto p-3">
+                {chatMessages.length === 0 ? (
+                  <p className="py-4 text-center text-muted-foreground text-xs">
+                    Describe what you'd like to change and AI will edit your
+                    LaTeX.
+                  </p>
+                ) : (
+                  chatMessages.map((msg, i) =>
+                    msg.role === "notice" ? (
+                      <div
+                        className="flex items-center justify-center gap-1.5 py-0.5 text-muted-foreground text-xs"
+                        key={i}
+                      >
+                        <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                        key={i}
+                      >
+                        <span
+                          className={`inline-block max-w-[85%] rounded px-2.5 py-1.5 text-xs leading-relaxed ${
+                            msg.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-foreground"
+                          }`}
+                        >
+                          {msg.role === "assistant" ? (
+                            <AssistantBubble
+                              content={msg.content}
+                              streaming={
+                                chatLoading && i === chatMessages.length - 1
+                              }
+                            />
+                          ) : (
+                            msg.content
+                          )}
+                        </span>
+                      </div>
+                    )
+                  )
+                )}
+                {chatLoading &&
+                  chatMessages[chatMessages.length - 1]?.role === "user" && (
+                    <div className="flex justify-start">
+                      <span className="inline-flex items-center gap-1 rounded bg-muted px-2.5 py-1.5 text-muted-foreground text-xs">
+                        <Loader2 className="size-3 animate-spin" />
+                        Thinking…
+                      </span>
+                    </div>
+                  )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input row */}
+              <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2">
+                <input
+                  className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                  disabled={chatLoading}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleChatSend();
+                    }
+                  }}
+                  placeholder="e.g. Add a skills section, make fonts smaller…"
+                  type="text"
+                  value={chatInput}
+                />
+                <Button
+                  aria-label="Send"
+                  className="h-7 w-7 shrink-0 p-0"
+                  disabled={chatLoading || !chatInput.trim()}
+                  onClick={handleChatSend}
+                  size="sm"
+                >
+                  {chatLoading ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <Send className="size-3" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Live preview */}
         <div className="relative flex w-1/2 flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border/50 px-3 py-1">
-            <span className="text-xs text-muted-foreground">Preview</span>
+          <div className="flex items-center justify-between border-border/50 border-b px-3 py-1">
+            <span className="text-muted-foreground text-xs">Preview</span>
             <div className="flex items-center gap-2">
               {isLoading && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1 text-muted-foreground text-xs">
                   <Loader2 className="size-3 animate-spin" />
                   {statusLabel}
                 </span>
               )}
               {hasError && compileLog && (
                 <button
-                  type="button"
+                  className="flex items-center gap-1 text-destructive text-xs hover:underline"
                   onClick={() => setShowLog((v) => !v)}
-                  className="flex items-center gap-1 text-xs text-destructive hover:underline"
+                  type="button"
                 >
                   <Terminal className="size-3" />
                   Log
@@ -338,8 +718,8 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
 
           {/* Compile log panel (errors) */}
           {hasError && showLog && compileLog && (
-            <div className="max-h-48 overflow-auto border-b border-border/50 bg-destructive/5 p-3">
-              <pre className="whitespace-pre-wrap font-mono text-xs text-destructive">
+            <div className="max-h-48 overflow-auto border-border/50 border-b bg-destructive/5 p-3">
+              <pre className="whitespace-pre-wrap font-mono text-destructive text-xs">
                 {compileLog}
               </pre>
             </div>
@@ -347,21 +727,25 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
 
           {isEmpty ? (
             <div className="flex h-full items-center justify-center">
-              <div className="text-center text-sm text-muted-foreground">
+              <div className="text-center text-muted-foreground text-sm">
                 <p className="mb-1 font-medium">No preview yet</p>
-                <p className="text-xs">Add LaTeX source to see a live preview</p>
+                <p className="text-xs">
+                  Add LaTeX source to see a live preview
+                </p>
               </div>
             </div>
           ) : !pdfUrl && hasError ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
-              <p className="text-center text-sm text-destructive">
-                {engine.phase === "error" ? engine.message : "Compilation error"}
+              <p className="text-center text-destructive text-sm">
+                {engine.phase === "error"
+                  ? engine.message
+                  : "Compilation error"}
               </p>
               {compileLog && !showLog && (
                 <button
-                  type="button"
+                  className="text-muted-foreground text-xs underline"
                   onClick={() => setShowLog(true)}
-                  className="text-xs text-muted-foreground underline"
+                  type="button"
                 >
                   Show compilation log
                 </button>
@@ -373,20 +757,20 @@ export function LatexEditor({ initialLatex, initialResumeUrl }: LatexEditorProps
                 style={{
                   transform: `scale(${zoom / 100})`,
                   transformOrigin: "top left",
-                  width: `${10000 / zoom}%`,
+                  width: `${10_000 / zoom}%`,
                   minHeight: "100%",
                 }}
               >
                 <iframe
+                  className="h-[calc(100vh-7rem)] w-full border-0"
                   src={pdfUrl}
                   title="LaTeX PDF preview"
-                  className="h-[calc(100vh-7rem)] w-full border-0"
                 />
               </div>
             </div>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <div className="text-center text-sm text-muted-foreground">
+              <div className="text-center text-muted-foreground text-sm">
                 <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
                 <p className="text-xs">{statusLabel ?? "Initializing…"}</p>
               </div>

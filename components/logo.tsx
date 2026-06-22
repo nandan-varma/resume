@@ -9,49 +9,49 @@ interface LogoIconProps {
 export function LogoIcon({ className, size = 28 }: LogoIconProps) {
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       className={className}
+      height={size}
+      viewBox="0 0 100 100"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
     >
       {/* Background — dark in light mode, slightly lifted in dark mode */}
       <rect
-        width="100"
+        className="dark:fill-[#1F1F1F]"
+        fill="#0A0A0A"
         height="100"
         rx="22"
-        fill="#0A0A0A"
-        className="dark:fill-[#1F1F1F]"
+        width="100"
       />
       {/* Subtle border for dark-mode visibility */}
       <rect
-        width="100"
+        fill="none"
         height="100"
         rx="22"
-        fill="none"
         stroke="white"
-        strokeWidth="1.5"
         strokeOpacity="0.12"
+        strokeWidth="1.5"
+        width="100"
       />
       {/* Top bar of J */}
       <line
-        x1="33"
-        y1="22"
-        x2="67"
-        y2="22"
         stroke="white"
-        strokeWidth="12"
         strokeLinecap="round"
+        strokeWidth="12"
+        x1="33"
+        x2="67"
+        y1="22"
+        y2="22"
       />
       {/* Stem + hook of J */}
       <path
         d="M 67 22 L 67 65 Q 67 80 53 80 Q 39 80 37 70"
+        fill="none"
         stroke="white"
-        strokeWidth="12"
         strokeLinecap="round"
         strokeLinejoin="round"
-        fill="none"
+        strokeWidth="12"
       />
     </svg>
   );

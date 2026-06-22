@@ -48,12 +48,19 @@ export function SignupForm({
   });
 
   const signUpWithGoogle = async () => {
-    await authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" });
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+    });
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const { success, message } = await signUp(values.email, values.password, values.username);
+    const { success, message } = await signUp(
+      values.email,
+      values.password,
+      values.username
+    );
     if (success) {
       toast.success("Account created! Check your email to verify.");
       router.push("/dashboard");
@@ -79,7 +86,11 @@ export function SignupForm({
                 type="button"
                 variant="outline"
               >
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="size-4 mr-2">
+                <svg
+                  className="mr-2 size-4"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <title>Google</title>
                   <path
                     d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
@@ -103,7 +114,11 @@ export function SignupForm({
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Alex Johnson" autoComplete="name" {...field} />
+                        <Input
+                          autoComplete="name"
+                          placeholder="Alex Johnson"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -116,7 +131,12 @@ export function SignupForm({
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="you@example.com" type="email" autoComplete="email" {...field} />
+                        <Input
+                          autoComplete="email"
+                          placeholder="you@example.com"
+                          type="email"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -129,7 +149,12 @@ export function SignupForm({
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input placeholder="Min. 8 characters" type="password" autoComplete="new-password" {...field} />
+                        <Input
+                          autoComplete="new-password"
+                          placeholder="Min. 8 characters"
+                          type="password"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -138,12 +163,19 @@ export function SignupForm({
               </div>
 
               <Button className="w-full" disabled={isLoading} type="submit">
-                {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Create account"}
+                {isLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  "Create account"
+                )}
               </Button>
 
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-muted-foreground text-sm">
                 Already have an account?{" "}
-                <Link className="text-foreground underline underline-offset-4 hover:text-primary" href="/login">
+                <Link
+                  className="text-foreground underline underline-offset-4 hover:text-primary"
+                  href="/login"
+                >
                   Sign in
                 </Link>
               </p>
@@ -153,9 +185,20 @@ export function SignupForm({
       </Card>
       <p className="text-balance text-center text-muted-foreground text-xs">
         By creating an account, you agree to our{" "}
-        <Link href="#" className="underline underline-offset-4 hover:text-primary">Terms of Service</Link>
-        {" "}and{" "}
-        <Link href="#" className="underline underline-offset-4 hover:text-primary">Privacy Policy</Link>.
+        <Link
+          className="underline underline-offset-4 hover:text-primary"
+          href="#"
+        >
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link
+          className="underline underline-offset-4 hover:text-primary"
+          href="#"
+        >
+          Privacy Policy
+        </Link>
+        .
       </p>
     </div>
   );

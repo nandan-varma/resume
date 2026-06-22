@@ -58,10 +58,7 @@ const ResetPasswordEmail = ({
           <Text className="m-0 mb-[8px] text-[14px] text-gray-500 leading-[20px]">
             Or copy and paste this link:
           </Text>
-          <Link
-            className="break-all text-[14px] text-gray-700"
-            href={resetUrl}
-          >
+          <Link className="break-all text-[14px] text-gray-700" href={resetUrl}>
             {resetUrl}
           </Link>
 

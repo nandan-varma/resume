@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
 import { generateText } from "ai";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { getModelInstanceById } from "@/lib/models";
@@ -31,7 +31,9 @@ export async function generateLatexFromPdf(
 ): Promise<void> {
   try {
     const res = await fetch(resumeUrl);
-    if (!res.ok) return;
+    if (!res.ok) {
+      return;
+    }
 
     const base64 = Buffer.from(await res.arrayBuffer()).toString("base64");
 

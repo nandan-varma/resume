@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/navigation";
 import { SettingsClient } from "@/components/settings-client";
-import { getCurrentUser, getPersonalInformation } from "@/server/users";
+import { getPersonalInformation } from "@/server/resume";
+import { getCurrentUser } from "@/server/users";
 
 export default async function SettingsPage() {
   const [{ currentUser }, personalInfo] = await Promise.all([
@@ -12,9 +13,9 @@ export default async function SettingsPage() {
     <>
       <Navigation activeTab="settings" />
       <SettingsClient
-        userName={currentUser.name}
-        userEmail={currentUser.email}
         initialPreferences={personalInfo?.aiPreferences ?? ""}
+        userEmail={currentUser.email}
+        userName={currentUser.name}
       />
     </>
   );

@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   description: "Manage your profile and AI analysis preferences.",
 };
 
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default function SettingsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

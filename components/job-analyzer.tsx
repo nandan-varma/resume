@@ -1,11 +1,15 @@
 "use client";
 
+import { AlertTriangle, Link2, Loader2, Search } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 import type { AnalysisResult } from "@/app/api/analyze/route";
+import { AnalysisResults } from "@/components/analysis-results";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,29 +17,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Link2, Loader2, Search, Upload } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { toast } from "sonner";
-import { AnalysisResults } from "@/components/analysis-results";
+import { Textarea } from "@/components/ui/textarea";
+import type { Job } from "@/db/schema";
 import {
   DEFAULT_MODEL_ID,
   isValidModelId,
   type ModelId,
   models,
 } from "@/lib/models";
-import { saveAnalysis } from "@/server/users";
+import { saveAnalysis } from "@/server/analysis";
 
 const MODEL_STORAGE_KEY = "job-match-ai-model";
 
-interface Job {
-  id: number;
-  jobTitle: string;
-}
+type JobSummary = Pick<Job, "id" | "jobTitle">;
 
 interface JobAnalyzerProps {
-  initialJobs: Job[];
   hasResume: boolean;
+  initialJobs: JobSummary[];
 }
 
 export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
@@ -45,15 +43,19 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
-  const [jobs] = useState<Job[]>(initialJobs);
+  const [jobs] = useState<JobSummary[]>(initialJobs);
   const [linkedJobId, setLinkedJobId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const [modelId, setModelId] = useState<ModelId>(() => {
-    if (typeof window === "undefined") return DEFAULT_MODEL_ID;
+    if (typeof window === "undefined") {
+      return DEFAULT_MODEL_ID;
+    }
     const stored = localStorage.getItem(MODEL_STORAGE_KEY);
-    return stored && isValidModelId(stored) ? (stored as ModelId) : DEFAULT_MODEL_ID;
+    return stored && isValidModelId(stored)
+      ? (stored as ModelId)
+      : DEFAULT_MODEL_ID;
   });
 
   const handleModelChange = (value: string) => {
@@ -76,7 +78,9 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: url.trim() }),
       });
-      if (!response.ok) throw new Error("Failed to fetch job description");
+      if (!response.ok) {
+        throw new Error("Failed to fetch job description");
+      }
       const data = await response.json();
       setJobDescription(data.description || "");
       toast.success("Job description fetched");
@@ -90,7 +94,9 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
   };
 
   const handleSaveToJob = async (jobId: number) => {
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setSaving(true);
     const saveResult = await saveAnalysis(jobId, {
       match_percentage: result.match_percentage,
@@ -122,7 +128,10 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription: jobDescription.trim(), modelId }),
+        body: JSON.stringify({
+          jobDescription: jobDescription.trim(),
+          modelId,
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -135,7 +144,8 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         await handleSaveToJob(Number(linkedJobId));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "An unknown error occurred";
+      const msg =
+        err instanceof Error ? err.message : "An unknown error occurred";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -149,11 +159,14 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
     <div className="space-y-5">
       {/* Resume status warning */}
       {!hasResume && (
-        <div className="flex items-start gap-3 border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning animate-enter">
-          <AlertTriangle className="size-4 shrink-0 mt-0.5 text-warning" />
+        <div className="flex animate-enter items-start gap-3 border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
           <span>
             No resume uploaded yet.{" "}
-            <Link href="/resume" className="font-medium underline underline-offset-3 hover:no-underline">
+            <Link
+              className="font-medium underline underline-offset-3 hover:no-underline"
+              href="/resume"
+            >
               Add your resume
             </Link>{" "}
             to get accurate results.
@@ -162,11 +175,11 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       )}
 
       {/* Form card */}
-      <Card className="p-5 sm:p-6 space-y-5">
+      <Card className="space-y-5 p-5 sm:p-6">
         {/* Step 1: Job input */}
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="job-url" className="text-sm font-medium">
+            <Label className="font-medium text-sm" htmlFor="job-url">
               Job posting URL
               <span className="ml-2 font-normal text-muted-foreground text-xs">
                 auto-fills the description below
@@ -174,7 +187,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
             </Label>
             <div className="flex gap-2">
               <Input
-                className="flex-1 min-w-0"
+                className="min-w-0 flex-1"
                 disabled={urlLoading}
                 id="job-url"
                 onChange={(e) => setUrl(e.target.value)}
@@ -184,11 +197,11 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
                 value={url}
               />
               <Button
+                className="shrink-0"
                 disabled={urlLoading || !url.trim()}
                 onClick={handleFetchDescription}
                 type="button"
                 variant="outline"
-                className="shrink-0"
               >
                 {urlLoading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -201,7 +214,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="job-description" className="text-sm font-medium">
+            <Label className="font-medium text-sm" htmlFor="job-description">
               Job description
               <span className="ml-2 font-normal text-muted-foreground text-xs">
                 or paste directly
@@ -222,11 +235,11 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         <div className="flex flex-wrap items-end gap-3">
           {jobs.length > 0 && (
             <div className="space-y-1">
-              <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Label className="flex items-center gap-1.5 text-muted-foreground text-xs">
                 <Link2 className="size-3" />
                 Link to tracked job
               </Label>
-              <Select value={linkedJobId} onValueChange={setLinkedJobId}>
+              <Select onValueChange={setLinkedJobId} value={linkedJobId}>
                 <SelectTrigger className="h-8 w-48 text-sm">
                   <SelectValue placeholder="Optional" />
                 </SelectTrigger>
@@ -243,11 +256,13 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
           )}
 
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">AI model</Label>
+            <Label className="text-muted-foreground text-xs">AI model</Label>
             <Select onValueChange={handleModelChange} value={modelId}>
               <SelectTrigger className="h-8 w-56 text-sm">
                 <SelectValue>
-                  <span className="truncate">{currentModel?.name ?? modelId}</span>
+                  <span className="truncate">
+                    {currentModel?.name ?? modelId}
+                  </span>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -255,7 +270,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
                   <SelectItem key={model.id} value={model.id}>
                     <div className="flex flex-col">
                       <span>{model.name}</span>
-                      <span className="text-xs text-muted-foreground uppercase">
+                      <span className="text-muted-foreground text-xs uppercase">
                         {model.provider}
                       </span>
                     </div>
@@ -266,10 +281,14 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
           </div>
 
           <Button
+            className="ml-auto h-8 w-full sm:w-auto"
             disabled={loading || !jobDescription.trim()}
             onClick={analyzeMatch}
-            className="ml-auto h-8 sm:w-auto w-full"
-            title={!jobDescription.trim() ? "Paste a job description first" : undefined}
+            title={
+              jobDescription.trim()
+                ? undefined
+                : "Paste a job description first"
+            }
           >
             {loading ? (
               <>
@@ -286,7 +305,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         </div>
 
         {error && (
-          <p className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-enter">
+          <p className="animate-enter border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive text-sm">
             {error}
           </p>
         )}
@@ -299,33 +318,39 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
           </div>
 
           {/* Post-analysis save bar */}
-          {(!linkedJobId || linkedJobId === "none") && !saved && jobs.length > 0 && (
-            <div className="flex items-center gap-3 border border-border bg-muted/50 px-4 py-3 animate-enter">
-              <p className="text-sm text-muted-foreground flex-1">
-                Save this analysis to a tracked job?
-              </p>
-              <Select
-                onValueChange={(val) => {
-                  if (val !== "none") handleSaveToJob(Number(val));
-                }}
-              >
-                <SelectTrigger className="h-8 w-48 text-sm">
-                  <SelectValue placeholder="Choose a job…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {jobs.map((job) => (
-                    <SelectItem key={job.id} value={String(job.id)}>
-                      {job.jobTitle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {saving && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-            </div>
-          )}
+          {(!linkedJobId || linkedJobId === "none") &&
+            !saved &&
+            jobs.length > 0 && (
+              <div className="flex animate-enter items-center gap-3 border border-border bg-muted/50 px-4 py-3">
+                <p className="flex-1 text-muted-foreground text-sm">
+                  Save this analysis to a tracked job?
+                </p>
+                <Select
+                  onValueChange={(val) => {
+                    if (val !== "none") {
+                      handleSaveToJob(Number(val));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-48 text-sm">
+                    <SelectValue placeholder="Choose a job…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map((job) => (
+                      <SelectItem key={job.id} value={String(job.id)}>
+                        {job.jobTitle}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {saving && (
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+            )}
 
           {saved && (
-            <p className="text-sm font-medium text-success">
+            <p className="font-medium text-sm text-success">
               ✓ Analysis saved to job
             </p>
           )}

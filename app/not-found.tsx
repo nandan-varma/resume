@@ -1,20 +1,23 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <main id="main-content" className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
-      <div className="space-y-3 animate-enter-up">
-        <p className="text-6xl font-bold tracking-tight text-foreground">404</p>
-        <h1 className="text-xl font-semibold text-foreground">
+    <main
+      className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center"
+      id="main-content"
+    >
+      <div className="animate-enter-up space-y-3">
+        <p className="font-bold text-6xl text-foreground tracking-tight">404</p>
+        <h1 className="font-semibold text-foreground text-xl">
           Page not found
         </h1>
         <p className="text-muted-foreground">
           This page doesn&apos;t exist or has been moved.
         </p>
       </div>
-      <div className="flex gap-3 animate-enter-up [animation-delay:80ms]">
+      <div className="flex animate-enter-up gap-3 [animation-delay:80ms]">
         <Link href="/dashboard">
           <Button>Go to Dashboard</Button>
         </Link>
@@ -22,7 +25,7 @@ export default function NotFound() {
           <Button variant="outline">Home</Button>
         </Link>
       </div>
-      <Link href="/" aria-label="JobMatch — home">
+      <Link aria-label="JobMatch — home" href="/">
         <Logo iconSize={22} />
       </Link>
     </main>

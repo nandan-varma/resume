@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ScoreRingProps {
-  score: number;
+  className?: string;
   colorClass: string;
+  score: number;
   size?: number;
   strokeWidth?: number;
-  className?: string;
 }
 
 export function ScoreRing({
@@ -32,10 +32,13 @@ export function ScoreRing({
     function tick(now: number) {
       const t = Math.min((now - start) / dur, 1);
       // ease-out-cubic
-      const eased = 1 - Math.pow(1 - t, 3);
+      const eased = 1 - (1 - t) ** 3;
       setProgress(eased * score);
-      if (t < 1) requestAnimationFrame(tick);
-      else setProgress(score);
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        setProgress(score);
+      }
     }
 
     requestAnimationFrame(tick);
@@ -45,35 +48,35 @@ export function ScoreRing({
 
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      className={cn("shrink-0", className)}
-      style={{ transform: "rotate(-90deg)" }}
       aria-hidden="true"
+      className={cn("shrink-0", className)}
+      height={size}
+      style={{ transform: "rotate(-90deg)" }}
+      viewBox={`0 0 ${size} ${size}`}
+      width={size}
     >
       {/* Track */}
       <circle
+        className="text-border opacity-60"
         cx={cx}
         cy={cy}
-        r={r}
         fill="none"
+        r={r}
         stroke="currentColor"
         strokeWidth={strokeWidth}
-        className="text-border opacity-60"
       />
       {/* Progress arc */}
       <circle
+        className={colorClass}
         cx={cx}
         cy={cy}
-        r={r}
         fill="none"
+        r={r}
         stroke="currentColor"
-        strokeWidth={strokeWidth}
         strokeDasharray={circumference}
         strokeDashoffset={dashOffset}
         strokeLinecap="butt"
-        className={colorClass}
+        strokeWidth={strokeWidth}
       />
     </svg>
   );

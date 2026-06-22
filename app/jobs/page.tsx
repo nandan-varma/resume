@@ -1,6 +1,7 @@
-import { Navigation } from "@/components/navigation";
 import { JobsList } from "@/components/jobs-list";
-import { getCurrentUser, getJobs } from "@/server/users";
+import { Navigation } from "@/components/navigation";
+import { getJobs } from "@/server/jobs";
+import { getCurrentUser } from "@/server/users";
 
 export default async function JobsPage() {
   const [, jobs] = await Promise.all([

@@ -1,8 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 const MAX_DESCRIPTION_LENGTH = 8000;
 const FETCH_TIMEOUT_MS = 8000;
+
+const BLOCKED_HOSTS = [
+  /^localhost$/i,
+  /^127\./,
+  /^0\.0\.0\.0$/,
+  /^10\./,
+  /^192\.168\./,
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,
+  /^169\.254\./, // link-local / cloud metadata
+  /^fd[0-9a-f]{2}:/i, // IPv6 ULA
+  /^::1$/,
+  /\.local$/i,
+  /^metadata\.google\.internal$/i,
+];
 
 function isSafeUrl(raw: string): boolean {
   let url: URL;
@@ -11,23 +25,10 @@ function isSafeUrl(raw: string): boolean {
   } catch {
     return false;
   }
-  if (!["http:", "https:"].includes(url.protocol)) return false;
-
-  const h = url.hostname;
-  const blocked = [
-    /^localhost$/i,
-    /^127\./,
-    /^0\.0\.0\.0$/,
-    /^10\./,
-    /^192\.168\./,
-    /^172\.(1[6-9]|2[0-9]|3[01])\./,
-    /^169\.254\./, // link-local / cloud metadata
-    /^fd[0-9a-f]{2}:/i, // IPv6 ULA
-    /^::1$/,
-    /\.local$/i,
-    /^metadata\.google\.internal$/i,
-  ];
-  return !blocked.some((p) => p.test(h));
+  if (!["http:", "https:"].includes(url.protocol)) {
+    return false;
+  }
+  return !BLOCKED_HOSTS.some((p) => p.test(url.hostname));
 }
 
 function extractText(html: string): string {
@@ -55,7 +56,10 @@ export async function POST(req: NextRequest) {
   try {
     ({ url } = await req.json());
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
   }
 
   if (!url || typeof url !== "string" || !url.trim()) {
@@ -63,7 +67,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (!isSafeUrl(url.trim())) {
-    return NextResponse.json({ error: "Invalid or disallowed URL" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid or disallowed URL" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -83,7 +90,9 @@ export async function POST(req: NextRequest) {
     }
 
     const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
+    if (
+      !(contentType.includes("text/html") || contentType.includes("text/plain"))
+    ) {
       return NextResponse.json(
         { error: "URL does not point to a web page" },
         { status: 400 }
@@ -95,7 +104,10 @@ export async function POST(req: NextRequest) {
 
     if (!description) {
       return NextResponse.json(
-        { error: "Could not extract text from that page. Try pasting the description manually." },
+        {
+          error:
+            "Could not extract text from that page. Try pasting the description manually.",
+        },
         { status: 400 }
       );
     }

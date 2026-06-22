@@ -1,21 +1,21 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
-import { authClient, useSession } from "@/lib/auth-client";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ModeSwitcher } from "@/components/mode-switcher";
-import { Logo } from "@/components/logo";
 import {
-  Menu,
-  X,
-  LayoutDashboard,
-  Sparkles,
   Briefcase,
   FileText,
+  LayoutDashboard,
+  Menu,
   Settings,
+  Sparkles,
+  X,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/logo";
+import { ModeSwitcher } from "@/components/mode-switcher";
+import { authClient, useSession } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 export type Tab = "dashboard" | "analyze" | "jobs" | "resume" | "settings";
 
@@ -27,16 +27,22 @@ const tabs: {
   id: Tab;
   label: string;
   to: string;
-  Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+  Icon: React.ComponentType<{
+    className?: string;
+    "aria-hidden"?: boolean | "true" | "false";
+  }>;
 }[] = [
-  { id: "dashboard", label: "Dashboard", to: "/dashboard", Icon: LayoutDashboard },
-  { id: "analyze",   label: "Analyze",   to: "/analyze",   Icon: Sparkles },
-  { id: "jobs",      label: "Jobs",       to: "/jobs",      Icon: Briefcase },
-  { id: "resume",    label: "Resume",     to: "/resume",    Icon: FileText },
-  { id: "settings",  label: "Settings",  to: "/settings",  Icon: Settings },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    to: "/dashboard",
+    Icon: LayoutDashboard,
+  },
+  { id: "analyze", label: "Analyze", to: "/analyze", Icon: Sparkles },
+  { id: "jobs", label: "Jobs", to: "/jobs", Icon: Briefcase },
+  { id: "resume", label: "Resume", to: "/resume", Icon: FileText },
+  { id: "settings", label: "Settings", to: "/settings", Icon: Settings },
 ];
-
-let prevTabId: Tab | null = null;
 
 export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   const { data: session, isPending: isLoading } = useSession();
@@ -44,6 +50,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const tabRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+  const prevTabRef = useRef<Tab | null>(null);
 
   const [indicator, setIndicator] = useState<{
     left: number;
@@ -60,7 +67,9 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   // Alt+Arrow keyboard navigation between tabs
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!e.altKey) return;
+      if (!e.altKey) {
+        return;
+      }
       const currentIndex = tabs.findIndex((t) => t.id === activeTab);
       let nextTab: (typeof tabs)[number] | null = null;
       if (e.key === "ArrowRight" || e.key === "ArrowDown") {
@@ -70,7 +79,9 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
         e.preventDefault();
         nextTab = tabs[(currentIndex - 1 + tabs.length) % tabs.length];
       }
-      if (nextTab) router.push(nextTab.to);
+      if (nextTab) {
+        router.push(nextTab.to);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -79,18 +90,20 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   // Two-phase indicator: snap to "from" position, then animate to "to" position.
   useEffect(() => {
     const toEl = tabRefs.current.get(activeTab);
-    if (!toEl) return;
+    if (!toEl) {
+      return;
+    }
 
     const fromEl =
-      prevTabId !== null && prevTabId !== activeTab
-        ? tabRefs.current.get(prevTabId)
+      prevTabRef.current !== null && prevTabRef.current !== activeTab
+        ? tabRefs.current.get(prevTabRef.current)
         : null;
 
     let outerRaf: number;
     let innerRaf: number;
 
     outerRaf = requestAnimationFrame(() => {
-      const toLeft  = toEl.offsetLeft;
+      const toLeft = toEl.offsetLeft;
       const toWidth = toEl.offsetWidth;
 
       if (fromEl) {
@@ -101,13 +114,23 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
           animated: false,
         });
         innerRaf = requestAnimationFrame(() => {
-          setIndicator({ left: toLeft, width: toWidth, visible: true, animated: true });
+          setIndicator({
+            left: toLeft,
+            width: toWidth,
+            visible: true,
+            animated: true,
+          });
         });
       } else {
-        setIndicator({ left: toLeft, width: toWidth, visible: true, animated: false });
+        setIndicator({
+          left: toLeft,
+          width: toWidth,
+          visible: true,
+          animated: false,
+        });
       }
 
-      prevTabId = activeTab;
+      prevTabRef.current = activeTab;
     });
 
     return () => {
@@ -132,25 +155,24 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
 
   return (
     <nav
-      className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm animate-enter"
       aria-label="Site navigation"
+      className="sticky top-0 z-40 animate-enter border-border border-b bg-background/80 backdrop-blur-sm"
     >
       {/* ── Main bar ─────────────────────────────────────────── */}
       <div className="flex h-12 items-stretch justify-between px-4 md:px-6">
-
         {/* Logo */}
         <Link
-          href="/dashboard"
           aria-label="JobMatch — home"
           className="flex items-center transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          href="/dashboard"
         >
           <Logo iconSize={24} />
         </Link>
 
         {/* Desktop tab list — hidden on mobile */}
         <div
-          className="hidden md:flex relative items-stretch gap-0.5"
           aria-label="Main menu"
+          className="relative hidden items-stretch gap-0.5 md:flex"
         >
           {/* Sliding indicator */}
           <span
@@ -169,26 +191,29 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
           >
             <span
               aria-hidden="true"
-              className="absolute left-1/2 top-1/2 size-[4px] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-foreground"
+              className="absolute top-1/2 left-1/2 size-[4px] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-foreground"
             />
           </span>
 
           {tabs.map((tab) => (
             <Link
-              key={tab.id}
-              href={tab.to}
               aria-current={activeTab === tab.id ? "page" : undefined}
-              ref={(el) => {
-                if (el) tabRefs.current.set(tab.id, el);
-                else tabRefs.current.delete(tab.id);
-              }}
               className={cn(
                 "relative flex items-center px-3 text-sm transition-colors duration-200",
                 "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                 activeTab === tab.id
-                  ? "text-foreground font-medium"
+                  ? "font-medium text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               )}
+              href={tab.to}
+              key={tab.id}
+              ref={(el) => {
+                if (el) {
+                  tabRefs.current.set(tab.id, el);
+                } else {
+                  tabRefs.current.delete(tab.id);
+                }
+              }}
             >
               {tab.label}
             </Link>
@@ -202,18 +227,18 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
           {!isLoading && session?.user && (
             <>
               {/* Desktop: avatar + sign-out text */}
-              <div className="hidden md:flex items-center gap-3">
+              <div className="hidden items-center gap-3 md:flex">
                 <div
-                  role="img"
                   aria-label={`Signed in as ${session.user.email}`}
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-background text-xs font-semibold ring-1 ring-border"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground font-semibold text-background text-xs ring-1 ring-border"
+                  role="img"
                 >
                   {userInitial}
                 </div>
                 <button
-                  type="button"
+                  className="text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   onClick={handleSignOut}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  type="button"
                 >
                   Sign out
                 </button>
@@ -221,17 +246,17 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
               {/* Mobile: avatar (decorative — sign-out is in the mobile menu) */}
               <div
                 aria-hidden="true"
-                className="md:hidden flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background text-xs font-semibold ring-1 ring-border"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground font-semibold text-background text-xs ring-1 ring-border md:hidden"
               >
                 {userInitial}
               </div>
             </>
           )}
 
-          {!isLoading && !session?.user && (
+          {!(isLoading || session?.user) && (
             <Link
+              className="hidden text-foreground text-sm transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:inline-flex"
               href="/login"
-              className="hidden md:inline-flex text-sm text-foreground transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               Sign in
             </Link>
@@ -239,16 +264,20 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
 
           {/* Hamburger — mobile only */}
           <button
-            type="button"
-            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
-            aria-expanded={mobileOpen}
             aria-controls="mobile-nav-menu"
+            aria-expanded={mobileOpen}
+            aria-label={
+              mobileOpen ? "Close navigation menu" : "Open navigation menu"
+            }
+            className="-mr-1 flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:hidden"
             onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden flex items-center justify-center size-8 -mr-1 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            type="button"
           >
-            {mobileOpen
-              ? <X className="size-5" aria-hidden="true" />
-              : <Menu className="size-5" aria-hidden="true" />}
+            {mobileOpen ? (
+              <X aria-hidden="true" className="size-5" />
+            ) : (
+              <Menu aria-hidden="true" className="size-5" />
+            )}
           </button>
         </div>
       </div>
@@ -256,25 +285,25 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
       {/* ── Mobile dropdown ──────────────────────────────────── */}
       {mobileOpen && (
         <div
+          className="border-border border-t bg-background/95 backdrop-blur-sm md:hidden"
           id="mobile-nav-menu"
-          className="md:hidden border-t border-border bg-background/95 backdrop-blur-sm"
         >
           <ul className="py-1" role="list">
             {tabs.map(({ id, label, to, Icon }) => (
               <li key={id}>
                 <Link
-                  href={to}
                   aria-current={activeTab === id ? "page" : undefined}
-                  onClick={() => setMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-5 py-3 text-sm transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-inset focus-visible:ring-1 focus-visible:ring-ring",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
                     activeTab === id
-                      ? "text-foreground font-medium bg-muted/50"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                      ? "bg-muted/50 font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
                   )}
+                  href={to}
+                  onClick={() => setMobileOpen(false)}
                 >
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <Icon aria-hidden="true" className="size-4 shrink-0" />
                   {label}
                 </Link>
               </li>
@@ -282,25 +311,25 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
           </ul>
 
           {!isLoading && (
-            <div className="border-t border-border px-5 py-3 flex items-center justify-between gap-3 min-w-0">
+            <div className="flex min-w-0 items-center justify-between gap-3 border-border border-t px-5 py-3">
               {session?.user ? (
                 <>
-                  <span className="text-xs text-muted-foreground truncate min-w-0">
+                  <span className="min-w-0 truncate text-muted-foreground text-xs">
                     {session.user.email}
                   </span>
                   <button
-                    type="button"
+                    className="shrink-0 text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     onClick={handleSignOut}
-                    className="shrink-0 text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    type="button"
                   >
                     Sign out
                   </button>
                 </>
               ) : (
                 <Link
+                  className="text-foreground text-sm transition-colors hover:text-muted-foreground"
                   href="/login"
                   onClick={() => setMobileOpen(false)}
-                  className="text-sm text-foreground hover:text-muted-foreground transition-colors"
                 >
                   Sign in
                 </Link>

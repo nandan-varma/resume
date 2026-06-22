@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 interface CountUpProps {
-  to: number;
-  duration?: number;
   className?: string;
+  duration?: number;
+  to: number;
 }
 
 export function CountUp({ to, duration = 900, className }: CountUpProps) {
@@ -13,7 +13,9 @@ export function CountUp({ to, duration = 900, className }: CountUpProps) {
   const started = useRef(false);
 
   useEffect(() => {
-    if (started.current) return;
+    if (started.current) {
+      return;
+    }
     started.current = true;
 
     const start = performance.now();
@@ -21,10 +23,13 @@ export function CountUp({ to, duration = 900, className }: CountUpProps) {
     function tick(now: number) {
       const progress = Math.min((now - start) / duration, 1);
       // expo-out: starts fast, decelerates to target
-      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const eased = progress === 1 ? 1 : 1 - 2 ** (-10 * progress);
       setValue(Math.round(eased * to));
-      if (progress < 1) requestAnimationFrame(tick);
-      else setValue(to);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        setValue(to);
+      }
     }
 
     requestAnimationFrame(tick);

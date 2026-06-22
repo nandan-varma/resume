@@ -1,12 +1,11 @@
 "use client";
 
+import { Briefcase, ExternalLink, Loader2, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,31 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Loader2, ExternalLink, Briefcase } from "lucide-react";
-import { createJob, deleteJob, getJobs, updateJobStatus } from "@/server/users";
-import type { JobStatus } from "@/db/schema";
-import { STATUS_COLORS, STATUS_ICONS } from "@/lib/status";
+import { Textarea } from "@/components/ui/textarea";
+import type { Job, JobStatus } from "@/db/schema";
+import { jobStatus } from "@/db/schema";
+import { STATUS_CONFIG } from "@/lib/status";
+import { createJob, deleteJob, getJobs, updateJobStatus } from "@/server/jobs";
 
-const JOB_STATUSES: JobStatus[] = [
-  "submitted",
-  "waiting for response",
-  "rejected",
-  "interview",
-  "offer",
-  "accepted",
-  "withdrawn",
-];
-
-interface Job {
-  id: number;
-  jobTitle: string;
-  jobDescription: string;
-  link: string | null;
-  status: JobStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
+const JOB_STATUSES = jobStatus;
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -64,7 +47,7 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   const handleSubmit = async () => {
-    if (!formData.jobTitle.trim() || !formData.jobDescription.trim()) {
+    if (!(formData.jobTitle.trim() && formData.jobDescription.trim())) {
       toast.error("Job title and description are required");
       return;
     }
@@ -89,11 +72,11 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
   const handleDelete = async (jobId: number) => {
     setJobs((prev) => prev.filter((j) => j.id !== jobId));
     const result = await deleteJob(jobId);
-    if (!result.success) {
+    if (result.success) {
+      toast.success("Application removed");
+    } else {
       getJobs().then((data) => setJobs(data as Job[]));
       toast.error(result.message || "Failed to delete");
-    } else {
-      toast.success("Application removed");
     }
   };
 
@@ -114,18 +97,18 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
   );
 
   return (
-    <main id="main-content" className="min-h-screen p-6 md:p-10">
+    <main className="min-h-screen p-6 md:p-10" id="main-content">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-8 flex items-start justify-between gap-4 animate-enter-up">
+        <div className="mb-8 flex animate-enter-up items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Applications</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="font-bold text-3xl text-foreground">Applications</h1>
+            <p className="mt-1 text-muted-foreground text-sm">
               {jobs.length > 0
-                ? `${jobs.length} application${jobs.length !== 1 ? "s" : ""} tracked`
+                ? `${jobs.length} application${jobs.length === 1 ? "" : "s"} tracked`
                 : "Track your job applications"}
             </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog onOpenChange={setOpen} open={open}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="mr-2 size-4" />
@@ -140,44 +123,54 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
                 <div>
                   <Label htmlFor="title">Job Title *</Label>
                   <Input
+                    className="mt-1"
                     id="title"
-                    placeholder="Senior React Developer at Acme Corp"
-                    value={formData.jobTitle}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, jobTitle: e.target.value }))
                     }
-                    className="mt-1"
+                    placeholder="Senior React Developer at Acme Corp"
+                    value={formData.jobTitle}
                   />
                 </div>
                 <div>
                   <Label htmlFor="description">Job Description *</Label>
                   <Textarea
-                    id="description"
-                    placeholder="Paste the job description here…"
-                    value={formData.jobDescription}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, jobDescription: e.target.value }))
-                    }
-                    rows={6}
                     className="mt-1"
+                    id="description"
+                    onChange={(e) =>
+                      setFormData((f) => ({
+                        ...f,
+                        jobDescription: e.target.value,
+                      }))
+                    }
+                    placeholder="Paste the job description here…"
+                    rows={6}
+                    value={formData.jobDescription}
                   />
                 </div>
                 <div>
                   <Label htmlFor="link">Job Posting URL (optional)</Label>
                   <Input
+                    className="mt-1"
                     id="link"
-                    placeholder="https://…"
-                    type="url"
-                    value={formData.link}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, link: e.target.value }))
                     }
-                    className="mt-1"
+                    placeholder="https://…"
+                    type="url"
+                    value={formData.link}
                   />
                 </div>
-                <Button onClick={handleSubmit} disabled={creating} className="w-full">
+                <Button
+                  className="w-full"
+                  disabled={creating}
+                  onClick={handleSubmit}
+                >
                   {creating ? (
-                    <><Loader2 className="mr-2 size-4 animate-spin" />Adding…</>
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Adding…
+                    </>
                   ) : (
                     "Add Application"
                   )}
@@ -188,15 +181,21 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
         </div>
 
         {jobs.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2 animate-enter [animation-delay:80ms]" role="list" aria-label="Application status summary">
+          <div
+            aria-label="Application status summary"
+            className="mb-6 flex animate-enter flex-wrap gap-2 [animation-delay:80ms]"
+            role="list"
+          >
             {JOB_STATUSES.filter((s) => statusCounts[s] > 0).map((s) => (
               <span
+                className="inline-flex items-center gap-1.5 border border-border bg-background px-3 py-1 text-muted-foreground text-xs"
                 key={s}
                 role="listitem"
-                className="inline-flex items-center gap-1.5 border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
               >
-                <span aria-hidden="true">{STATUS_ICONS[s]}</span>
-                <span className="font-medium text-foreground">{statusCounts[s]}</span>
+                <span aria-hidden="true">{STATUS_CONFIG[s].icon}</span>
+                <span className="font-medium text-foreground">
+                  {statusCounts[s]}
+                </span>
                 <span className="capitalize">{s}</span>
               </span>
             ))}
@@ -206,19 +205,21 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
         {jobs.length === 0 ? (
           <Card className="py-16 text-center">
             <Briefcase className="mx-auto mb-3 size-10 text-muted-foreground/30" />
-            <h3 className="mb-1 font-semibold text-foreground">No applications yet</h3>
-            <p className="mb-5 text-sm text-muted-foreground">
+            <h3 className="mb-1 font-semibold text-foreground">
+              No applications yet
+            </h3>
+            <p className="mb-5 text-muted-foreground text-sm">
               Track your first application or{" "}
               <a
-                href="/analyze"
                 className="text-primary underline underline-offset-3 hover:no-underline"
+                href="/analyze"
               >
                 analyze a job
               </a>{" "}
               to get started.
             </p>
             <div className="flex justify-center">
-              <Button size="sm" onClick={() => setOpen(true)}>
+              <Button onClick={() => setOpen(true)} size="sm">
                 <Plus className="mr-2 size-4" />
                 Add Application
               </Button>
@@ -228,54 +229,58 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
           <div className="space-y-3">
             {jobs.map((job, i) => (
               <Card
+                className="animate-enter-up p-5"
                 key={job.id}
-                className="p-5 animate-enter-up"
                 style={{ animationDelay: `${Math.min(i * 50, 250)}ms` }}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-foreground truncate">
+                      <h3 className="truncate font-semibold text-foreground">
                         {job.jobTitle}
                       </h3>
-                      <Badge className={`${STATUS_COLORS[job.status]} border-0 text-xs`}>
-                        {STATUS_ICONS[job.status]} {job.status}
+                      <Badge
+                        className={`${STATUS_CONFIG[job.status].color} border-0 text-xs`}
+                      >
+                        {STATUS_CONFIG[job.status].icon} {job.status}
                       </Badge>
                     </div>
 
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="mt-1 flex items-center gap-3 text-muted-foreground text-xs">
                       <span>Added {formatDate(job.createdAt)}</span>
                       {job.link && (
                         <a
-                          href={job.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-primary hover:underline"
+                          href={job.link}
+                          rel="noopener noreferrer"
+                          target="_blank"
                         >
                           View posting <ExternalLink className="size-3" />
                         </a>
                       )}
                     </div>
 
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                    <p className="mt-2 line-clamp-2 text-muted-foreground text-sm">
                       {job.jobDescription}
                     </p>
 
                     <div className="mt-3 flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Status:</span>
+                      <span className="text-muted-foreground text-xs">
+                        Status:
+                      </span>
                       <Select
-                        value={job.status}
                         onValueChange={(v) =>
                           handleStatusChange(job.id, v as JobStatus)
                         }
+                        value={job.status}
                       >
                         <SelectTrigger className="h-7 w-44 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {JOB_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s} className="text-xs">
-                              {STATUS_ICONS[s]} {s}
+                            <SelectItem className="text-xs" key={s} value={s}>
+                              {STATUS_CONFIG[s].icon} {s}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -284,11 +289,11 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
                   </div>
 
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(job.id)}
                     aria-label={`Delete ${job.jobTitle}`}
                     className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDelete(job.id)}
+                    size="sm"
+                    variant="ghost"
                   >
                     <Trash2 className="size-4" />
                   </Button>

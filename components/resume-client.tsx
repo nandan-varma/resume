@@ -1,22 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import {
+  ChevronDown,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Pencil,
+  Save,
+  Upload,
+} from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, Loader2, Save, ExternalLink, ChevronDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { saveResumeLatex } from "@/server/users";
+import { saveResumeLatex } from "@/server/resume";
 
 interface ResumeClientProps {
-  initialResumeUrl: string | null;
   initialLatex: string | null;
+  initialResumeUrl: string | null;
 }
 
-export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientProps) {
+export function ResumeClient({
+  initialResumeUrl,
+  initialLatex,
+}: ResumeClientProps) {
   const [resumeUrl, setResumeUrl] = useState(initialResumeUrl);
   const [uploading, setUploading] = useState(false);
   const [latexContent, setLatexContent] = useState(initialLatex ?? "");
@@ -26,7 +36,9 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     if (file.type !== "application/pdf") {
       toast.error("Please upload a PDF file");
       return;
@@ -74,25 +86,27 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
   };
 
   return (
-    <main id="main-content" className="min-h-screen p-6 md:p-10">
+    <main className="min-h-screen p-6 md:p-10" id="main-content">
       <div className="mx-auto max-w-2xl">
         <div className="mb-8 animate-enter-up">
-          <h1 className="text-3xl font-bold text-foreground">Resume</h1>
+          <h1 className="font-bold text-3xl text-foreground">Resume</h1>
           <p className="mt-1 text-muted-foreground">
             Your resume is used for all AI analysis
           </p>
         </div>
 
-        <Card className="mb-4 p-6 animate-enter-up [animation-delay:80ms]">
+        <Card className="mb-4 animate-enter-up p-6 [animation-delay:80ms]">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">PDF Resume</h2>
+            <h2 className="font-semibold text-base text-foreground">
+              PDF Resume
+            </h2>
             <div className="flex items-center gap-3">
               {resumeUrl && (
                 <a
+                  className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
                   href={resumeUrl}
-                  target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  target="_blank"
                 >
                   <FileText className="size-3" />
                   View current
@@ -100,8 +114,8 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
                 </a>
               )}
               <Link
+                className="inline-flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
                 href="/editor"
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 <Pencil className="size-3" />
                 Open editor
@@ -111,17 +125,20 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
 
           {!resumeUrl && (
             <div className="mb-4 flex items-start gap-2.5 border border-warning/20 bg-warning/10 px-3 py-2.5 text-sm text-warning">
-              <Upload className="size-4 shrink-0 mt-0.5" />
+              <Upload className="mt-0.5 size-4 shrink-0" />
               <span>No resume uploaded yet — required for AI analysis.</span>
             </div>
           )}
 
           {resumeUrl && (
-            <div className="mb-4 flex items-start gap-2.5 border border-info/20 bg-info/10 px-3 py-2.5 text-sm text-info">
-              <FileText className="size-4 shrink-0 mt-0.5" />
+            <div className="mb-4 flex items-start gap-2.5 border border-info/20 bg-info/10 px-3 py-2.5 text-info text-sm">
+              <FileText className="mt-0.5 size-4 shrink-0" />
               <span>
                 After uploading, AI auto-generates editable LaTeX in the{" "}
-                <Link href="/editor" className="font-medium underline underline-offset-3 hover:no-underline">
+                <Link
+                  className="font-medium underline underline-offset-3 hover:no-underline"
+                  href="/editor"
+                >
                   editor
                 </Link>
                 . This may take a moment.
@@ -129,17 +146,19 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
             </div>
           )}
 
-          <label className={cn(
-            "flex cursor-pointer items-center gap-3 border border-dashed border-border px-5 py-4",
-            "hover:border-primary/40 hover:bg-muted/30 transition-colors",
-            uploading && "pointer-events-none opacity-60"
-          )}>
+          <label
+            className={cn(
+              "flex cursor-pointer items-center gap-3 border border-border border-dashed px-5 py-4",
+              "transition-colors hover:border-primary/40 hover:bg-muted/30",
+              uploading && "pointer-events-none opacity-60"
+            )}
+          >
             {uploading ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             ) : (
-              <Upload className="size-4 text-muted-foreground shrink-0" />
+              <Upload className="size-4 shrink-0 text-muted-foreground" />
             )}
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               {uploading
                 ? "Uploading…"
                 : resumeUrl
@@ -147,24 +166,26 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
                   : "Upload resume (PDF only)"}
             </span>
             <input
-              type="file"
               accept=".pdf"
-              onChange={handleResumeUpload}
-              disabled={uploading}
               className="hidden"
+              disabled={uploading}
+              onChange={handleResumeUpload}
+              type="file"
             />
           </label>
         </Card>
 
-        <Card className="p-6 animate-enter-up [animation-delay:150ms]">
+        <Card className="animate-enter-up p-6 [animation-delay:150ms]">
           <button
-            type="button"
-            onClick={() => setLatexOpen((v) => !v)}
             className="flex w-full items-center justify-between text-left"
+            onClick={() => setLatexOpen((v) => !v)}
+            type="button"
           >
             <div>
-              <h2 className="text-base font-semibold text-foreground">LaTeX Source</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <h2 className="font-semibold text-base text-foreground">
+                LaTeX Source
+              </h2>
+              <p className="mt-0.5 text-muted-foreground text-xs">
                 Store your resume source for version control
               </p>
             </div>
@@ -179,29 +200,35 @@ export function ResumeClient({ initialResumeUrl, initialLatex }: ResumeClientPro
           {latexOpen && (
             <div className="mt-4 space-y-3">
               <Textarea
-                value={latexContent}
+                aria-label="LaTeX resume source code"
+                className="resize-y font-mono text-sm"
                 onChange={(e) => {
                   setLatexContent(e.target.value);
                   setLatexDirty(true);
                 }}
-                aria-label="LaTeX resume source code"
-                rows={18}
                 placeholder="Paste your LaTeX resume source here…"
-                className="font-mono text-sm resize-y"
+                rows={18}
+                value={latexContent}
               />
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {latexDirty ? "Unsaved changes" : latexContent ? "Saved" : ""}
                 </span>
                 <Button
-                  onClick={handleSaveLatex}
                   disabled={savingLatex || !latexDirty}
+                  onClick={handleSaveLatex}
                   size="sm"
                 >
                   {savingLatex ? (
-                    <><Loader2 className="mr-2 size-3.5 animate-spin" />Saving…</>
+                    <>
+                      <Loader2 className="mr-2 size-3.5 animate-spin" />
+                      Saving…
+                    </>
                   ) : (
-                    <><Save className="mr-2 size-3.5" />Save LaTeX</>
+                    <>
+                      <Save className="mr-2 size-3.5" />
+                      Save LaTeX
+                    </>
                   )}
                 </Button>
               </div>

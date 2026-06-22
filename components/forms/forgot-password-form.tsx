@@ -66,8 +66,10 @@ export function ForgotPasswordForm({
             <div className="flex flex-col items-center gap-4 py-4 text-center">
               <CheckCircle2 className="size-10 text-success" />
               <div>
-                <p className="font-semibold text-foreground">Check your email</p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">
+                  Check your email
+                </p>
+                <p className="mt-1 text-muted-foreground text-sm">
                   If an account exists for{" "}
                   <span className="font-medium text-foreground">
                     {form.getValues("email")}
@@ -76,7 +78,7 @@ export function ForgotPasswordForm({
                 </p>
               </div>
               <Link href="/login">
-                <Button variant="outline" size="sm" className="mt-2">
+                <Button className="mt-2" size="sm" variant="outline">
                   Back to sign in
                 </Button>
               </Link>
@@ -123,7 +125,7 @@ export function ForgotPasswordForm({
                   "Send reset link"
                 )}
               </Button>
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-muted-foreground text-sm">
                 Remember your password?{" "}
                 <Link
                   className="text-foreground underline underline-offset-4 hover:text-primary"

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LatexEditor } from "@/components/latex-editor";
-import { getCurrentUser, getPersonalInformation } from "@/server/users";
+import { getCurrentUser } from "@/server/users";
+import { getPersonalInformation } from "@/server/resume";
 
 export const metadata: Metadata = {
   title: "LaTeX Editor",
