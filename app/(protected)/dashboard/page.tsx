@@ -1,5 +1,5 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { BarChart3, Briefcase, CheckCircle2, Target } from "lucide-react";
+import { BarChart3, Briefcase, CheckCircle2, Puzzle, Target } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
@@ -75,6 +75,27 @@ async function DashboardContent() {
           </Link>
         ))}
       </div>
+
+      <SpotlightCard className="animate-enter-up mb-6 p-5 [animation-delay:240ms]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
+              <Puzzle className="size-5 text-indigo-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Chrome Extension</p>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                See your match score on any LinkedIn job — right on the page.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link href="https://github.com/nandan-varma/resume/tree/main/extension" target="_blank">
+              Install
+            </Link>
+          </Button>
+        </div>
+      </SpotlightCard>
 
       {jobs.length === 0 ? (
         <Card className="animate-enter-up p-10 text-center [animation-delay:320ms]">

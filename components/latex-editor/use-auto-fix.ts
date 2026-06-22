@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type React from "react";
 import type { ChatMsg, EditorJob, EnginePhase } from "./types";
 import { buildHistory } from "./types";
 
@@ -9,6 +10,7 @@ const MAX_AUTO_FIX = 2;
 interface AutoFixOptions {
   aiAppliedRef: React.MutableRefObject<boolean>;
   chatLoading: boolean;
+  chatLoadingRef: React.MutableRefObject<boolean>;
   chatMessages: ChatMsg[];
   compileLog: string;
   engine: EnginePhase;
@@ -28,6 +30,7 @@ export function useAutoFix({
   engine,
   compileLog,
   chatLoading,
+  chatLoadingRef,
   chatMessages,
   aiAppliedRef,
   executeAIEdit,
@@ -37,7 +40,6 @@ export function useAutoFix({
   const autoFixCountRef = useRef(0);
   const pendingAutoFixRef = useRef(false);
 
-  // Effect: trigger auto-fix when compilation error occurs after AI edit
   // biome-ignore lint/correctness/useExhaustiveDependencies: refs & AI state intentionally excluded
   useEffect(() => {
     if (engine.phase !== "error" && engine.phase !== "ready") {
@@ -48,6 +50,8 @@ export function useAutoFix({
     aiAppliedRef.current = false;
 
     if (!wasAI || engine.phase !== "error" || !compileLog) {
+      // Reset counter on any successful compile so future AI edits get fresh attempts.
+      if (engine.phase === "ready") autoFixCountRef.current = 0;
       return;
     }
 
@@ -64,7 +68,7 @@ export function useAutoFix({
       return;
     }
 
-    if (chatLoading) {
+    if (chatLoadingRef.current) {
       pendingAutoFixRef.current = true;
       return;
     }
@@ -78,24 +82,18 @@ export function useAutoFix({
     );
   }, [engine.phase, compileLog]);
 
-  // Effect: process pending auto-fix when chat finishes loading
   // biome-ignore lint/correctness/useExhaustiveDependencies: only run when chatLoading changes
   useEffect(() => {
-    if (!chatLoading && pendingAutoFixRef.current) {
-      pendingAutoFixRef.current = false;
-      if (
-        engine.phase === "error" &&
-        compileLog &&
-        autoFixCountRef.current < MAX_AUTO_FIX
-      ) {
-        autoFixCountRef.current += 1;
-        executeAIEdit(
-          `The LaTeX has compilation errors. Fix them.\n\nError log:\n${compileLog.slice(0, 2000)}`,
-          buildHistory(chatMessages),
-          "Compilation error — fixing automatically…",
-          job?.description
-        );
-      }
+    if (chatLoadingRef.current || !pendingAutoFixRef.current) return;
+    pendingAutoFixRef.current = false;
+    if (engine.phase === "error" && compileLog && autoFixCountRef.current < MAX_AUTO_FIX) {
+      autoFixCountRef.current += 1;
+      executeAIEdit(
+        `The LaTeX has compilation errors. Fix them.\n\nError log:\n${compileLog.slice(0, 2000)}`,
+        buildHistory(chatMessages),
+        "Compilation error — fixing automatically…",
+        job?.description
+      );
     }
   }, [chatLoading]);
 }

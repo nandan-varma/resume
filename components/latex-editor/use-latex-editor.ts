@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useModelId } from "@/lib/use-model-id";
 import type { ChatMsg, EditorJob } from "./types";
 import { useAiChat } from "./use-ai-chat";
@@ -14,7 +14,8 @@ const DEBOUNCE_MS = 2500;
 export function useLatexEditor(
   initialLatex: string,
   job: EditorJob | null,
-  isNewJobResume: boolean
+  isNewJobResume: boolean,
+  initialChatMessages?: unknown
 ) {
   const [latex, setLatexState] = useState(initialLatex);
   const latexRef = useRef(latex);
@@ -38,14 +39,22 @@ export function useLatexEditor(
 
   const [modelId] = useModelId();
 
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>(
+    Array.isArray(initialChatMessages) ? (initialChatMessages as ChatMsg[]) : []
+  );
+  const [chatLoading, _setChatLoading] = useState(false);
+  const chatLoadingRef = useRef(false);
+  const setChatLoading = useCallback((v: boolean) => {
+    chatLoadingRef.current = v;
+    _setChatLoading(v);
+  }, []);
 
-  const { engine, pdfUrl, compileLog, showLog, setShowLog, compile } =
+  const { engine, pageCount, pdfUrl, compileLog, showLog, setShowLog, compile } =
     useEngine();
 
   const { saving, dirty, autoSaving, handleSave, markDirty } = useAutoSave(
     getLatex,
+    chatMessages,
     job
   );
 
@@ -55,9 +64,11 @@ export function useLatexEditor(
       setLatex,
       modelId,
       job,
+      pageCount,
       chatMessages,
       setChatMessages,
       chatLoading,
+      chatLoadingRef,
       setChatLoading
     );
 
@@ -78,6 +89,7 @@ export function useLatexEditor(
     engine,
     compileLog,
     chatLoading,
+    chatLoadingRef,
     chatMessages,
     aiAppliedRef,
     executeAIEdit,
@@ -124,7 +136,7 @@ export function useLatexEditor(
     await compile(latexRef.current);
   }, [compile]);
 
-  const isEmpty = useMemo(() => !latex.trim(), [latex]);
+  const isEmpty = !latex.trim();
 
   return {
     autoSaving,

@@ -22,6 +22,7 @@ export type ChatMsg =
       role: "assistant";
       content: string;
       editsApplied?: number;
+      streaming?: boolean;
     }
   | {
       id: string;

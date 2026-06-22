@@ -77,6 +77,7 @@ function renderMessage(
           <AssistantBubble
             content={msg.content}
             editsApplied={msg.editsApplied}
+            streaming={msg.streaming}
           />
         ) : (
           <span className="leading-relaxed">{msg.content}</span>
@@ -130,7 +131,7 @@ function EditorPane({
             {chatMessages.map((msg, i) =>
               renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
             )}
-            {chatLoading && lastMsg?.role === "user" && <LoadingBubble />}
+            {chatLoading && lastMsg?.role === "user" && !chatMessages.some((m) => m.role === "assistant" && m.streaming) && <LoadingBubble />}
             <div ref={chatEndRef} />
           </div>
           <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2.5">

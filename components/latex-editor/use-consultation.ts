@@ -55,15 +55,7 @@ export function useConsultation(
         userMsg("Tailor my resume for this job"),
       ]);
       executeAIEdit(
-        `Tailor this resume to maximize ATS keyword match and human reviewer impact for the target job.
-
-PRIORITIES (in order):
-1. Insert the job's required keywords and exact technology/tool names naturally into existing bullet points and the Skills section.
-2. Strengthen weak or vague bullet points with quantifiable metrics where available.
-3. Align experience descriptions to mirror the terminology and language used in the job description.
-4. Ensure the most relevant experience and skills are prominent and easy to find.
-
-Do NOT fabricate metrics, technologies, company names, or accomplishments not already in the resume.${ctx}`,
+        `Tailor this resume for the target job: insert required keywords naturally, strengthen bullets with metrics where possible, and mirror the job description's terminology. Do not fabricate any facts.${ctx}`,
         [],
         undefined,
         job?.description

@@ -1,6 +1,8 @@
 "use client";
 
+import { parsePartialJson } from "ai";
 import { useCallback, useRef, useState } from "react";
+import type React from "react";
 import { toast } from "sonner";
 import type { ModelId } from "@/lib/models";
 import type { ChatMsg, EditorJob } from "./types";
@@ -17,12 +19,7 @@ function userMsg(content: string): ChatMsg {
 }
 
 function assistantMsg(content: string, editsApplied?: number): ChatMsg {
-  return {
-    id: createMsgId(),
-    role: "assistant",
-    content,
-    ...(editsApplied === undefined ? {} : { editsApplied }),
-  };
+  return { id: createMsgId(), role: "assistant", content, editsApplied };
 }
 
 function applyEdits(
@@ -46,11 +43,13 @@ export function useAiChat(
   setLatex: (value: string, isAiEdit: boolean) => void,
   modelId: ModelId,
   job: EditorJob | null,
+  pageCount: number | null,
   chatMessages: ChatMsg[],
   setChatMessages: (
     updater: ChatMsg[] | ((prev: ChatMsg[]) => ChatMsg[])
   ) => void,
   chatLoading: boolean,
+  chatLoadingRef: React.MutableRefObject<boolean>,
   setChatLoading: (v: boolean) => void
 ) {
   const [chatInput, setChatInput] = useState("");
@@ -105,6 +104,13 @@ export function useAiChat(
         setChatMessages((prev) => [...prev, notice(noticeMsg)]);
       }
       setChatLoading(true);
+
+      const streamMsgId = createMsgId();
+      setChatMessages((prev) => [
+        ...prev,
+        { id: streamMsgId, role: "assistant" as const, content: "", streaming: true },
+      ]);
+
       try {
         const res = await fetch("/api/edit-latex", {
           method: "POST",
@@ -115,14 +121,34 @@ export function useAiChat(
             modelId,
             history,
             ...(jobDescription ? { jobDescription } : {}),
+            ...(pageCount !== null ? { pageCount } : {}),
           }),
         });
-        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
           throw new Error(data.error ?? "Request failed");
         }
 
-        const { explanation, edits } = data as {
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let text = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          text += decoder.decode(value, { stream: true });
+
+          const { value: partial } = await parsePartialJson(text);
+          const partialExplanation = (partial as Record<string, unknown> | undefined)?.explanation;
+          if (typeof partialExplanation === "string") {
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === streamMsgId ? { ...m, content: partialExplanation } : m
+              )
+            );
+          }
+        }
+
+        const { explanation, edits } = JSON.parse(text) as {
           explanation: string;
           edits: { find: string; replace: string }[];
         };
@@ -137,22 +163,26 @@ export function useAiChat(
             notice("Could not apply edits — try rephrasing."),
           ]);
         }
-        setChatMessages((prev) => [
-          ...prev,
-          assistantMsg(explanation, applied),
-        ]);
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamMsgId
+              ? { ...m, content: explanation, streaming: false, editsApplied: applied || undefined }
+              : m
+          )
+        );
       } catch (err) {
+        setChatMessages((prev) => prev.filter((m) => m.id !== streamMsgId));
         toast.error(err instanceof Error ? err.message : "AI request failed");
       } finally {
         setChatLoading(false);
       }
     },
-    [modelId, getLatex, setLatex, pushUndo, setChatMessages, setChatLoading]
+    [modelId, getLatex, setLatex, pushUndo, setChatMessages, setChatLoading, pageCount]
   );
 
   const handleChatSend = useCallback(async () => {
     const msg = chatInput.trim();
-    if (!msg || chatLoading) {
+    if (!msg || chatLoadingRef.current) {
       return;
     }
 
@@ -166,7 +196,7 @@ export function useAiChat(
     );
   }, [
     chatInput,
-    chatLoading,
+    chatLoadingRef,
     chatMessages,
     executeAIEdit,
     job,

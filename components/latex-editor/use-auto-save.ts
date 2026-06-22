@@ -3,22 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { saveJobResumeLatex, saveResumeLatex } from "@/server/resume";
-import type { EditorJob } from "./types";
+import type { ChatMsg, EditorJob } from "./types";
 
-export function useAutoSave(getLatex: () => string, job: EditorJob | null) {
+export function useAutoSave(
+  getLatex: () => string,
+  chatMessages: ChatMsg[],
+  job: EditorJob | null
+) {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatMessagesRef = useRef(chatMessages);
+  chatMessagesRef.current = chatMessages;
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       const latex = getLatex();
+      const messages = chatMessagesRef.current;
       const result = job
-        ? await saveJobResumeLatex(job.id, latex)
-        : await saveResumeLatex(latex);
+        ? await saveJobResumeLatex(job.id, latex, messages)
+        : await saveResumeLatex(latex, messages);
       if (result.success) {
         setDirty(false);
         setAutoSaving(false);

@@ -30,8 +30,7 @@ export function getModelInstanceById(id: ModelId) {
   const model = models.find((m) => m.id === id);
   if (!model) throw new Error(`Model '${id}' not found`);
   if (model.provider === "google") return google(model.modelId as GoogleGenerativeAIModelId);
-  if (model.provider === "openai") return openai(model.modelId as OpenAIChatModelId);
-  throw new Error("Unsupported provider");
+  return openai(model.modelId as OpenAIChatModelId);
 }
 
 export const DEFAULT_MODEL_ID: ModelId = "gemini-3-flash-preview";

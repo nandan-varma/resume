@@ -2,7 +2,7 @@
 
 import EditorHeader from "./editor-header";
 import EditorPane from "./editor-pane";
-import { ErrorBoundary } from "./error-boundary";
+import { ErrorBoundary } from "@/lib/error-boundary";
 import JobBanner from "./job-banner";
 import PdfPreview from "./pdf-preview";
 import { ResizablePanel } from "./resizable-panel";
@@ -10,12 +10,14 @@ import type { EditorJob } from "./types";
 import { useLatexEditor } from "./use-latex-editor";
 
 interface LatexEditorProps {
+  initialChatMessages?: unknown;
   initialLatex: string;
   isNewJobResume?: boolean;
   job?: EditorJob | null;
 }
 
 export function LatexEditor({
+  initialChatMessages,
   initialLatex,
   job = null,
   isNewJobResume = false,
@@ -48,14 +50,14 @@ export function LatexEditor({
     handleForceRecompile,
     undo,
     redo,
-  } = useLatexEditor(initialLatex, job, isNewJobResume);
+  } = useLatexEditor(initialLatex, job, isNewJobResume, initialChatMessages);
 
   const isCompiling =
     engine.phase === "loading" || engine.phase === "compiling";
   const isEngineReady = engine.phase === "ready";
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary reload>
       <div className="flex h-screen flex-col bg-background">
         <EditorHeader
           autoSaving={autoSaving}

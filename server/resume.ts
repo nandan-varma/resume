@@ -20,45 +20,35 @@ const saveJobResumeLatexSchema = z.object({
   resumeLatex: z.string(),
 });
 
-async function upsertPersonalInfo(
-  userId: string,
-  update: Partial<{
-    resumeUrl: string;
-    resumeLatex: string;
-    aiPreferences: string;
-  }>
-) {
-  const existing = await db.query.personalInformation.findFirst({
-    where: eq(personalInformation.userId, userId),
-    columns: { id: true },
-  });
-  if (existing) {
-    await db
-      .update(personalInformation)
-      .set(update)
-      .where(eq(personalInformation.userId, userId));
-  } else {
-    await db.insert(personalInformation).values({ userId, ...update });
-  }
+type PersonalInfoUpdate = Partial<{
+  resumeUrl: string;
+  resumeLatex: string;
+  aiPreferences: string;
+  chatMessages: unknown[];
+}>;
+
+async function upsertPersonalInfo(userId: string, update: PersonalInfoUpdate) {
+  await db
+    .insert(personalInformation)
+    .values({ userId, ...update })
+    .onConflictDoUpdate({
+      target: personalInformation.userId,
+      set: update,
+    });
 }
 
 async function upsertJobResume(
   userId: string,
   jobId: number,
-  resumeLatex: string
+  update: Partial<{ resumeLatex: string; chatMessages: unknown[] }>
 ) {
-  const existing = await db.query.jobResumes.findFirst({
-    where: and(eq(jobResumes.jobId, jobId), eq(jobResumes.userId, userId)),
-    columns: { id: true },
-  });
-  if (existing) {
-    await db
-      .update(jobResumes)
-      .set({ resumeLatex })
-      .where(and(eq(jobResumes.jobId, jobId), eq(jobResumes.userId, userId)));
-  } else {
-    await db.insert(jobResumes).values({ jobId, userId, resumeLatex });
-  }
+  await db
+    .insert(jobResumes)
+    .values({ jobId, userId, ...update })
+    .onConflictDoUpdate({
+      target: [jobResumes.jobId, jobResumes.userId],
+      set: update,
+    });
 }
 
 export const uploadResume = async (fileBuffer: Buffer, fileName: string) => {
@@ -121,7 +111,10 @@ export const saveAiPreferences = async (aiPreferences: string) => {
   }
 };
 
-export const saveResumeLatex = async (resumeLatex: string) => {
+export const saveResumeLatex = async (
+  resumeLatex: string,
+  chatMessages?: unknown[]
+) => {
   try {
     const parsed = saveResumeLatexSchema.safeParse({ resumeLatex });
     if (!parsed.success) {
@@ -137,6 +130,7 @@ export const saveResumeLatex = async (resumeLatex: string) => {
     }
     await upsertPersonalInfo(session.user.id, {
       resumeLatex: parsed.data.resumeLatex,
+      ...(Array.isArray(chatMessages) ? { chatMessages } : {}),
     });
     return { success: true, message: "LaTeX saved." };
   } catch (error) {
@@ -166,7 +160,8 @@ export const getJobResume = async (jobId: number) => {
 
 export const saveJobResumeLatex = async (
   jobId: number,
-  resumeLatex: string
+  resumeLatex: string,
+  chatMessages?: unknown[]
 ) => {
   try {
     const parsed = saveJobResumeLatexSchema.safeParse({ jobId, resumeLatex });
@@ -182,11 +177,10 @@ export const saveJobResumeLatex = async (
       return { success: false, message: "Unauthorized" };
     }
 
-    await upsertJobResume(
-      session.user.id,
-      parsed.data.jobId,
-      parsed.data.resumeLatex
-    );
+    await upsertJobResume(session.user.id, parsed.data.jobId, {
+      resumeLatex: parsed.data.resumeLatex,
+      ...(Array.isArray(chatMessages) ? { chatMessages } : {}),
+    });
 
     return { success: true, message: "Job resume saved." };
   } catch (error) {

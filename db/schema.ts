@@ -3,10 +3,12 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -64,6 +66,7 @@ export const personalInformation = pgTable(
     resumeUrl: text("resume_url"),
     resumeLatex: text("resume_latex"),
     aiPreferences: text("ai_preferences"),
+    chatMessages: jsonb("chat_messages").notNull().default([]),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -73,7 +76,7 @@ export const personalInformation = pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index("personalInformation_userId_idx").on(table.userId)]
+  (table) => [uniqueIndex("personalInformation_userId_idx").on(table.userId)]
 );
 
 export const session = pgTable(
@@ -226,6 +229,7 @@ export const jobResumes = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     resumeLatex: text("resume_latex").notNull().default(""),
+    chatMessages: jsonb("chat_messages").notNull().default([]),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -235,6 +239,7 @@ export const jobResumes = pgTable(
   (table) => [
     index("job_resumes_jobId_idx").on(table.jobId),
     index("job_resumes_userId_idx").on(table.userId),
+    uniqueIndex("job_resumes_jobId_userId_unique").on(table.jobId, table.userId),
   ]
 );
 

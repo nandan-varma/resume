@@ -24,7 +24,7 @@ There are no tests. The linter is **Biome** (configured in `biome.jsonc`, extend
 
 - **`proxy.ts`** exports `proxy` (the middleware function) and `config` (the matcher). Next.js picks this up as `middleware.ts` via a config alias — do not rename it to `middleware.ts`.
 - Auth is **better-auth** (`lib/auth.ts` server, `lib/auth-client.ts` client). The session cookie is `better-auth.session_token`.
-- Protected routes: `/dashboard`, `/jobs`, `/analyze`, `/settings`, `/resume`, `/editor`.
+- The middleware's `PROTECTED` list covers `/dashboard`, `/jobs`, `/analyze`, `/settings`, `/resume`. The `/editor` route is outside the `(protected)` group but protected via `getCurrentUser()` → `requireSession()` which redirects to `/login`.
 - Server-side auth: `app/(protected)/layout.tsx` calls `requireSession()` from `server/session.ts`, which redirects to `/login` on failure. Individual protected pages do **not** need their own auth guard.
 
 ### Server actions (`server/`)
@@ -34,8 +34,8 @@ Actions are split by domain. All import the shared React-cached `getSession` fro
 | File | Exports |
 |---|---|
 | `server/users.ts` | `getCurrentUser`, `signIn`, `signUp` |
-| `server/jobs.ts` | `createJob`, `getJobs`, `updateJobStatus`, `deleteJob` |
-| `server/resume.ts` | `uploadResume`, `getPersonalInformation`, `saveAiPreferences`, `saveResumeLatex` |
+| `server/jobs.ts` | `createJob`, `getJobs`, `updateJobStatus`, `deleteJob`, `getJobById` |
+| `server/resume.ts` | `uploadResume`, `getPersonalInformation`, `saveAiPreferences`, `saveResumeLatex`, `getJobResume`, `saveJobResumeLatex` |
 | `server/analysis.ts` | `saveAnalysis`, `getAnalysisByJobId` |
 | `server/session.ts` | `getSession`, `requireSession` (internal, not called from client) |
 
@@ -45,7 +45,10 @@ Actions are split by domain. All import the shared React-cached `getSession` fro
 
 Drizzle ORM on Neon (serverless PostgreSQL). Schema in `db/schema.ts`; use `db.query.*` for relational queries and `db.insert/update/delete` for mutations. The `Job` type is exported from schema as `typeof jobs.$inferSelect`.
 
-The `analysis` table stores `strengths`, `missingKeywords`, and `improvementSuggestions` as JSON-serialized `text` columns — callers in `server/analysis.ts` handle `JSON.stringify`/`JSON.parse` explicitly.
+Key tables:
+- `personalInformation` — one row per user; stores global `resumeLatex`, `resumeUrl`, `aiPreferences`, and `chatMessages` (JSONB).
+- `jobResumes` — per-job resume variant; stores `resumeLatex` and `chatMessages` (JSONB). Unique on `(jobId, userId)`. Upserted via `onConflictDoUpdate`.
+- `analysis` — stores `strengths`, `missingKeywords`, and `improvementSuggestions` as JSON-serialized `text` columns — callers in `server/analysis.ts` handle `JSON.stringify`/`JSON.parse` explicitly.
 
 ### TanStack Query
 
@@ -66,11 +69,31 @@ The `analysis` table stores `strengths`, `missingKeywords`, and `improvementSugg
 
 - `resolveModel(id: string)` — use this in API routes; falls back to `DEFAULT_MODEL_ID` if `id` is invalid.
 - `getModelInstanceById(id: ModelId)` — returns a provider instance directly; throws if the id is unknown.
-- Default model: `gemini-3-flash-preview`.
+- Default model: `gemini-3-flash-preview`. Model selection is persisted to localStorage via `useModelId()` in `lib/use-model-id.ts` (`MODEL_STORAGE_KEY`).
+
+### API routes (`app/api/`)
+
+| Route | Purpose |
+|---|---|
+| `auth/[...all]` | better-auth catch-all handler |
+| `edit-latex` | Streaming LaTeX edits — uses `streamObject` + `toTextStreamResponse()` |
+| `job-customize` | Consultation questions for tailoring resume to a job |
+| `analysis` | AI resume-vs-job match scoring |
+| `analyze` | Orchestrates fetch-job + analysis |
+| `fetch-job` | Scrapes job description from a URL |
+| `upload-resume` | Handles PDF upload to R2, triggers background LaTeX generation |
+
+All routes validate the session via `auth.api.getSession({ headers: req.headers })` and parse the request body with Zod before any AI calls.
 
 ### LaTeX editor (`/editor`)
 
-The editor page uses `texlyre-busytex` — a WASM LaTeX compiler that runs in the browser. The `texlive-extra.data` file (~324 MB) is served via an UploadThing CDN redirect configured in `next.config.ts`. The WASM engine is lazy-loaded and cached via refs; do not import `texlyre-busytex` statically.
+The editor page is at `/editor` (global resume) or `/editor?jobId=N` (job-specific resume). The page resolves `initialLatex` as `jobResume.resumeLatex || personalInfo.resumeLatex`. `isNewJobResume` is true when a job is selected but no `jobResume` row exists yet — this triggers the AI consultation flow.
+
+The editor uses `texlyre-busytex` — a WASM LaTeX compiler that runs in the browser. The `texlive-extra.data` file (~324 MB) is served via UploadThing CDN; `busytex.wasm` and `busytex.js` are served from a custom R2 bucket. All three are redirected in `next.config.ts`. Do not import `texlyre-busytex` statically — it is lazy-loaded and cached via refs.
+
+**Streaming edits**: `edit-latex` uses `streamObject` server-side. The client (`use-ai-chat.ts`) reads the body stream chunk-by-chunk, calls `parsePartialJson` (from AI SDK) on each chunk to extract the partial `explanation`, and updates the chat bubble in real time with a blinking cursor. Edits are applied once the stream is complete.
+
+**Auto-save**: 5-second debounce after any change. Saves to `jobResumes` when a job is active, otherwise to `personalInformation`. Both LaTeX and chat messages are saved together.
 
 ### Status display (`lib/status.ts`)
 

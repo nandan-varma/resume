@@ -49,10 +49,13 @@ export default async function EditorPage({
 
   const initialLatex =
     jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
+  const initialChatMessages =
+    jobResume?.chatMessages ?? personalInfo?.chatMessages;
 
   return (
     <Suspense fallback={<EditorSkeleton />}>
       <LatexEditor
+        initialChatMessages={initialChatMessages}
         initialLatex={initialLatex}
         isNewJobResume={!!job && !jobResume}
         job={

@@ -1,4 +1,4 @@
-import { generateText, Output } from "ai";
+import { streamObject } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
@@ -17,6 +17,7 @@ const requestSchema = z.object({
   modelId: z.string(),
   history: z.array(historyMessageSchema).default([]),
   jobDescription: z.string().optional(),
+  pageCount: z.number().int().positive().optional(),
 });
 
 interface HistoryMessage {
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
   let modelId: string;
   let history: HistoryMessage[];
   let jobDescription: string | undefined;
+  let pageCount: number | undefined;
 
   try {
     const body = await req.json();
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
     modelId = parsed.modelId;
     history = parsed.history;
     jobDescription = parsed.jobDescription;
+    pageCount = parsed.pageCount;
   } catch (err) {
     if (err instanceof z.ZodError) {
       return Response.json(
@@ -131,23 +134,28 @@ CRITICAL RULES:
 - Prioritize: inserting required skills/tools from the JD into the Skills section and relevant bullets, strengthening bullet points with impact metrics, aligning terminology to mirror the JD's exact language.`);
   }
 
+  if (pageCount) {
+    const overflow =
+      pageCount === 1
+        ? "Fits on one page."
+        : pageCount === 2
+          ? "Currently spills onto a second page — prefer tightening existing content (shorter bullets, reduced vspace) over adding new content unless the user explicitly asks to expand."
+          : `${pageCount} pages — resume is long, lean toward cutting.`;
+    systemParts.push(`\nCompiled page count: ${pageCount}. ${overflow}`);
+  }
+
   // LaTeX in system prompt for provider-level prefix caching
   systemParts.push(`\nCurrent LaTeX resume:\n\`\`\`latex\n${latex}\n\`\`\``);
 
   try {
-    const { output } = await generateText({
+    const result = streamObject({
       model: modelInstance,
-      output: Output.object({
-        schema: editSchema,
-        name: "ResumeEdits",
-        description:
-          "Targeted find-and-replace edits to apply to the LaTeX resume",
-      }),
+      schema: editSchema,
       system: systemParts.join("\n"),
       messages: [...history, { role: "user", content: instruction.trim() }],
     });
 
-    return Response.json(output);
+    return result.toTextStreamResponse();
   } catch (err) {
     console.error("[edit-latex]", err);
     const errorMessage =

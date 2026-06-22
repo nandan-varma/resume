@@ -95,13 +95,20 @@ function RawQuestionBubble({
 interface AssistantBubbleProps {
   content: string;
   editsApplied?: number;
+  streaming?: boolean;
 }
 
-function RawAssistantBubble({ content, editsApplied }: AssistantBubbleProps) {
+function RawAssistantBubble({ content, editsApplied, streaming }: AssistantBubbleProps) {
+  const isEmpty = streaming && !content;
   return (
     <div className="flex flex-col gap-2">
-      <span className="whitespace-pre-wrap leading-relaxed">{content}</span>
-      {!!editsApplied && (
+      <span className={`whitespace-pre-wrap leading-relaxed${isEmpty ? " text-muted-foreground" : ""}`}>
+        {isEmpty ? "Analyzing…" : content}
+        {streaming && (
+          <span className="ml-0.5 inline-block h-[0.75em] w-[2px] translate-y-[1px] animate-pulse bg-current align-middle" />
+        )}
+      </span>
+      {!streaming && !!editsApplied && (
         <span className="inline-flex items-center gap-1 font-medium text-green-600 text-xs dark:text-green-400">
           <CheckCircle2 className="size-3 shrink-0" />
           Applied {editsApplied} {editsApplied === 1 ? "change" : "changes"} to

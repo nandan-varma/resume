@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
-interface SpotlightCardProps extends React.ComponentProps<"div"> {}
+type SpotlightCardProps = React.ComponentProps<"div">;
 
 export function SpotlightCard({
   children,

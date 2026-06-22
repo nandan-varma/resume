@@ -17,6 +17,7 @@ export function useEngine() {
   );
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [compileLog, setCompileLog] = useState("");
+  const [pageCount, setPageCount] = useState<number | null>(null);
   const [showLog, setShowLog] = useState(false);
 
   const pdfBlobUrlRef = useRef<string | null>(null);
@@ -89,7 +90,10 @@ export function useEngine() {
           rerun: true,
           verbose: "silent",
         });
-        setCompileLog(result.log ?? "");
+        const log = result.log ?? "";
+        setCompileLog(log);
+        const pages = log.match(/Output written.*?\((\d+)\s+page/)?.[1];
+        setPageCount(pages ? parseInt(pages) : null);
         if (result.success && result.pdf) {
           if (pdfBlobUrlRef.current) {
             URL.revokeObjectURL(pdfBlobUrlRef.current);
@@ -124,6 +128,7 @@ export function useEngine() {
 
   return {
     engine,
+    pageCount,
     pdfUrl,
     compileLog,
     showLog,
