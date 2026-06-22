@@ -18,13 +18,6 @@ const updateJobStatusSchema = z.object({
   status: z.enum(jobStatus),
 });
 
-const deleteJobSchema = z.object({
-  jobId: z.number().positive(),
-});
-
-const getJobByIdSchema = z.object({
-  jobId: z.number().positive(),
-});
 
 export const createJob = async (
   jobTitle: string,
@@ -120,20 +113,14 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
 
 export const getJobById = async (jobId: number) => {
   try {
-    const parsed = getJobByIdSchema.safeParse({ jobId });
-    if (!parsed.success) {
-      return null;
-    }
+    if (!Number.isInteger(jobId) || jobId < 1) return null;
 
     const session = await getSession();
     if (!session?.user.id) {
       return null;
     }
     return await db.query.jobs.findFirst({
-      where: and(
-        eq(jobs.id, parsed.data.jobId),
-        eq(jobs.userId, session.user.id)
-      ),
+      where: and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)),
     });
   } catch {
     return null;
@@ -142,12 +129,8 @@ export const getJobById = async (jobId: number) => {
 
 export const deleteJob = async (jobId: number) => {
   try {
-    const parsed = deleteJobSchema.safeParse({ jobId });
-    if (!parsed.success) {
-      return {
-        success: false,
-        message: parsed.error.issues.map((e) => e.message).join(", "),
-      };
+    if (!Number.isInteger(jobId) || jobId < 1) {
+      return { success: false, message: "Invalid job ID" };
     }
 
     const session = await getSession();
@@ -157,9 +140,7 @@ export const deleteJob = async (jobId: number) => {
 
     await db
       .delete(jobs)
-      .where(
-        and(eq(jobs.id, parsed.data.jobId), eq(jobs.userId, session.user.id))
-      );
+      .where(and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)));
 
     return { success: true, message: "Job deleted." };
   } catch (error) {

@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 // import Script from "next/script";
 import { BusyTexSW } from "@/components/busytex-sw";
-import { NetworkBackgroundWrapper } from "@/components/network-background-wrapper";
 import { Providers } from "./providers";
 
 const geistSans = Geist({
@@ -65,7 +64,6 @@ export default function RootLayout({
           Skip to main content
         </a>
         <BusyTexSW />
-        <NetworkBackgroundWrapper />
         <div className="relative z-[1]">
           <Providers>{children}</Providers>
         </div>
