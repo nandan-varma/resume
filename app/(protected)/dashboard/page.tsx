@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { STATUS_CONFIG } from "@/lib/status";
 import { getJobs } from "@/server/jobs";
-import { getCurrentUser } from "@/server/users";
+import { getSession } from "@/server/session";
 
 export default async function Dashboard() {
-  const [userData, jobs] = await Promise.all([getCurrentUser(), getJobs()]);
+  const [session, jobs] = await Promise.all([getSession(), getJobs()]);
 
   const interviewCount = jobs.filter((j) => j.status === "interview").length;
   const offerCount = jobs.filter((j) => j.status === "offer").length;
@@ -43,7 +43,7 @@ export default async function Dashboard() {
         {/* Welcome */}
         <div className="mb-8 animate-enter-up">
           <h1 className="font-bold text-3xl text-foreground">
-            Welcome back, {userData.currentUser.name}
+            Welcome back, {session?.user.name}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Here's your job search at a glance

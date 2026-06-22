@@ -10,17 +10,17 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeSwitcher } from "@/components/mode-switcher";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 export type Tab = "dashboard" | "analyze" | "jobs" | "resume" | "settings";
 
 interface NavigationProps {
-  activeTab?: Tab;
+  user: { name: string; email: string } | null;
 }
 
 const tabs: {
@@ -44,10 +44,14 @@ const tabs: {
   { id: "settings", label: "Settings", to: "/settings", Icon: Settings },
 ];
 
-export function Navigation({ activeTab = "analyze" }: NavigationProps) {
-  const { data: session, isPending: isLoading } = useSession();
+export function Navigation({ user }: NavigationProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const activeTab =
+    (tabs.find((t) => pathname === t.to || pathname.startsWith(`${t.to}/`))
+      ?.id as Tab | undefined) ?? "dashboard";
 
   const tabRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
   const prevTabRef = useRef<Tab | null>(null);
@@ -150,8 +154,8 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
     }
   };
 
-  const userInitial = session?.user
-    ? (session.user.name ?? session.user.email).charAt(0).toUpperCase()
+  const userInitial = user
+    ? (user.name ?? user.email).charAt(0).toUpperCase()
     : null;
 
   const indicatorTransition = () => {
@@ -233,12 +237,12 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
         <div className="flex items-center gap-2 md:gap-3">
           <ModeSwitcher />
 
-          {!isLoading && session?.user && (
+          {user && (
             <>
               {/* Desktop: avatar + sign-out text */}
               <div className="hidden items-center gap-3 md:flex">
                 <div
-                  aria-label={`Signed in as ${session.user.email}`}
+                  aria-label={`Signed in as ${user.email}`}
                   className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground font-semibold text-background text-xs ring-1 ring-border"
                   role="img"
                 >
@@ -262,7 +266,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
             </>
           )}
 
-          {!(isLoading || session?.user) && (
+          {!user && (
             <Link
               className="hidden text-foreground text-sm transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:inline-flex"
               href="/login"
@@ -319,32 +323,30 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
             ))}
           </ul>
 
-          {!isLoading && (
-            <div className="flex min-w-0 items-center justify-between gap-3 border-border border-t px-5 py-3">
-              {session?.user ? (
-                <>
-                  <span className="min-w-0 truncate text-muted-foreground text-xs">
-                    {session.user.email}
-                  </span>
-                  <button
-                    className="shrink-0 text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    onClick={handleSignOut}
-                    type="button"
-                  >
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <Link
-                  className="text-foreground text-sm transition-colors hover:text-muted-foreground"
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
+          <div className="flex min-w-0 items-center justify-between gap-3 border-border border-t px-5 py-3">
+            {user ? (
+              <>
+                <span className="min-w-0 truncate text-muted-foreground text-xs">
+                  {user.email}
+                </span>
+                <button
+                  className="shrink-0 text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onClick={handleSignOut}
+                  type="button"
                 >
-                  Sign in
-                </Link>
-              )}
-            </div>
-          )}
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                className="text-foreground text-sm transition-colors hover:text-muted-foreground"
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </nav>
