@@ -1,8 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Save } from "lucide-react";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -17,6 +19,10 @@ import { ErrorBoundary } from "@/lib/error-boundary";
 import { isValidModelId, type ModelId, models } from "@/lib/models";
 import { usePersonalInfo, useSaveAiPreferences } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
+
+const schema = z.object({
+  aiPreferences: z.string().max(5000),
+});
 
 interface SettingsClientProps {
   userEmail: string;
@@ -34,25 +40,17 @@ export function SettingsClient(props: SettingsClientProps) {
 function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
   const { data: personalInfo } = usePersonalInfo();
   const savePrefs = useSaveAiPreferences();
-
-  const [aiPreferences, setAiPreferences] = useState(
-    personalInfo?.aiPreferences ?? ""
-  );
   const [modelId, setModelId] = useModelId();
 
-  const savedPreferences = personalInfo?.aiPreferences ?? "";
-  const isDirty = aiPreferences !== savedPreferences;
+  // "values" re-syncs with TQ cache on every render — isDirty becomes false after a successful save
+  const form = useForm({
+    resolver: zodResolver(schema),
+    values: { aiPreferences: personalInfo?.aiPreferences ?? "" },
+  });
 
-  const handleModelChange = (value: string) => {
-    if (isValidModelId(value)) {
-      setModelId(value as ModelId);
-      toast.success("Model saved");
-    }
-  };
-
-  const handleSave = () => {
-    savePrefs.mutate(aiPreferences);
-  };
+  const onSubmit = form.handleSubmit(async ({ aiPreferences }) => {
+    await savePrefs.mutateAsync(aiPreferences);
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 md:px-6">
@@ -82,7 +80,15 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
             locally.
           </p>
         </div>
-        <Select onValueChange={handleModelChange} value={modelId}>
+        <Select
+          onValueChange={(value) => {
+            if (isValidModelId(value)) {
+              setModelId(value as ModelId);
+              toast.success("Model saved");
+            }
+          }}
+          value={modelId}
+        >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -111,36 +117,37 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
             your goals.
           </p>
         </div>
-        <Textarea
-          onChange={(e) => setAiPreferences(e.target.value)}
-          placeholder='e.g. "I am targeting senior backend engineering roles at startups. I have 5 years of Python and Go experience. Emphasize distributed systems work and de-emphasize frontend."'
-          rows={5}
-          value={aiPreferences}
-        />
-        <div className="mt-4 flex items-center justify-between">
-          <span
-            className={`text-xs ${isDirty ? "text-warning" : "text-muted-foreground"}`}
-          >
-            {isDirty ? "Unsaved changes" : ""}
-          </span>
-          <Button
-            disabled={savePrefs.isPending || !isDirty}
-            onClick={handleSave}
-            size="sm"
-          >
-            {savePrefs.isPending ? (
-              <>
-                <Loader2 className="mr-2 size-3.5 animate-spin" />
-                Saving…
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 size-3.5" />
-                Save
-              </>
-            )}
-          </Button>
-        </div>
+        <form onSubmit={onSubmit}>
+          <Textarea
+            {...form.register("aiPreferences")}
+            placeholder='e.g. "I am targeting senior backend engineering roles at startups…"'
+            rows={5}
+          />
+          <div className="mt-4 flex items-center justify-between">
+            <span
+              className={`text-xs ${form.formState.isDirty ? "text-warning" : "text-muted-foreground"}`}
+            >
+              {form.formState.isDirty ? "Unsaved changes" : ""}
+            </span>
+            <Button
+              disabled={form.formState.isSubmitting || !form.formState.isDirty}
+              size="sm"
+              type="submit"
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 size-3.5" />
+                  Save
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </Card>
     </div>
   );

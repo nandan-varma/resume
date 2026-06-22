@@ -1,5 +1,6 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Briefcase,
   ExternalLink,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,9 +44,15 @@ import {
 } from "@/lib/queries/jobs";
 import { STATUS_CONFIG } from "@/lib/status";
 
-const JOB_STATUSES = jobStatus;
+const addJobSchema = z.object({
+  jobTitle: z.string().min(1, "Required"),
+  jobDescription: z.string().min(1, "Required"),
+  link: z.string().url("Must be a valid URL").or(z.literal("")).optional(),
+});
 
-function formatDate(date: Date): string {
+type AddJobValues = z.infer<typeof addJobSchema>;
+
+function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -52,7 +60,106 @@ function formatDate(date: Date): string {
   }).format(new Date(date));
 }
 
-const EMPTY_FORM = { jobTitle: "", jobDescription: "", link: "" };
+function AddJobDialog() {
+  const [open, setOpen] = useState(false);
+  const createJob = useCreateJob();
+  const form = useForm<AddJobValues>({
+    resolver: zodResolver(addJobSchema),
+    defaultValues: { jobTitle: "", jobDescription: "", link: "" },
+  });
+
+  const onSubmit = form.handleSubmit((values) => {
+    createJob.mutate(
+      {
+        title: values.jobTitle,
+        description: values.jobDescription,
+        link: values.link || undefined,
+      },
+      {
+        onSuccess: () => {
+          form.reset();
+          setOpen(false);
+        },
+      }
+    );
+  });
+
+  return (
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="mr-2 size-4" />
+          Add Job
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add Application</DialogTitle>
+        </DialogHeader>
+        <form className="space-y-4 pt-1" onSubmit={onSubmit}>
+          <div>
+            <Label htmlFor="jobTitle">Job Title *</Label>
+            <Input
+              className="mt-1"
+              id="jobTitle"
+              placeholder="Senior React Developer at Acme Corp"
+              {...form.register("jobTitle")}
+            />
+            {form.formState.errors.jobTitle && (
+              <p className="mt-1 text-destructive text-xs">
+                {form.formState.errors.jobTitle.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="jobDescription">Job Description *</Label>
+            <Textarea
+              className="mt-1"
+              id="jobDescription"
+              placeholder="Paste the job description here…"
+              rows={6}
+              {...form.register("jobDescription")}
+            />
+            {form.formState.errors.jobDescription && (
+              <p className="mt-1 text-destructive text-xs">
+                {form.formState.errors.jobDescription.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="link">Job Posting URL (optional)</Label>
+            <Input
+              className="mt-1"
+              id="link"
+              placeholder="https://…"
+              type="url"
+              {...form.register("link")}
+            />
+            {form.formState.errors.link && (
+              <p className="mt-1 text-destructive text-xs">
+                {form.formState.errors.link.message}
+              </p>
+            )}
+          </div>
+          <Button
+            className="w-full"
+            disabled={createJob.isPending}
+            type="submit"
+          >
+            {createJob.isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Adding…
+              </>
+            ) : (
+              "Add Application"
+            )}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function JobsList() {
   return (
@@ -64,38 +171,15 @@ export function JobsList() {
 
 function WrappedJobsList() {
   const { data: jobs } = useJobs();
-  const createJobMutation = useCreateJob();
-  const deleteJobMutation = useDeleteJob();
-  const updateStatusMutation = useUpdateJobStatus();
-
-  const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState(EMPTY_FORM);
+  const deleteJob = useDeleteJob();
+  const updateStatus = useUpdateJobStatus();
   const [filterStatus, setFilterStatus] = useState<JobStatus | null>(null);
 
-  const handleSubmit = () => {
-    if (!(formData.jobTitle.trim() && formData.jobDescription.trim())) {
-      return;
-    }
-    createJobMutation.mutate(
-      {
-        title: formData.jobTitle.trim(),
-        description: formData.jobDescription.trim(),
-        link: formData.link.trim() || undefined,
-      },
-      {
-        onSuccess: () => {
-          setFormData(EMPTY_FORM);
-          setOpen(false);
-        },
-      }
-    );
-  };
-
   const statusCounts = Object.fromEntries(
-    JOB_STATUSES.map((s) => [s, jobs.filter((j) => j.status === s).length])
+    jobStatus.map((s) => [s, jobs.filter((j) => j.status === s).length])
   ) as Record<JobStatus, number>;
 
-  const displayedJobs = filterStatus
+  const displayed = filterStatus
     ? jobs.filter((j) => j.status === filterStatus)
     : jobs;
 
@@ -104,83 +188,10 @@ function WrappedJobsList() {
       <div className="mb-5 flex animate-enter-up items-center justify-between gap-4">
         <p className="text-muted-foreground text-sm">
           {jobs.length > 0
-            ? `${filterStatus ? `${displayedJobs.length} of ${jobs.length}` : jobs.length} application${jobs.length === 1 ? "" : "s"}`
+            ? `${filterStatus ? `${displayed.length} of ${jobs.length}` : jobs.length} application${jobs.length === 1 ? "" : "s"}`
             : "No applications yet"}
         </p>
-        <Dialog onOpenChange={setOpen} open={open}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 size-4" />
-              Add Job
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add Application</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-1">
-              <div>
-                <Label htmlFor="title">Job Title *</Label>
-                <Input
-                  className="mt-1"
-                  id="title"
-                  onChange={(e) =>
-                    setFormData((f) => ({ ...f, jobTitle: e.target.value }))
-                  }
-                  placeholder="Senior React Developer at Acme Corp"
-                  value={formData.jobTitle}
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Job Description *</Label>
-                <Textarea
-                  className="mt-1"
-                  id="description"
-                  onChange={(e) =>
-                    setFormData((f) => ({
-                      ...f,
-                      jobDescription: e.target.value,
-                    }))
-                  }
-                  placeholder="Paste the job description here…"
-                  rows={6}
-                  value={formData.jobDescription}
-                />
-              </div>
-              <div>
-                <Label htmlFor="link">Job Posting URL (optional)</Label>
-                <Input
-                  className="mt-1"
-                  id="link"
-                  onChange={(e) =>
-                    setFormData((f) => ({ ...f, link: e.target.value }))
-                  }
-                  placeholder="https://…"
-                  type="url"
-                  value={formData.link}
-                />
-              </div>
-              <Button
-                className="w-full"
-                disabled={
-                  createJobMutation.isPending ||
-                  !formData.jobTitle.trim() ||
-                  !formData.jobDescription.trim()
-                }
-                onClick={handleSubmit}
-              >
-                {createJobMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Adding…
-                  </>
-                ) : (
-                  "Add Application"
-                )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AddJobDialog />
       </div>
 
       {jobs.length > 0 && (
@@ -194,23 +205,25 @@ function WrappedJobsList() {
               ✕ All
             </button>
           )}
-          {JOB_STATUSES.filter((s) => statusCounts[s] > 0).map((s) => (
-            <button
-              aria-pressed={filterStatus === s}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
-                filterStatus === s
-                  ? `${STATUS_CONFIG[s].color} border-current/20 font-medium`
-                  : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-              key={s}
-              onClick={() => setFilterStatus(filterStatus === s ? null : s)}
-              type="button"
-            >
-              <span aria-hidden="true">{STATUS_CONFIG[s].icon}</span>
-              <span>{statusCounts[s]}</span>
-              <span className="capitalize">{s}</span>
-            </button>
-          ))}
+          {jobStatus
+            .filter((s) => statusCounts[s] > 0)
+            .map((s) => (
+              <button
+                aria-pressed={filterStatus === s}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                  filterStatus === s
+                    ? `${STATUS_CONFIG[s].color} border-current/20 font-medium`
+                    : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                }`}
+                key={s}
+                onClick={() => setFilterStatus(filterStatus === s ? null : s)}
+                type="button"
+              >
+                <span aria-hidden="true">{STATUS_CONFIG[s].icon}</span>
+                <span>{statusCounts[s]}</span>
+                <span className="capitalize">{s}</span>
+              </button>
+            ))}
         </div>
       )}
 
@@ -230,16 +243,10 @@ function WrappedJobsList() {
             </a>{" "}
             to get started.
           </p>
-          <div className="flex justify-center">
-            <Button onClick={() => setOpen(true)} size="sm">
-              <Plus className="mr-2 size-4" />
-              Add Application
-            </Button>
-          </div>
         </Card>
       ) : (
         <div className="space-y-3">
-          {displayedJobs.map((job, i) => (
+          {displayed.map((job, i) => (
             <Card
               className="animate-enter-up p-5"
               key={job.id}
@@ -257,7 +264,6 @@ function WrappedJobsList() {
                       {STATUS_CONFIG[job.status].icon} {job.status}
                     </Badge>
                   </div>
-
                   <div className="mt-1 flex items-center gap-3 text-muted-foreground text-xs">
                     <span>Added {formatDate(job.createdAt)}</span>
                     {job.link && (
@@ -271,11 +277,9 @@ function WrappedJobsList() {
                       </a>
                     )}
                   </div>
-
                   <p className="mt-2 line-clamp-2 text-muted-foreground text-sm">
                     {job.jobDescription}
                   </p>
-
                   <div className="mt-3 flex items-center gap-2">
                     <span className="text-muted-foreground text-xs">
                       Status:
@@ -284,7 +288,7 @@ function WrappedJobsList() {
                       onValueChange={(v) => {
                         const parsed = z.enum(jobStatus).safeParse(v);
                         if (parsed.success) {
-                          updateStatusMutation.mutate({
+                          updateStatus.mutate({
                             jobId: job.id,
                             status: parsed.data,
                           });
@@ -296,7 +300,7 @@ function WrappedJobsList() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {JOB_STATUSES.map((s) => (
+                        {jobStatus.map((s) => (
                           <SelectItem className="text-xs" key={s} value={s}>
                             {STATUS_CONFIG[s].icon} {s}
                           </SelectItem>
@@ -305,7 +309,6 @@ function WrappedJobsList() {
                     </Select>
                   </div>
                 </div>
-
                 <div className="flex shrink-0 items-center gap-1">
                   <Button
                     asChild
@@ -323,7 +326,7 @@ function WrappedJobsList() {
                   <Button
                     aria-label={`Delete ${job.jobTitle}`}
                     className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => deleteJobMutation.mutate(job.id)}
+                    onClick={() => deleteJob.mutate(job.id)}
                     size="sm"
                     variant="ghost"
                   >
