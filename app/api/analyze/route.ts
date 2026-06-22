@@ -32,6 +32,11 @@ const analysisSchema = z.object({
 
 export type AnalysisResult = z.infer<typeof analysisSchema>;
 
+const requestSchema = z.object({
+  jobDescription: z.string().min(1, "Job description is required").max(8000),
+  modelId: z.string(),
+});
+
 const MAX_JD_LENGTH = 8000;
 
 async function fetchResumeBase64(userId: string): Promise<string> {
@@ -61,21 +66,24 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let jobDescription: string;
-  let modelId: string;
-
+  let body: unknown;
   try {
-    ({ jobDescription, modelId } = await req.json());
+    body = await req.json();
   } catch {
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (!jobDescription?.trim()) {
+  const parsed = requestSchema.safeParse(body);
+  if (!parsed.success) {
     return Response.json(
-      { error: "Job description is required" },
+      {
+        error: `Invalid request: ${parsed.error.issues.map((e) => e.message).join(", ")}`,
+      },
       { status: 400 }
     );
   }
+
+  const { jobDescription, modelId } = parsed.data;
 
   try {
     const resumeBase64 = await fetchResumeBase64(session.user.id);
@@ -89,7 +97,7 @@ export async function POST(req: Request) {
           content: [
             {
               type: "text",
-              text: `You are an expert career coach. Analyze the attached resume against the job description and provide detailed, actionable feedback.\n\nJob Description:\n${jobDescription.trim().slice(0, MAX_JD_LENGTH)}`,
+              text: `You are an expert career coach. Analyze the attached resume against the job description and provide detailed, actionable feedback.\n\nJob Description:\n${jobDescription.slice(0, MAX_JD_LENGTH)}`,
             },
             {
               type: "file",

@@ -1,10 +1,24 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { jobResumes, personalInformation } from "@/db/schema";
 import { uploadToR2 } from "@/lib/r2";
 import { getSession } from "./session";
+
+const saveAiPreferencesSchema = z.object({
+  aiPreferences: z.string().max(5000, "Preferences too long"),
+});
+
+const saveResumeLatexSchema = z.object({
+  resumeLatex: z.string(),
+});
+
+const saveJobResumeLatexSchema = z.object({
+  jobId: z.number().positive(),
+  resumeLatex: z.string(),
+});
 
 async function upsertPersonalInfo(
   userId: string,
@@ -63,11 +77,21 @@ export const getPersonalInformation = async () => {
 
 export const saveAiPreferences = async (aiPreferences: string) => {
   try {
+    const parsed = saveAiPreferencesSchema.safeParse({ aiPreferences });
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return { success: false, message: "Unauthorized" };
     }
-    await upsertPersonalInfo(session.user.id, { aiPreferences });
+    await upsertPersonalInfo(session.user.id, {
+      aiPreferences: parsed.data.aiPreferences,
+    });
     return { success: true, message: "Preferences saved." };
   } catch (error) {
     return {
@@ -80,11 +104,21 @@ export const saveAiPreferences = async (aiPreferences: string) => {
 
 export const saveResumeLatex = async (resumeLatex: string) => {
   try {
+    const parsed = saveResumeLatexSchema.safeParse({ resumeLatex });
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return { success: false, message: "Unauthorized" };
     }
-    await upsertPersonalInfo(session.user.id, { resumeLatex });
+    await upsertPersonalInfo(session.user.id, {
+      resumeLatex: parsed.data.resumeLatex,
+    });
     return { success: true, message: "LaTeX saved." };
   } catch (error) {
     return {
@@ -116,6 +150,14 @@ export const saveJobResumeLatex = async (
   resumeLatex: string
 ) => {
   try {
+    const parsed = saveJobResumeLatexSchema.safeParse({ jobId, resumeLatex });
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return { success: false, message: "Unauthorized" };
@@ -123,7 +165,7 @@ export const saveJobResumeLatex = async (
 
     const existing = await db.query.jobResumes.findFirst({
       where: and(
-        eq(jobResumes.jobId, jobId),
+        eq(jobResumes.jobId, parsed.data.jobId),
         eq(jobResumes.userId, session.user.id)
       ),
       columns: { id: true },
@@ -132,17 +174,19 @@ export const saveJobResumeLatex = async (
     if (existing) {
       await db
         .update(jobResumes)
-        .set({ resumeLatex })
+        .set({ resumeLatex: parsed.data.resumeLatex })
         .where(
           and(
-            eq(jobResumes.jobId, jobId),
+            eq(jobResumes.jobId, parsed.data.jobId),
             eq(jobResumes.userId, session.user.id)
           )
         );
     } else {
-      await db
-        .insert(jobResumes)
-        .values({ jobId, userId: session.user.id, resumeLatex });
+      await db.insert(jobResumes).values({
+        jobId: parsed.data.jobId,
+        userId: session.user.id,
+        resumeLatex: parsed.data.resumeLatex,
+      });
     }
 
     return { success: true, message: "Job resume saved." };

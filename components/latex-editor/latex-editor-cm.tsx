@@ -6,6 +6,8 @@ import { basicSetup } from "codemirror";
 import { latex } from "codemirror-lang-latex";
 import { useEffect, useRef } from "react";
 
+import { cmExtensions } from "./cm-theme";
+
 interface LatexEditorCmProps {
   className?: string;
   onChange: (value: string) => void;
@@ -99,6 +101,7 @@ export function LatexEditorCm({
           fileName: "main.tex",
         }),
         EditorView.lineWrapping,
+        ...cmExtensions,
         updateListener,
         cmKeymap,
       ],

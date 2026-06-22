@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
+
+const requestSchema = z.object({
+  url: z.string().url("Must be a valid URL"),
+});
 
 const MAX_DESCRIPTION_LENGTH = 8000;
 const FETCH_TIMEOUT_MS = 8000;
@@ -11,8 +16,8 @@ const BLOCKED_HOSTS = [
   /^10\./,
   /^192\.168\./,
   /^172\.(1[6-9]|2[0-9]|3[01])\./,
-  /^169\.254\./, // link-local / cloud metadata
-  /^fd[0-9a-f]{2}:/i, // IPv6 ULA
+  /^169\.254\./,
+  /^fd[0-9a-f]{2}:/i,
   /^::1$/,
   /\.local$/i,
   /^metadata\.google\.internal$/i,
@@ -52,9 +57,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let url: string;
+  let body: unknown;
   try {
-    ({ url } = await req.json());
+    body = await req.json();
   } catch {
     return NextResponse.json(
       { error: "Invalid request body" },
@@ -62,11 +67,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!url || typeof url !== "string" || !url.trim()) {
-    return NextResponse.json({ error: "URL is required" }, { status: 400 });
+  const parsed = requestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: `Invalid request: ${parsed.error.issues.map((e) => e.message).join(", ")}`,
+      },
+      { status: 400 }
+    );
   }
 
-  if (!isSafeUrl(url.trim())) {
+  const { url } = parsed.data;
+
+  if (!isSafeUrl(url)) {
     return NextResponse.json(
       { error: "Invalid or disallowed URL" },
       { status: 400 }
@@ -77,7 +90,7 @@ export async function POST(req: NextRequest) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const response = await fetch(url.trim(), {
+    const response = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; JobMatch/1.0)" },
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));

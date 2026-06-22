@@ -68,7 +68,7 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
     setCreating(false);
 
     if (result.success && result.job) {
-      setJobs((prev) => [result.job as Job, ...prev]);
+      setJobs((prev) => [result.job, ...prev]);
       setFormData(EMPTY_FORM);
       setOpen(false);
       toast.success("Application added");
@@ -83,7 +83,7 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
     if (result.success) {
       toast.success("Application removed");
     } else {
-      getJobs().then((data) => setJobs(data as Job[]));
+      getJobs().then((data) => setJobs(data));
       toast.error(result.message || "Failed to delete");
     }
   };
@@ -94,7 +94,7 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
     );
     const result = await updateJobStatus(jobId, newStatus);
     if (!result.success) {
-      getJobs().then((data) => setJobs(data as Job[]));
+      getJobs().then((data) => setJobs(data));
       toast.error(result.message || "Failed to update status");
     }
   };

@@ -1,9 +1,16 @@
 import { after, type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { generateLatexFromPdf } from "@/lib/resume-latex";
 import { uploadResume } from "@/server/resume";
 
+const requestSchema = z.object({
+  fileName: z.string().min(1, "File name is required"),
+  fileBuffer: z.array(z.number()).min(4, "File is too small"),
+});
+
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const PDF_MIN_SIZE = 4;
 const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46]); // %PDF
 
 export async function POST(req: NextRequest) {
@@ -12,11 +19,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let fileName: string;
-  let fileBuffer: number[];
-
+  let body: unknown;
   try {
-    ({ fileName, fileBuffer } = await req.json());
+    body = await req.json();
   } catch {
     return NextResponse.json(
       { error: "Invalid request body" },
@@ -24,13 +29,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!fileName || typeof fileName !== "string" || !Array.isArray(fileBuffer)) {
+  const parsed = requestSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Missing fileName or fileBuffer" },
+      {
+        error: `Invalid request: ${parsed.error.issues.map((e) => e.message).join(", ")}`,
+      },
       { status: 400 }
     );
   }
 
+  const { fileName, fileBuffer } = parsed.data;
   const buffer = Buffer.from(fileBuffer);
 
   if (buffer.length > MAX_FILE_SIZE_BYTES) {
@@ -40,7 +49,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (buffer.length < 4 || !buffer.slice(0, 4).equals(PDF_MAGIC)) {
+  if (
+    buffer.length < PDF_MIN_SIZE ||
+    !buffer.slice(0, PDF_MIN_SIZE).equals(PDF_MAGIC)
+  ) {
     return NextResponse.json(
       { error: "File must be a valid PDF." },
       { status: 400 }
@@ -51,8 +63,6 @@ export async function POST(req: NextRequest) {
     const result = await uploadResume(buffer, fileName);
     if (result.success && result.resumeUrl) {
       const { resumeUrl } = result;
-      // Generate LaTeX from the uploaded PDF in the background —
-      // response is sent to the client before this runs.
       after(() => generateLatexFromPdf(session.user.id, resumeUrl));
     }
     return NextResponse.json(result);

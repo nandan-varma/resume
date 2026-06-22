@@ -1,10 +1,30 @@
 "use server";
 
 import { and, desc, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db/drizzle";
 import type { JobStatus } from "@/db/schema";
-import { jobs } from "@/db/schema";
+import { jobStatus, jobs } from "@/db/schema";
 import { getSession } from "./session";
+
+const createJobSchema = z.object({
+  jobTitle: z.string().min(1, "Job title is required").max(200),
+  jobDescription: z.string().min(1, "Job description is required").max(10_000),
+  link: z.string().url().optional(),
+});
+
+const updateJobStatusSchema = z.object({
+  jobId: z.number().positive(),
+  status: z.enum(jobStatus),
+});
+
+const deleteJobSchema = z.object({
+  jobId: z.number().positive(),
+});
+
+const getJobByIdSchema = z.object({
+  jobId: z.number().positive(),
+});
 
 export const createJob = async (
   jobTitle: string,
@@ -12,14 +32,33 @@ export const createJob = async (
   link?: string
 ) => {
   try {
+    const parsed = createJobSchema.safeParse({
+      jobTitle,
+      jobDescription,
+      link,
+    });
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return { success: false, message: "Unauthorized" };
     }
 
+    const { jobTitle: title, jobDescription: desc, link: url } = parsed.data;
+
     const [job] = await db
       .insert(jobs)
-      .values({ jobTitle, jobDescription, link, userId: session.user.id })
+      .values({
+        jobTitle: title,
+        jobDescription: desc,
+        link: url,
+        userId: session.user.id,
+      })
       .returning();
 
     return { success: true, message: "Job created.", job };
@@ -48,6 +87,14 @@ export const getJobs = async () => {
 
 export const updateJobStatus = async (jobId: number, status: JobStatus) => {
   try {
+    const parsed = updateJobStatusSchema.safeParse({ jobId, status });
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return { success: false, message: "Unauthorized" };
@@ -55,8 +102,10 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
 
     const [job] = await db
       .update(jobs)
-      .set({ status })
-      .where(and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)))
+      .set({ status: parsed.data.status })
+      .where(
+        and(eq(jobs.id, parsed.data.jobId), eq(jobs.userId, session.user.id))
+      )
       .returning();
 
     return { success: true, message: "Status updated.", job };
@@ -71,12 +120,20 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
 
 export const getJobById = async (jobId: number) => {
   try {
+    const parsed = getJobByIdSchema.safeParse({ jobId });
+    if (!parsed.success) {
+      return null;
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return null;
     }
     return await db.query.jobs.findFirst({
-      where: and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)),
+      where: and(
+        eq(jobs.id, parsed.data.jobId),
+        eq(jobs.userId, session.user.id)
+      ),
     });
   } catch {
     return null;
@@ -85,6 +142,14 @@ export const getJobById = async (jobId: number) => {
 
 export const deleteJob = async (jobId: number) => {
   try {
+    const parsed = deleteJobSchema.safeParse({ jobId });
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues.map((e) => e.message).join(", "),
+      };
+    }
+
     const session = await getSession();
     if (!session?.user.id) {
       return { success: false, message: "Unauthorized" };
@@ -92,7 +157,9 @@ export const deleteJob = async (jobId: number) => {
 
     await db
       .delete(jobs)
-      .where(and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)));
+      .where(
+        and(eq(jobs.id, parsed.data.jobId), eq(jobs.userId, session.user.id))
+      );
 
     return { success: true, message: "Job deleted." };
   } catch (error) {
