@@ -134,6 +134,11 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
     setResult(null);
     setSaved(false);
     setIsAnalyzing(true);
+
+    // Clear previous results and show loading state
+    setResult(null);
+    setSaved(false);
+
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
