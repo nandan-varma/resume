@@ -1,7 +1,11 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getQueryClient } from "@/app/get-query-client";
 import { JobAnalyzer } from "@/components/job-analyzer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { jobsQueryKey } from "@/lib/queries/jobs";
+import { personalInfoQueryKey } from "@/lib/queries/resume";
 import { getJobs } from "@/server/jobs";
 import { getPersonalInformation } from "@/server/resume";
 
@@ -9,24 +13,6 @@ export const metadata: Metadata = {
   title: "Analyze Match",
   description: "See how well your resume fits a job posting.",
 };
-
-async function AnalyzeContent() {
-  const [jobs, personalInfo] = await Promise.all([
-    getJobs(),
-    getPersonalInformation(),
-  ]);
-  return (
-    <div className="animate-enter-up [animation-delay:80ms]">
-      <JobAnalyzer
-        hasResume={!!personalInfo?.resumeUrl}
-        initialJobs={jobs.map((j) => ({
-          id: j.id,
-          jobTitle: j.jobTitle,
-        }))}
-      />
-    </div>
-  );
-}
 
 function AnalyzeContentSkeleton() {
   return (
@@ -39,6 +25,13 @@ function AnalyzeContentSkeleton() {
 }
 
 export default function AnalyzePage() {
+  const queryClient = getQueryClient();
+  queryClient.prefetchQuery({ queryKey: jobsQueryKey, queryFn: getJobs });
+  queryClient.prefetchQuery({
+    queryKey: personalInfoQueryKey,
+    queryFn: getPersonalInformation,
+  });
+
   return (
     <main className="min-h-screen" id="main-content">
       <div className="animate-enter-up border-border/40 border-b px-4 py-5 md:px-6 md:py-6">
@@ -53,9 +46,11 @@ export default function AnalyzePage() {
       </div>
       <div className="px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-5xl">
-          <Suspense fallback={<AnalyzeContentSkeleton />}>
-            <AnalyzeContent />
-          </Suspense>
+          <HydrationBoundary state={dehydrate(queryClient)}>
+            <Suspense fallback={<AnalyzeContentSkeleton />}>
+              <JobAnalyzer />
+            </Suspense>
+          </HydrationBoundary>
         </div>
       </div>
     </main>

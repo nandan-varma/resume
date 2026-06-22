@@ -1,18 +1,16 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getQueryClient } from "@/app/get-query-client";
 import { JobsList } from "@/components/jobs-list";
 import { Skeleton } from "@/components/ui/skeleton";
+import { jobsQueryKey } from "@/lib/queries/jobs";
 import { getJobs } from "@/server/jobs";
 
 export const metadata: Metadata = {
   title: "Applications",
   description: "Track and manage your job applications.",
 };
-
-async function JobsContent() {
-  const jobs = await getJobs();
-  return <JobsList initialJobs={jobs} />;
-}
 
 function JobsContentSkeleton() {
   return (
@@ -32,6 +30,9 @@ function JobsContentSkeleton() {
 }
 
 export default function JobsPage() {
+  const queryClient = getQueryClient();
+  queryClient.prefetchQuery({ queryKey: jobsQueryKey, queryFn: getJobs });
+
   return (
     <main className="min-h-screen" id="main-content">
       <div className="border-border/40 border-b px-4 py-5 md:px-6 md:py-6">
@@ -50,9 +51,11 @@ export default function JobsPage() {
       </div>
       <div className="px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-4xl">
-          <Suspense fallback={<JobsContentSkeleton />}>
-            <JobsContent />
-          </Suspense>
+          <HydrationBoundary state={dehydrate(queryClient)}>
+            <Suspense fallback={<JobsContentSkeleton />}>
+              <JobsList />
+            </Suspense>
+          </HydrationBoundary>
         </div>
       </div>
     </main>

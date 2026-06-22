@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,11 +31,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Job, JobStatus } from "@/db/schema";
+import type { JobStatus } from "@/db/schema";
 import { jobStatus } from "@/db/schema";
 import { ErrorBoundary } from "@/lib/error-boundary";
+import {
+  useCreateJob,
+  useDeleteJob,
+  useJobs,
+  useUpdateJobStatus,
+} from "@/lib/queries/jobs";
 import { STATUS_CONFIG } from "@/lib/status";
-import { createJob, deleteJob, getJobs, updateJobStatus } from "@/server/jobs";
 
 const JOB_STATUSES = jobStatus;
 
@@ -50,64 +54,41 @@ function formatDate(date: Date): string {
 
 const EMPTY_FORM = { jobTitle: "", jobDescription: "", link: "" };
 
-export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
+export function JobsList() {
   return (
     <ErrorBoundary>
-      <WrappedJobsList initialJobs={initialJobs} />
+      <WrappedJobsList />
     </ErrorBoundary>
   );
 }
 
-function WrappedJobsList({ initialJobs }: { initialJobs: Job[] }) {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
-  const [creating, setCreating] = useState(false);
+function WrappedJobsList() {
+  const { data: jobs } = useJobs();
+  const createJobMutation = useCreateJob();
+  const deleteJobMutation = useDeleteJob();
+  const updateStatusMutation = useUpdateJobStatus();
+
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [filterStatus, setFilterStatus] = useState<JobStatus | null>(null);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!(formData.jobTitle.trim() && formData.jobDescription.trim())) {
-      toast.error("Job title and description are required");
       return;
     }
-    setCreating(true);
-    const result = await createJob(
-      formData.jobTitle.trim(),
-      formData.jobDescription.trim(),
-      formData.link.trim() || undefined
+    createJobMutation.mutate(
+      {
+        title: formData.jobTitle.trim(),
+        description: formData.jobDescription.trim(),
+        link: formData.link.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setFormData(EMPTY_FORM);
+          setOpen(false);
+        },
+      }
     );
-    setCreating(false);
-
-    if (result.success && result.job) {
-      setJobs((prev) => [result.job, ...prev]);
-      setFormData(EMPTY_FORM);
-      setOpen(false);
-      toast.success("Application added");
-    } else {
-      toast.error(result.message || "Failed to add application");
-    }
-  };
-
-  const handleDelete = async (jobId: number) => {
-    setJobs((prev) => prev.filter((j) => j.id !== jobId));
-    const result = await deleteJob(jobId);
-    if (result.success) {
-      toast.success("Application removed");
-    } else {
-      getJobs().then((data) => setJobs(data));
-      toast.error(result.message || "Failed to delete");
-    }
-  };
-
-  const handleStatusChange = async (jobId: number, newStatus: JobStatus) => {
-    setJobs((prev) =>
-      prev.map((j) => (j.id === jobId ? { ...j, status: newStatus } : j))
-    );
-    const result = await updateJobStatus(jobId, newStatus);
-    if (!result.success) {
-      getJobs().then((data) => setJobs(data));
-      toast.error(result.message || "Failed to update status");
-    }
   };
 
   const statusCounts = Object.fromEntries(
@@ -181,10 +162,14 @@ function WrappedJobsList({ initialJobs }: { initialJobs: Job[] }) {
               </div>
               <Button
                 className="w-full"
-                disabled={creating}
+                disabled={
+                  createJobMutation.isPending ||
+                  !formData.jobTitle.trim() ||
+                  !formData.jobDescription.trim()
+                }
                 onClick={handleSubmit}
               >
-                {creating ? (
+                {createJobMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
                     Adding…
@@ -299,7 +284,10 @@ function WrappedJobsList({ initialJobs }: { initialJobs: Job[] }) {
                       onValueChange={(v) => {
                         const parsed = z.enum(jobStatus).safeParse(v);
                         if (parsed.success) {
-                          handleStatusChange(job.id, parsed.data);
+                          updateStatusMutation.mutate({
+                            jobId: job.id,
+                            status: parsed.data,
+                          });
                         }
                       }}
                       value={job.status}
@@ -335,7 +323,7 @@ function WrappedJobsList({ initialJobs }: { initialJobs: Job[] }) {
                   <Button
                     aria-label={`Delete ${job.jobTitle}`}
                     className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDelete(job.id)}
+                    onClick={() => deleteJobMutation.mutate(job.id)}
                     size="sm"
                     variant="ghost"
                   >

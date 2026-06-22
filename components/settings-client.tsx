@@ -15,11 +15,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorBoundary } from "@/lib/error-boundary";
 import { isValidModelId, type ModelId, models } from "@/lib/models";
+import { usePersonalInfo, useSaveAiPreferences } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
-import { saveAiPreferences } from "@/server/resume";
 
 interface SettingsClientProps {
-  initialPreferences: string;
   userEmail: string;
   userName: string;
 }
@@ -32,15 +31,17 @@ export function SettingsClient(props: SettingsClientProps) {
   );
 }
 
-function SettingsClientInner({
-  userName,
-  userEmail,
-  initialPreferences,
-}: SettingsClientProps) {
-  const [aiPreferences, setAiPreferences] = useState(initialPreferences);
-  const [originalPrefs, setOriginalPrefs] = useState(initialPreferences);
-  const [saving, setSaving] = useState(false);
+function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
+  const { data: personalInfo } = usePersonalInfo();
+  const savePrefs = useSaveAiPreferences();
+
+  const [aiPreferences, setAiPreferences] = useState(
+    personalInfo?.aiPreferences ?? ""
+  );
   const [modelId, setModelId] = useModelId();
+
+  const savedPreferences = personalInfo?.aiPreferences ?? "";
+  const isDirty = aiPreferences !== savedPreferences;
 
   const handleModelChange = (value: string) => {
     if (isValidModelId(value)) {
@@ -49,19 +50,9 @@ function SettingsClientInner({
     }
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    const result = await saveAiPreferences(aiPreferences);
-    setSaving(false);
-    if (result.success) {
-      setOriginalPrefs(aiPreferences);
-      toast.success("Preferences saved");
-    } else {
-      toast.error(result.message || "Failed to save");
-    }
+  const handleSave = () => {
+    savePrefs.mutate(aiPreferences);
   };
-
-  const isDirty = aiPreferences !== originalPrefs;
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 md:px-6">
@@ -132,8 +123,12 @@ function SettingsClientInner({
           >
             {isDirty ? "Unsaved changes" : ""}
           </span>
-          <Button disabled={saving || !isDirty} onClick={handleSave} size="sm">
-            {saving ? (
+          <Button
+            disabled={savePrefs.isPending || !isDirty}
+            onClick={handleSave}
+            size="sm"
+          >
+            {savePrefs.isPending ? (
               <>
                 <Loader2 className="mr-2 size-3.5 animate-spin" />
                 Saving…

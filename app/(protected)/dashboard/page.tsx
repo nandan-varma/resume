@@ -1,11 +1,14 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { BarChart3, Briefcase, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { getQueryClient } from "@/app/get-query-client";
 import { CountUp } from "@/components/count-up";
 import { SpotlightCard } from "@/components/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { jobsQueryKey } from "@/lib/queries/jobs";
 import { STATUS_CONFIG } from "@/lib/status";
 import { getJobs } from "@/server/jobs";
 import { getSession } from "@/server/session";
@@ -150,6 +153,9 @@ function DashboardSkeleton() {
 }
 
 export default function Dashboard() {
+  const queryClient = getQueryClient();
+  queryClient.prefetchQuery({ queryKey: jobsQueryKey, queryFn: getJobs });
+
   return (
     <main className="min-h-screen" id="main-content">
       <div className="animate-enter-up border-border/40 border-b px-4 py-5 md:px-6 md:py-6">
@@ -167,9 +173,11 @@ export default function Dashboard() {
       </div>
       <div className="px-4 py-6 md:px-6 md:py-8">
         <div className="mx-auto max-w-5xl">
-          <Suspense fallback={<DashboardSkeleton />}>
-            <DashboardContent />
-          </Suspense>
+          <HydrationBoundary state={dehydrate(queryClient)}>
+            <Suspense fallback={<DashboardSkeleton />}>
+              <DashboardContent />
+            </Suspense>
+          </HydrationBoundary>
         </div>
       </div>
     </main>

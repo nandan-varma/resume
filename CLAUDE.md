@@ -25,7 +25,7 @@ There are no tests. The linter is **Biome** (configured in `biome.jsonc`, extend
 - **`proxy.ts`** exports `proxy` (the middleware function) and `config` (the matcher). Next.js picks this up as `middleware.ts` via a config alias — do not rename it to `middleware.ts`.
 - Auth is **better-auth** (`lib/auth.ts` server, `lib/auth-client.ts` client). The session cookie is `better-auth.session_token`.
 - Protected routes: `/dashboard`, `/jobs`, `/analyze`, `/settings`, `/resume`, `/editor`.
-- Server-side auth for pages: call `getCurrentUser()` from `server/users.ts` at the top of any page — it redirects to `/login` on failure.
+- Server-side auth: `app/(protected)/layout.tsx` calls `requireSession()` from `server/session.ts`, which redirects to `/login` on failure. Individual protected pages do **not** need their own auth guard.
 
 ### Server actions (`server/`)
 
@@ -39,21 +39,34 @@ Actions are split by domain. All import the shared React-cached `getSession` fro
 | `server/analysis.ts` | `saveAnalysis`, `getAnalysisByJobId` |
 | `server/session.ts` | `getSession`, `requireSession` (internal, not called from client) |
 
+**Server actions as queryFn**: `getJobs` and `getPersonalInformation` are used as `queryFn` in TanStack Query hooks. On initial load the data is hydrated from the server, so the queryFn only runs client-side on stale refetches. **Mutations** (`createJob`, `deleteJob`, etc.) are the primary intended client-side use of server actions.
+
 ### Database (`db/`)
 
 Drizzle ORM on Neon (serverless PostgreSQL). Schema in `db/schema.ts`; use `db.query.*` for relational queries and `db.insert/update/delete` for mutations. The `Job` type is exported from schema as `typeof jobs.$inferSelect`.
 
 The `analysis` table stores `strengths`, `missingKeywords`, and `improvementSuggestions` as JSON-serialized `text` columns — callers in `server/analysis.ts` handle `JSON.stringify`/`JSON.parse` explicitly.
 
+### TanStack Query
+
+**`app/get-query-client.ts`** — singleton factory. Uses React's `cache()` so all server components in a single request share one `QueryClient`; the browser gets a module-level singleton. Pending queries are included in dehydration to enable streaming.
+
+**`lib/queries/`** — hooks split by domain:
+- `jobs.ts`: `useJobs()` (suspense), `useCreateJob()`, `useDeleteJob()`, `useUpdateJobStatus()` — delete and status mutations do optimistic updates with rollback.
+- `resume.ts`: `usePersonalInfo()` (suspense), `useSaveAiPreferences()` — save updates the cache directly on success.
+
+**Page pattern** for protected routes:
+1. Server component page calls `getQueryClient()`, fires `prefetchQuery` (no `await` — streaming), wraps children in `<HydrationBoundary state={dehydrate(queryClient)}>`.
+2. Client components call `useSuspenseQuery` (via the hooks above) — data is immediately available from the hydrated cache on first render; a `<Suspense>` boundary in the page shows a skeleton during streaming.
+3. Write operations use `useMutation` hooks from `lib/queries/`.
+
+`staleTime` is 5 minutes globally — queries will not refetch on every navigation.
+
 ### AI models (`lib/models.ts`)
 
 - `resolveModel(id: string)` — use this in API routes; falls back to `DEFAULT_MODEL_ID` if `id` is invalid.
 - `getModelInstanceById(id: ModelId)` — returns a provider instance directly; throws if the id is unknown.
 - Default model: `gemini-3-flash-preview`.
-
-### Page pattern
-
-Pages are server components that call `getCurrentUser()` (for auth guard) plus any data fetches in `Promise.all`. They pass data down to `*-client.tsx` client components. The `<Navigation activeTab="...">` component is placed in each page (not in a shared layout) because each tab needs a different `activeTab` prop.
 
 ### LaTeX editor (`/editor`)
 

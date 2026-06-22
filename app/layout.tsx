@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// import Script from "next/script";
 import { BusyTexSW } from "@/components/busytex-sw";
 import { NetworkBackgroundWrapper } from "@/components/network-background-wrapper";
 import { Providers } from "./providers";
@@ -47,6 +48,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      {/* <head>
+        <Script
+          crossOrigin="anonymous"
+          src="//unpkg.com/react-scan/dist/auto.global.js"
+          strategy="beforeInteractive"
+        />
+      </head> */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

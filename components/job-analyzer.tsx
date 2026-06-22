@@ -19,12 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Job } from "@/db/schema";
+import { useCreateJob, useJobs } from "@/lib/queries/jobs";
+import { usePersonalInfo } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
 import { saveAnalysis } from "@/server/analysis";
-import { createJob } from "@/server/jobs";
-
-type JobSummary = Pick<Job, "id" | "jobTitle">;
 
 // ─── Sub-components ─────────────────────────────────────────────────────
 
@@ -74,7 +72,7 @@ const UrlFetcher = memo(function UrlFetcher({
 // ─── Save bar ────────────────────────────────────────────────────────────
 
 interface SaveAnalysisBarProps {
-  jobs: JobSummary[];
+  jobs: { id: number; jobTitle: string }[];
   onSave: (jobId: number) => void;
   saving: boolean;
 }
@@ -150,24 +148,23 @@ const CustomizeCta = memo(function CustomizeCta({
 
 // ─── Main component ─────────────────────────────────────────────────────
 
-interface JobAnalyzerProps {
-  hasResume: boolean;
-  initialJobs: JobSummary[];
-}
-
-export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
+export function JobAnalyzer() {
   const router = useRouter();
+  const { data: jobs } = useJobs();
+  const { data: personalInfo } = usePersonalInfo();
+  const createJobMutation = useCreateJob();
+
+  const hasResume = !!personalInfo?.resumeUrl;
+
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
-  const [jobs, setJobs] = useState<JobSummary[]>(initialJobs);
   const [linkedJobId, setLinkedJobId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [creatingJob, setCreatingJob] = useState(false);
 
   const [modelId] = useModelId();
 
@@ -275,7 +272,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
     }
   };
 
-  const handleCustomize = async () => {
+  const handleCustomize = () => {
     if (linkedJobId && linkedJobId !== "none") {
       router.push(`/editor?jobId=${linkedJobId}`);
       return;
@@ -284,24 +281,15 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       return;
     }
     const title = result?.short_title ?? "Job Application";
-    setCreatingJob(true);
-    try {
-      const res = await createJob(title, jobDescription.trim());
-      if (res.success && res.job) {
-        setJobs((prev) => [
-          ...prev,
-          { id: res.job.id, jobTitle: res.job.jobTitle },
-        ]);
-        setLinkedJobId(String(res.job.id));
-        router.push(`/editor?jobId=${res.job.id}`);
-      } else {
-        toast.error(res.message ?? "Failed to create job");
+    createJobMutation.mutate(
+      { title, description: jobDescription.trim() },
+      {
+        onSuccess: (job) => {
+          setLinkedJobId(String(job.id));
+          router.push(`/editor?jobId=${job.id}`);
+        },
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create job");
-    } finally {
-      setCreatingJob(false);
-    }
+    );
   };
 
   return (
@@ -447,7 +435,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
             )}
 
             <CustomizeCta
-              creatingJob={creatingJob}
+              creatingJob={createJobMutation.isPending}
               onCustomize={handleCustomize}
             />
           </div>

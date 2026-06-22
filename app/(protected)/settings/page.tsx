@@ -1,7 +1,10 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getQueryClient } from "@/app/get-query-client";
 import { SettingsClient } from "@/components/settings-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { personalInfoQueryKey } from "@/lib/queries/resume";
 import { getPersonalInformation } from "@/server/resume";
 import { getSession } from "@/server/session";
 
@@ -9,20 +12,6 @@ export const metadata: Metadata = {
   title: "Settings",
   description: "Manage your profile and AI analysis preferences.",
 };
-
-async function SettingsContent() {
-  const [session, personalInfo] = await Promise.all([
-    getSession(),
-    getPersonalInformation(),
-  ]);
-  return (
-    <SettingsClient
-      initialPreferences={personalInfo?.aiPreferences ?? ""}
-      userEmail={session?.user.email ?? ""}
-      userName={session?.user.name ?? ""}
-    />
-  );
-}
 
 function SettingsContentSkeleton() {
   return (
@@ -34,7 +23,16 @@ function SettingsContentSkeleton() {
   );
 }
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const queryClient = getQueryClient();
+  const [session] = await Promise.all([
+    getSession(),
+    queryClient.prefetchQuery({
+      queryKey: personalInfoQueryKey,
+      queryFn: getPersonalInformation,
+    }),
+  ]);
+
   return (
     <main className="min-h-screen" id="main-content">
       <div className="animate-enter-up border-border/40 border-b px-4 py-5 md:px-6 md:py-6">
@@ -48,9 +46,14 @@ export default function SettingsPage() {
         </div>
       </div>
       <div className="py-6 md:py-8">
-        <Suspense fallback={<SettingsContentSkeleton />}>
-          <SettingsContent />
-        </Suspense>
+        <HydrationBoundary state={dehydrate(queryClient)}>
+          <Suspense fallback={<SettingsContentSkeleton />}>
+            <SettingsClient
+              userEmail={session?.user.email ?? ""}
+              userName={session?.user.name ?? ""}
+            />
+          </Suspense>
+        </HydrationBoundary>
       </div>
     </main>
   );
