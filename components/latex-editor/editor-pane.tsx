@@ -122,23 +122,118 @@ function EditorPane({
     return "e.g. Add a skills section…";
   }, [pendingQuestion, job]);
 
-  const chatBody = useMemo(() => {
-    if (chatMessages.length === 0) {
-      if (chatLoading) {
-        return <LoadingBubble label="Reviewing resume…" />;
-      }
+  const chatPanel = useMemo(() => {
+    if (chatMessages.length > 0) {
       return (
-        <p className="py-4 text-center text-muted-foreground text-xs">
-          {job
-            ? "Resume customized — ask for further changes."
-            : "Describe what you'd like to change and AI will edit your LaTeX."}
-        </p>
+        <>
+          <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            {chatMessages.map((msg, i) =>
+              renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
+            )}
+            {chatLoading && lastMsg?.role === "user" && <LoadingBubble />}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2">
+            <input
+              className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              disabled={chatLoading || pendingQuestion}
+              onChange={(e) => onChatInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onChatSend();
+                }
+              }}
+              placeholder={placeholder}
+              type="text"
+              value={chatInput}
+            />
+            <Button
+              aria-label="Send"
+              className="h-7 w-7 shrink-0 p-0"
+              disabled={chatLoading || !chatInput.trim() || pendingQuestion}
+              onClick={onChatSend}
+              size="sm"
+            >
+              {chatLoading ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Send className="size-3" />
+              )}
+            </Button>
+          </div>
+        </>
       );
     }
-    return chatMessages.map((msg, i) =>
-      renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
+
+    if (chatLoading) {
+      return (
+        <div className="flex flex-1 items-center justify-center">
+          <LoadingBubble label="Reviewing resume…" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6">
+        <div className="rounded-full bg-primary/10 p-3">
+          <Sparkles className="size-6 text-primary" />
+        </div>
+        <div className="text-center">
+          <p className="font-medium text-foreground text-sm">
+            What would you like to change?
+          </p>
+          <p className="mt-1 text-muted-foreground text-xs">
+            {job
+              ? "Resume customized — ask for further changes."
+              : "Describe what you'd like to change and AI will edit your LaTeX."}
+          </p>
+        </div>
+        <div className="flex w-full max-w-md items-center gap-2">
+          <input
+            autoFocus
+            className="h-10 flex-1 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            disabled={chatLoading || pendingQuestion}
+            onChange={(e) => onChatInputChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onChatSend();
+              }
+            }}
+            placeholder={placeholder}
+            type="text"
+            value={chatInput}
+          />
+          <Button
+            aria-label="Send"
+            className="h-10 w-10 shrink-0 rounded-lg p-0"
+            disabled={chatLoading || !chatInput.trim() || pendingQuestion}
+            onClick={onChatSend}
+            size="sm"
+          >
+            {chatLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
+          </Button>
+        </div>
+      </div>
     );
-  }, [chatMessages, chatLoading, job, onConsultPick, onConsultSkip]);
+  }, [
+    chatMessages,
+    chatLoading,
+    placeholder,
+    job,
+    lastMsg,
+    pendingQuestion,
+    onChatInputChange,
+    onChatSend,
+    onConsultPick,
+    onConsultSkip,
+    chatInput,
+  ]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col border-border border-r">
@@ -177,41 +272,7 @@ function EditorPane({
       <div
         className={`min-h-0 flex-col border-border border-t ${activeTab === "chat" ? "flex flex-1" : "hidden"}`}
       >
-        <div className="flex-1 space-y-2 overflow-y-auto p-3">
-          {chatBody}
-          {chatLoading && lastMsg?.role === "user" && <LoadingBubble />}
-          <div ref={chatEndRef} />
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2">
-          <input
-            className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-            disabled={chatLoading || pendingQuestion}
-            onChange={(e) => onChatInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onChatSend();
-              }
-            }}
-            placeholder={placeholder}
-            type="text"
-            value={chatInput}
-          />
-          <Button
-            aria-label="Send"
-            className="h-7 w-7 shrink-0 p-0"
-            disabled={chatLoading || !chatInput.trim() || pendingQuestion}
-            onClick={onChatSend}
-            size="sm"
-          >
-            {chatLoading ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Send className="size-3" />
-            )}
-          </Button>
-        </div>
+        {chatPanel}
       </div>
     </div>
   );

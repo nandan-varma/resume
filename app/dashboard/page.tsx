@@ -4,7 +4,6 @@ import { CountUp } from "@/components/count-up";
 import { SpotlightCard } from "@/components/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { JobStatus } from "@/db/schema";
 import { STATUS_CONFIG } from "@/lib/status";
 import { getJobs } from "@/server/jobs";
 import { getCurrentUser } from "@/server/users";
@@ -121,10 +120,7 @@ export default async function Dashboard() {
                     </p>
                     <span
                       className={`px-2 py-0.5 font-medium text-xs capitalize ${
-                        (
-                          STATUS_CONFIG[job.status as JobStatus] ??
-                          STATUS_CONFIG.withdrawn
-                        ).color
+                        STATUS_CONFIG[job.status].color
                       }`}
                     >
                       {job.status}

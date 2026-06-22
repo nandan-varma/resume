@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  DEFAULT_MODEL_ID,
-  isValidModelId,
-  MODEL_STORAGE_KEY,
-  type ModelId,
-} from "@/lib/models";
+import { useModelId } from "@/lib/use-model-id";
 import type { ChatMsg, EditorJob } from "./types";
 import { useAiChat } from "./use-ai-chat";
 import { useAutoFix } from "./use-auto-fix";
@@ -41,15 +36,7 @@ export function useLatexEditor(
     job && isNewJobResume ? "chat" : "editor"
   );
 
-  const [modelId] = useState<ModelId>(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_MODEL_ID;
-    }
-    const stored = localStorage.getItem(MODEL_STORAGE_KEY);
-    return stored && isValidModelId(stored)
-      ? (stored as ModelId)
-      : DEFAULT_MODEL_ID;
-  });
+  const [modelId] = useModelId();
 
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
   const [chatLoading, setChatLoading] = useState(false);

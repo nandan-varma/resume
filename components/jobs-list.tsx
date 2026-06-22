@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,6 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { Job, JobStatus } from "@/db/schema";
 import { jobStatus } from "@/db/schema";
+import { ErrorBoundary } from "@/lib/error-boundary";
 import { STATUS_CONFIG } from "@/lib/status";
 import { createJob, deleteJob, getJobs, updateJobStatus } from "@/server/jobs";
 
@@ -49,6 +51,14 @@ function formatDate(date: Date): string {
 const EMPTY_FORM = { jobTitle: "", jobDescription: "", link: "" };
 
 export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
+  return (
+    <ErrorBoundary>
+      <WrappedJobsList initialJobs={initialJobs} />
+    </ErrorBoundary>
+  );
+}
+
+function WrappedJobsList({ initialJobs }: { initialJobs: Job[] }) {
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
@@ -274,9 +284,12 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
                         Status:
                       </span>
                       <Select
-                        onValueChange={(v) =>
-                          handleStatusChange(job.id, v as JobStatus)
-                        }
+                        onValueChange={(v) => {
+                          const parsed = z.enum(jobStatus).safeParse(v);
+                          if (parsed.success) {
+                            handleStatusChange(job.id, parsed.data);
+                          }
+                        }}
                         value={job.status}
                       >
                         <SelectTrigger className="h-7 w-44 text-xs">

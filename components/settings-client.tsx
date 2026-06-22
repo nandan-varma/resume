@@ -14,13 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  DEFAULT_MODEL_ID,
-  isValidModelId,
-  MODEL_STORAGE_KEY,
-  type ModelId,
-  models,
-} from "@/lib/models";
+import { ErrorBoundary } from "@/lib/error-boundary";
+import { isValidModelId, type ModelId, models } from "@/lib/models";
+import { useModelId } from "@/lib/use-model-id";
 import { saveAiPreferences } from "@/server/resume";
 
 interface SettingsClientProps {
@@ -29,7 +25,15 @@ interface SettingsClientProps {
   userName: string;
 }
 
-export function SettingsClient({
+export function SettingsClient(props: SettingsClientProps) {
+  return (
+    <ErrorBoundary>
+      <SettingsClientInner {...props} />
+    </ErrorBoundary>
+  );
+}
+
+function SettingsClientInner({
   userName,
   userEmail,
   initialPreferences,
@@ -37,20 +41,11 @@ export function SettingsClient({
   const [aiPreferences, setAiPreferences] = useState(initialPreferences);
   const [originalPrefs, setOriginalPrefs] = useState(initialPreferences);
   const [saving, setSaving] = useState(false);
-  const [modelId, setModelId] = useState<ModelId>(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_MODEL_ID;
-    }
-    const stored = localStorage.getItem(MODEL_STORAGE_KEY);
-    return stored && isValidModelId(stored)
-      ? (stored as ModelId)
-      : DEFAULT_MODEL_ID;
-  });
+  const [modelId, setModelId] = useModelId();
 
   const handleModelChange = (value: string) => {
     if (isValidModelId(value)) {
       setModelId(value as ModelId);
-      localStorage.setItem(MODEL_STORAGE_KEY, value);
       toast.success("Model saved");
     }
   };

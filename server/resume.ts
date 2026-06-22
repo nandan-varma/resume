@@ -42,6 +42,25 @@ async function upsertPersonalInfo(
   }
 }
 
+async function upsertJobResume(
+  userId: string,
+  jobId: number,
+  resumeLatex: string
+) {
+  const existing = await db.query.jobResumes.findFirst({
+    where: and(eq(jobResumes.jobId, jobId), eq(jobResumes.userId, userId)),
+    columns: { id: true },
+  });
+  if (existing) {
+    await db
+      .update(jobResumes)
+      .set({ resumeLatex })
+      .where(and(eq(jobResumes.jobId, jobId), eq(jobResumes.userId, userId)));
+  } else {
+    await db.insert(jobResumes).values({ jobId, userId, resumeLatex });
+  }
+}
+
 export const uploadResume = async (fileBuffer: Buffer, fileName: string) => {
   try {
     const session = await getSession();
@@ -163,31 +182,11 @@ export const saveJobResumeLatex = async (
       return { success: false, message: "Unauthorized" };
     }
 
-    const existing = await db.query.jobResumes.findFirst({
-      where: and(
-        eq(jobResumes.jobId, parsed.data.jobId),
-        eq(jobResumes.userId, session.user.id)
-      ),
-      columns: { id: true },
-    });
-
-    if (existing) {
-      await db
-        .update(jobResumes)
-        .set({ resumeLatex: parsed.data.resumeLatex })
-        .where(
-          and(
-            eq(jobResumes.jobId, parsed.data.jobId),
-            eq(jobResumes.userId, session.user.id)
-          )
-        );
-    } else {
-      await db.insert(jobResumes).values({
-        jobId: parsed.data.jobId,
-        userId: session.user.id,
-        resumeLatex: parsed.data.resumeLatex,
-      });
-    }
+    await upsertJobResume(
+      session.user.id,
+      parsed.data.jobId,
+      parsed.data.resumeLatex
+    );
 
     return { success: true, message: "Job resume saved." };
   } catch (error) {

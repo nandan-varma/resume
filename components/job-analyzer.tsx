@@ -3,7 +3,7 @@
 import { AlertTriangle, Link2, Loader2, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { toast } from "sonner";
 import type { AnalysisResult } from "@/app/api/analyze/route";
 import { AnalysisResults } from "@/components/analysis-results";
@@ -20,16 +20,135 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Job } from "@/db/schema";
-import {
-  DEFAULT_MODEL_ID,
-  isValidModelId,
-  MODEL_STORAGE_KEY,
-  type ModelId,
-} from "@/lib/models";
+import { useModelId } from "@/lib/use-model-id";
 import { saveAnalysis } from "@/server/analysis";
 import { createJob } from "@/server/jobs";
 
 type JobSummary = Pick<Job, "id" | "jobTitle">;
+
+// ─── Sub-components ─────────────────────────────────────────────────────
+
+interface UrlFetcherProps {
+  disabled: boolean;
+  onFetch: () => void;
+  onUrlChange: (url: string) => void;
+  url: string;
+}
+
+const UrlFetcher = memo(function UrlFetcher({
+  disabled,
+  url,
+  onUrlChange,
+  onFetch,
+}: UrlFetcherProps) {
+  return (
+    <div className="flex gap-2">
+      <Input
+        className="min-w-0 flex-1"
+        disabled={disabled}
+        id="job-url"
+        onChange={(e) => onUrlChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onFetch()}
+        placeholder="https://www.linkedin.com/jobs/view/…"
+        type="url"
+        value={url}
+      />
+      <Button
+        className="shrink-0"
+        disabled={disabled || !url.trim()}
+        onClick={onFetch}
+        type="button"
+        variant="outline"
+      >
+        {disabled ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Search className="size-4" />
+        )}
+        <span className="ml-1.5">Fetch</span>
+      </Button>
+    </div>
+  );
+});
+
+// ─── Save bar ────────────────────────────────────────────────────────────
+
+interface SaveAnalysisBarProps {
+  jobs: JobSummary[];
+  onSave: (jobId: number) => void;
+  saving: boolean;
+}
+
+const SaveAnalysisBar = memo(function SaveAnalysisBar({
+  jobs,
+  saving,
+  onSave,
+}: SaveAnalysisBarProps) {
+  return (
+    <div className="flex animate-enter items-center gap-3 border border-border bg-muted/50 px-4 py-3">
+      <p className="flex-1 text-muted-foreground text-sm">
+        Save this analysis to a tracked job?
+      </p>
+      <Select
+        onValueChange={(val) => {
+          if (val !== "none") {
+            onSave(Number(val));
+          }
+        }}
+      >
+        <SelectTrigger className="h-8 w-48 text-sm">
+          <SelectValue placeholder="Choose a job…" />
+        </SelectTrigger>
+        <SelectContent>
+          {jobs.map((job) => (
+            <SelectItem key={job.id} value={String(job.id)}>
+              {job.jobTitle}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {saving && (
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+      )}
+    </div>
+  );
+});
+
+// ─── Customize CTA ──────────────────────────────────────────────────────
+
+interface CustomizeCtaProps {
+  creatingJob: boolean;
+  onCustomize: () => void;
+}
+
+const CustomizeCta = memo(function CustomizeCta({
+  creatingJob,
+  onCustomize,
+}: CustomizeCtaProps) {
+  return (
+    <div className="flex animate-enter-up items-center gap-3 border border-primary/20 bg-primary/5 px-4 py-3 [animation-delay:320ms]">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-foreground text-sm">
+          Customize your resume for this role
+        </p>
+        <p className="mt-0.5 text-muted-foreground text-xs">
+          Opens AI editor pre-loaded with this job — saves as a separate job
+          resume
+        </p>
+      </div>
+      <Button disabled={creatingJob} onClick={onCustomize} size="sm">
+        {creatingJob ? (
+          <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+        ) : (
+          <Sparkles className="mr-1.5 size-3.5" />
+        )}
+        Customize resume
+      </Button>
+    </div>
+  );
+});
+
+// ─── Main component ─────────────────────────────────────────────────────
 
 interface JobAnalyzerProps {
   hasResume: boolean;
@@ -50,18 +169,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
   const [saved, setSaved] = useState(false);
   const [creatingJob, setCreatingJob] = useState(false);
 
-  const [modelId] = useState<ModelId>(() => {
-    if (typeof window === "undefined") {
-      return DEFAULT_MODEL_ID;
-    }
-    const stored = localStorage.getItem(MODEL_STORAGE_KEY);
-    return stored && isValidModelId(stored)
-      ? (stored as ModelId)
-      : DEFAULT_MODEL_ID;
-  });
-
-  // Add loading state for better UX
-  const [_isAnalyzing, setIsAnalyzing] = useState(false);
+  const [modelId] = useModelId();
 
   const handleFetchDescription = async () => {
     if (!url.trim()) {
@@ -133,11 +241,6 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
     setError(null);
     setResult(null);
     setSaved(false);
-    setIsAnalyzing(true);
-
-    // Clear previous results and show loading state
-    setResult(null);
-    setSaved(false);
 
     try {
       const response = await fetch("/api/analyze", {
@@ -165,7 +268,6 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       toast.error(msg);
     } finally {
       setLoading(false);
-      setIsAnalyzing(false);
     }
   };
 
@@ -177,7 +279,6 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
     if (!jobDescription.trim()) {
       return;
     }
-    // Auto-create job using the AI-generated short title from analysis
     const title = result?.short_title ?? "Job Application";
     setCreatingJob(true);
     try {
@@ -185,7 +286,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       if (res.success && res.job) {
         setJobs((prev) => [
           ...prev,
-          { id: res.job?.id, jobTitle: res.job?.jobTitle },
+          { id: res.job.id, jobTitle: res.job.jobTitle },
         ]);
         setLinkedJobId(String(res.job.id));
         router.push(`/editor?jobId=${res.job.id}`);
@@ -201,7 +302,6 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
 
   return (
     <div className="space-y-5">
-      {/* Resume status warning */}
       {!hasResume && (
         <div className="flex animate-enter items-start gap-3 border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -218,9 +318,7 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
         </div>
       )}
 
-      {/* Form card */}
       <Card className="space-y-5 p-5 sm:p-6">
-        {/* Step 1: Job input */}
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="font-medium text-sm" htmlFor="job-url">
@@ -229,32 +327,12 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
                 auto-fills the description below
               </span>
             </Label>
-            <div className="flex gap-2">
-              <Input
-                className="min-w-0 flex-1"
-                disabled={urlLoading}
-                id="job-url"
-                onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleFetchDescription()}
-                placeholder="https://www.linkedin.com/jobs/view/…"
-                type="url"
-                value={url}
-              />
-              <Button
-                className="shrink-0"
-                disabled={urlLoading || !url.trim()}
-                onClick={handleFetchDescription}
-                type="button"
-                variant="outline"
-              >
-                {urlLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Search className="size-4" />
-                )}
-                <span className="ml-1.5">Fetch</span>
-              </Button>
-            </div>
+            <UrlFetcher
+              disabled={urlLoading}
+              onFetch={handleFetchDescription}
+              onUrlChange={setUrl}
+              url={url}
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -275,7 +353,6 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
           </div>
         </div>
 
-        {/* Step 2: Options + action */}
         <div className="flex flex-wrap items-end gap-3">
           {jobs.length > 0 && (
             <div className="space-y-1">
@@ -344,36 +421,14 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
             <AnalysisResults result={result} />
           </div>
 
-          {/* Post-analysis save bar */}
           {(!linkedJobId || linkedJobId === "none") &&
             !saved &&
             jobs.length > 0 && (
-              <div className="flex animate-enter items-center gap-3 border border-border bg-muted/50 px-4 py-3">
-                <p className="flex-1 text-muted-foreground text-sm">
-                  Save this analysis to a tracked job?
-                </p>
-                <Select
-                  onValueChange={(val) => {
-                    if (val !== "none") {
-                      handleSaveToJob(Number(val));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-48 text-sm">
-                    <SelectValue placeholder="Choose a job…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {jobs.map((job) => (
-                      <SelectItem key={job.id} value={String(job.id)}>
-                        {job.jobTitle}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {saving && (
-                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
+              <SaveAnalysisBar
+                jobs={jobs}
+                onSave={handleSaveToJob}
+                saving={saving}
+              />
             )}
 
           {saved && (
@@ -382,26 +437,10 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
             </p>
           )}
 
-          {/* Customize CTA */}
-          <div className="flex animate-enter-up items-center gap-3 border border-primary/20 bg-primary/5 px-4 py-3 [animation-delay:320ms]">
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-foreground text-sm">
-                Customize your resume for this role
-              </p>
-              <p className="mt-0.5 text-muted-foreground text-xs">
-                Opens AI editor pre-loaded with this job — saves as a separate
-                job resume
-              </p>
-            </div>
-            <Button disabled={creatingJob} onClick={handleCustomize} size="sm">
-              {creatingJob ? (
-                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="mr-1.5 size-3.5" />
-              )}
-              Customize resume
-            </Button>
-          </div>
+          <CustomizeCta
+            creatingJob={creatingJob}
+            onCustomize={handleCustomize}
+          />
         </>
       )}
     </div>

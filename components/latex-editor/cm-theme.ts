@@ -238,16 +238,6 @@ export const cmSyntaxHighlight = syntaxHighlighting(
     { tag: tags.definitionKeyword, color: "var(--info)" },
     { tag: tags.moduleKeyword, color: "var(--info)" },
 
-    /* Operators */
-    { tag: tags.operator, color: "var(--foreground)" },
-    { tag: tags.arithmeticOperator, color: "var(--foreground)" },
-    { tag: tags.logicOperator, color: "var(--foreground)" },
-    { tag: tags.bitwiseOperator, color: "var(--foreground)" },
-    { tag: tags.compareOperator, color: "var(--foreground)" },
-    { tag: tags.updateOperator, color: "var(--foreground)" },
-    { tag: tags.definitionOperator, color: "var(--foreground)" },
-    { tag: tags.derefOperator, color: "var(--foreground)" },
-
     /* Strings — text content in braces */
     { tag: tags.string, color: "var(--foreground)" },
     { tag: tags.special(tags.string), color: "var(--success)" },
@@ -261,9 +251,6 @@ export const cmSyntaxHighlight = syntaxHighlighting(
     { tag: tags.number, color: "var(--success)" },
     { tag: tags.integer, color: "var(--success)" },
     { tag: tags.float, color: "var(--success)" },
-
-    /* Booleans */
-    { tag: tags.bool, color: "var(--warning)" },
 
     /* Environment names / types */
     { tag: tags.typeName, color: "var(--primary)" },
@@ -309,10 +296,6 @@ export const cmSyntaxHighlight = syntaxHighlighting(
 
     /* Separator — & in tables, etc. */
     { tag: tags.separator, color: "var(--muted-foreground)" },
-
-    /* Special identifiers */
-    { tag: tags.special(tags.name), color: "var(--warning)" },
-    { tag: tags.processingInstruction, color: "var(--warning)" },
     { tag: tags.inserted, color: "var(--success)" },
     { tag: tags.deleted, color: "var(--destructive)" },
     { tag: tags.changed, color: "var(--warning)" },

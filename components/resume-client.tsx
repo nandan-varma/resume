@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { ErrorBoundary } from "@/lib/error-boundary";
 import { cn } from "@/lib/utils";
 import { saveResumeLatex } from "@/server/resume";
 
@@ -23,7 +24,15 @@ interface ResumeClientProps {
   initialResumeUrl: string | null;
 }
 
-export function ResumeClient({
+export function ResumeClient(props: ResumeClientProps) {
+  return (
+    <ErrorBoundary>
+      <ResumeClientInner {...props} />
+    </ErrorBoundary>
+  );
+}
+
+function ResumeClientInner({
   initialResumeUrl,
   initialLatex,
 }: ResumeClientProps) {
