@@ -22,6 +22,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { pathname } = new URL(event.request.url);
   if (!pathname.startsWith(BUSYTEX_PREFIX)) return;
+  // texlive-extra.data (324 MB) is already cached in IndexedDB by Emscripten's
+  // EM_PRELOAD_CACHE — caching it here too would waste an identical 324 MB in
+  // Cache API storage. Let the IndexedDB path handle it.
+  if (pathname.endsWith('/texlive-extra.data')) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
