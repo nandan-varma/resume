@@ -6,6 +6,19 @@ import { personalInformation } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
 
+const historyMessageSchema = z.object({
+  content: z.string(),
+  role: z.enum(["user", "assistant"]),
+});
+
+const requestSchema = z.object({
+  instruction: z.string().min(1, "Instruction is required"),
+  latex: z.string(),
+  modelId: z.string(),
+  history: z.array(historyMessageSchema).default([]),
+  jobDescription: z.string().optional(),
+});
+
 interface HistoryMessage {
   content: string;
   role: "user" | "assistant";
@@ -52,14 +65,23 @@ export async function POST(req: Request) {
   let jobDescription: string | undefined;
 
   try {
-    ({ instruction, latex, modelId, history, jobDescription } =
-      await req.json());
-  } catch {
+    const body = await req.json();
+    const parsed = requestSchema.parse(body);
+    instruction = parsed.instruction;
+    latex = parsed.latex;
+    modelId = parsed.modelId;
+    history = parsed.history;
+    jobDescription = parsed.jobDescription;
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return Response.json(
+        {
+          error: `Invalid request: ${err.issues.map((e) => e.message).join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
     return Response.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  if (!instruction?.trim()) {
-    return Response.json({ error: "Instruction is required" }, { status: 400 });
   }
 
   const personalInfo = await db.query.personalInformation.findFirst({

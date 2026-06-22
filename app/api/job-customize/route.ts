@@ -3,6 +3,22 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
 
+const MAX_LATEX_CHARS = 4000;
+const MAX_JOB_DESC_CHARS = 3000;
+
+const answerSchema = z.object({
+  key: z.string(),
+  question: z.string(),
+  answer: z.string(),
+});
+
+const requestSchema = z.object({
+  latex: z.string(),
+  jobDescription: z.string(),
+  modelId: z.string(),
+  answers: z.array(answerSchema).default([]),
+});
+
 // Flat schema — no discriminated unions, no optional fields.
 // Gemini collapses complex nested/union schemas into strings; flat + required is reliable.
 const responseSchema = z.object({
@@ -40,8 +56,21 @@ export async function POST(req: Request) {
   let answers: { key: string; question: string; answer: string }[];
 
   try {
-    ({ latex, jobDescription, modelId, answers } = await req.json());
-  } catch {
+    const body = await req.json();
+    const parsed = requestSchema.parse(body);
+    latex = parsed.latex;
+    jobDescription = parsed.jobDescription;
+    modelId = parsed.modelId;
+    answers = parsed.answers;
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return Response.json(
+        {
+          error: `Invalid request: ${err.issues.map((e) => e.message).join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 
@@ -49,6 +78,9 @@ export async function POST(req: Request) {
     answers.length > 0
       ? `\n\nPreviously answered:\n${answers.map((a) => `- ${a.question}: ${a.answer}`).join("\n")}`
       : "";
+
+  const truncatedLatex = latex.slice(0, MAX_LATEX_CHARS);
+  const truncatedJobDesc = jobDescription.slice(0, MAX_JOB_DESC_CHARS);
 
   try {
     const { output } = await generateText({
@@ -67,7 +99,7 @@ Rules:
 - Make options specific and grounded in what's already in the resume.
 - If you have enough info, respond with type "proceed".
 - Ask at most one question per turn.`,
-      prompt: `Resume:\n\`\`\`latex\n${latex.slice(0, 4000)}\`\`\`\n\nJob Description:\n${jobDescription.slice(0, 3000)}${answersSection}\n\nDo you need one more concrete fact to avoid fabricating? If yes, ask it. If no, proceed.`,
+      prompt: `Resume:\n\`\`\`latex\n${truncatedLatex}\`\`\`\n\nJob Description:\n${truncatedJobDesc}${answersSection}\n\nDo you need one more concrete fact to avoid fabricating? If yes, ask it. If no, proceed.`,
     });
 
     return Response.json(output);

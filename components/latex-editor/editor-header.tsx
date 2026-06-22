@@ -5,6 +5,7 @@ import {
   Briefcase,
   Download,
   Loader2,
+  Play,
   RotateCcw,
   Save,
   ZoomIn,
@@ -18,7 +19,10 @@ import type { EditorJob } from "./types";
 interface EditorHeaderProps {
   autoSaving: boolean;
   dirty: boolean;
+  isCompiling: boolean;
+  isEngineReady: boolean;
   job: EditorJob | null;
+  onRecompile: () => void;
   onSave: () => void;
   onZoomChange: (zoom: number) => void;
   pdfUrl: string | null;
@@ -33,8 +37,11 @@ function EditorHeader({
   pdfUrl,
   saving,
   zoom,
+  isCompiling,
+  isEngineReady,
   onSave,
   onZoomChange,
+  onRecompile,
 }: EditorHeaderProps) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-border border-b px-4">
@@ -62,6 +69,20 @@ function EditorHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
+        <Button
+          disabled={!isEngineReady || isCompiling}
+          onClick={onRecompile}
+          size="sm"
+          title="Force recompile (Ctrl+Shift+Enter)"
+          variant="outline"
+        >
+          {isCompiling ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Play className="size-3.5" />
+          )}
+          <span className="ml-1.5 hidden sm:inline">Recompile</span>
+        </Button>
         <div className="hidden items-center gap-1 sm:flex">
           <button
             className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -92,24 +113,22 @@ function EditorHeader({
           </button>
         </div>
         <div className="h-4 w-px bg-border" />
-        <Button
-          disabled={!pdfUrl}
-          onClick={() => {
-            if (!pdfUrl) {
-              return;
-            }
-            const a = document.createElement("a");
-            a.href = pdfUrl;
-            a.download = "resume.pdf";
-            a.click();
-          }}
-          size="sm"
-          title="Download PDF"
-          variant="outline"
-        >
-          <Download className="size-3.5" />
-          <span className="ml-1.5 hidden sm:inline">Download PDF</span>
-        </Button>
+        {pdfUrl ? (
+          <a
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-foreground text-sm transition-colors hover:bg-muted"
+            download="resume.pdf"
+            href={pdfUrl}
+            title="Download PDF"
+          >
+            <Download className="size-3.5" />
+            <span className="hidden sm:inline">Download PDF</span>
+          </a>
+        ) : (
+          <span className="inline-flex h-8 cursor-default items-center gap-1.5 rounded-md border border-border px-3 text-muted-foreground text-sm opacity-50">
+            <Download className="size-3.5" />
+            <span className="hidden sm:inline">Download PDF</span>
+          </span>
+        )}
         <Button disabled={saving || !dirty} onClick={onSave} size="sm">
           {saving ? (
             <Loader2 className="mr-1.5 size-3.5 animate-spin" />

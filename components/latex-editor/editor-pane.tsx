@@ -4,6 +4,7 @@ import { AlertTriangle, Loader2, Send, Sparkles } from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { AssistantBubble, LoadingBubble, QuestionBubble } from "./chat-bubbles";
+import { LatexEditorCm } from "./latex-editor-cm";
 import type { ChatMsg } from "./types";
 
 interface EditorPaneProps {
@@ -11,7 +12,6 @@ interface EditorPaneProps {
   chatInput: string;
   chatLoading: boolean;
   chatMessages: ChatMsg[];
-  initialResumeUrl: string | null;
   isEmpty: boolean;
   job: { id: number; title: string; description: string } | null;
   latex: string;
@@ -24,11 +24,13 @@ interface EditorPaneProps {
     answer: string
   ) => void;
   onConsultSkip: () => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onLatexChange: (latex: string) => void;
+  onRecompile: () => void;
+  onRedo: () => void;
+  onSave: () => void;
   onTabChange: (tab: "editor" | "chat") => void;
+  onUndo: () => void;
   pendingQuestion: boolean;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 function renderMessage(
@@ -89,9 +91,6 @@ function EditorPane({
   onTabChange,
   latex,
   onLatexChange,
-  onKeyDown,
-  initialResumeUrl,
-  textareaRef,
   chatMessages,
   chatLoading,
   chatInput,
@@ -100,6 +99,10 @@ function EditorPane({
   pendingQuestion,
   onConsultPick,
   onConsultSkip,
+  onSave,
+  onRecompile,
+  onUndo,
+  onRedo,
   job,
 }: EditorPaneProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -158,20 +161,18 @@ function EditorPane({
         )}
       </div>
 
-      <textarea
-        aria-label="LaTeX source"
-        className={`min-h-0 flex-1 resize-none bg-background p-4 font-mono text-foreground text-sm focus:outline-none ${activeTab === "chat" ? "hidden" : ""}`}
-        onChange={(e) => onLatexChange(e.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder={
-          latex.trim() === "" && initialResumeUrl
-            ? "AI is generating LaTeX from your PDF…"
-            : "Paste or type your LaTeX here…"
-        }
-        ref={textareaRef}
-        spellCheck={false}
-        value={latex}
-      />
+      <div
+        className={activeTab === "editor" ? "flex min-h-0 flex-1" : "hidden"}
+      >
+        <LatexEditorCm
+          onChange={onLatexChange}
+          onRecompile={onRecompile}
+          onRedo={onRedo}
+          onSave={onSave}
+          onUndo={onUndo}
+          value={latex}
+        />
+      </div>
 
       <div
         className={`min-h-0 flex-col border-border border-t ${activeTab === "chat" ? "flex flex-1" : "hidden"}`}

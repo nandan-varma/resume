@@ -2,12 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+const STORAGE_KEY = "editor-split-pos";
+
 interface ResizablePanelProps {
   defaultLeftPercent?: number;
   left: React.ReactNode;
   minLeft?: number;
   minRight?: number;
   right: React.ReactNode;
+}
+
+function loadSaved(defaultValue: number): number {
+  if (typeof window === "undefined") {
+    return defaultValue;
+  }
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? Number(saved) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
 }
 
 export function ResizablePanel({
@@ -17,7 +31,9 @@ export function ResizablePanel({
   minRight = 30,
   right,
 }: ResizablePanelProps) {
-  const [leftPercent, setLeftPercent] = useState(defaultLeftPercent);
+  const [leftPercent, setLeftPercent] = useState(() =>
+    loadSaved(defaultLeftPercent)
+  );
   const draggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +58,9 @@ export function ResizablePanel({
     };
 
     const handleMouseUp = () => {
-      draggingRef.current = false;
+      if (draggingRef.current) {
+        draggingRef.current = false;
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -52,6 +70,14 @@ export function ResizablePanel({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [minLeft, minRight]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(leftPercent));
+    } catch {
+      // storage unavailable
+    }
+  }, [leftPercent]);
 
   return (
     <div className="flex min-h-0 flex-1" ref={containerRef}>

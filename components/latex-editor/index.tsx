@@ -11,14 +11,12 @@ import { useLatexEditor } from "./use-latex-editor";
 
 interface LatexEditorProps {
   initialLatex: string;
-  initialResumeUrl: string | null;
   isNewJobResume?: boolean;
   job?: EditorJob | null;
 }
 
 export function LatexEditor({
   initialLatex,
-  initialResumeUrl,
   job = null,
   isNewJobResume = false,
 }: LatexEditorProps) {
@@ -38,18 +36,23 @@ export function LatexEditor({
     chatLoading,
     isEmpty,
     pendingQuestion,
-    textareaRef,
     handleLatexChange,
     setZoom,
     setActiveTab,
     setChatInput,
     setShowLog,
     handleSave,
-    handleKeyDown,
     handleChatSend,
     handleConsultPick,
     handleConsultSkip,
-  } = useLatexEditor(initialLatex, initialResumeUrl, job, isNewJobResume);
+    handleForceRecompile,
+    undo,
+    redo,
+  } = useLatexEditor(initialLatex, job, isNewJobResume);
+
+  const isCompiling =
+    engine.phase === "loading" || engine.phase === "compiling";
+  const isEngineReady = engine.phase === "ready";
 
   return (
     <ErrorBoundary>
@@ -57,7 +60,10 @@ export function LatexEditor({
         <EditorHeader
           autoSaving={autoSaving}
           dirty={dirty}
+          isCompiling={isCompiling}
+          isEngineReady={isEngineReady}
           job={job}
+          onRecompile={handleForceRecompile}
           onSave={handleSave}
           onZoomChange={setZoom}
           pdfUrl={pdfUrl}
@@ -75,7 +81,6 @@ export function LatexEditor({
               chatInput={chatInput}
               chatLoading={chatLoading}
               chatMessages={chatMessages}
-              initialResumeUrl={initialResumeUrl}
               isEmpty={isEmpty}
               job={job}
               latex={latex}
@@ -83,11 +88,13 @@ export function LatexEditor({
               onChatSend={handleChatSend}
               onConsultPick={handleConsultPick}
               onConsultSkip={handleConsultSkip}
-              onKeyDown={handleKeyDown}
               onLatexChange={handleLatexChange}
+              onRecompile={handleForceRecompile}
+              onRedo={redo}
+              onSave={handleSave}
               onTabChange={setActiveTab}
+              onUndo={undo}
               pendingQuestion={pendingQuestion}
-              textareaRef={textareaRef}
             />
           }
           right={

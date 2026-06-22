@@ -53,9 +53,16 @@ export function createMsgId(): string {
 export function buildHistory(
   msgs: ChatMsg[]
 ): { role: "user" | "assistant"; content: string }[] {
-  return msgs.flatMap((m) =>
-    m.role === "user" || m.role === "assistant"
-      ? [{ role: m.role, content: m.content }]
-      : []
-  );
+  return msgs.flatMap((m) => {
+    if (m.role === "user" || m.role === "assistant") {
+      return [{ role: m.role, content: m.content }];
+    }
+    if (m.role === "question") {
+      return [
+        { role: "assistant", content: m.question },
+        ...(m.answered ? [{ role: "user" as const, content: m.answered }] : []),
+      ];
+    }
+    return [];
+  });
 }
