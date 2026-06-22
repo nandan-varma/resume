@@ -10,8 +10,13 @@ import { STATUS_CONFIG } from "@/lib/status";
 import { getJobs } from "@/server/jobs";
 import { getSession } from "@/server/session";
 
+async function UserName() {
+  const session = await getSession();
+  return session?.user.name ? `, ${session.user.name}` : null;
+}
+
 async function DashboardContent() {
-  const [session, jobs] = await Promise.all([getSession(), getJobs()]);
+  const jobs = await getJobs();
 
   const interviewCount = jobs.filter((j) => j.status === "interview").length;
   const offerCount = jobs.filter((j) => j.status === "offer").length;
@@ -41,15 +46,6 @@ async function DashboardContent() {
 
   return (
     <>
-      <div className="mb-8 animate-enter-up">
-        <h1 className="font-bold text-3xl text-foreground">
-          Welcome back, {session?.user.name}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Here's your job search at a glance
-        </p>
-      </div>
-
       <Link aria-label="View all applications" href="/jobs">
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map(({ label, value, icon: Icon, color }, i) => (
@@ -136,10 +132,6 @@ async function DashboardContent() {
 function DashboardSkeleton() {
   return (
     <>
-      <div className="mb-8">
-        <Skeleton className="mb-2 h-9 w-56" />
-        <Skeleton className="h-4 w-48" />
-      </div>
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {["a", "b", "c", "d"].map((id) => (
           <Skeleton className="h-[90px]" key={id} />
@@ -155,6 +147,17 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen p-6 md:p-10" id="main-content">
       <div className="mx-auto max-w-5xl">
+        <div className="mb-8 animate-enter-up">
+          <h1 className="font-bold text-3xl text-foreground">
+            Welcome back
+            <Suspense fallback={null}>
+              <UserName />
+            </Suspense>
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Here's your job search at a glance
+          </p>
+        </div>
         <Suspense fallback={<DashboardSkeleton />}>
           <DashboardContent />
         </Suspense>

@@ -65,106 +65,91 @@ function SettingsClientInner({
   const isDirty = aiPreferences !== originalPrefs;
 
   return (
-    <main className="min-h-screen p-6 md:p-10" id="main-content">
-      <div className="mx-auto max-w-xl">
-        <div className="mb-8 animate-enter-up">
-          <h1 className="font-bold text-3xl text-foreground">Settings</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage your profile and AI preferences
+    <div className="mx-auto max-w-xl px-6 pb-10 md:px-10">
+      <Card className="mb-5 animate-enter-up p-6 [animation-delay:80ms]">
+        <h2 className="mb-4 font-semibold text-base text-foreground">
+          Profile
+        </h2>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-muted-foreground text-xs uppercase tracking-wide">
+              Name
+            </Label>
+            <p className="mt-1 text-foreground text-sm">{userName}</p>
+          </div>
+          <div>
+            <Label className="text-muted-foreground text-xs uppercase tracking-wide">
+              Email
+            </Label>
+            <p className="mt-1 text-foreground text-sm">{userEmail}</p>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mb-5 animate-enter-up p-6 [animation-delay:120ms]">
+        <div className="mb-4">
+          <h2 className="font-semibold text-base text-foreground">AI Model</h2>
+          <p className="mt-0.5 text-muted-foreground text-xs">
+            Used for resume analysis, editing, and job customization. Saved
+            locally.
           </p>
         </div>
+        <Select onValueChange={handleModelChange} value={modelId}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {models.map((model) => (
+              <SelectItem key={model.id} value={model.id}>
+                <div className="flex flex-col">
+                  <span>{model.name}</span>
+                  <span className="text-muted-foreground text-xs uppercase">
+                    {model.provider}
+                  </span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Card>
 
-        <Card className="mb-5 animate-enter-up p-6 [animation-delay:80ms]">
-          <h2 className="mb-4 font-semibold text-base text-foreground">
-            Profile
+      <Card className="animate-enter-up p-6 [animation-delay:150ms]">
+        <div className="mb-4">
+          <h2 className="font-semibold text-base text-foreground">
+            AI Analysis Preferences
           </h2>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-                Name
-              </Label>
-              <p className="mt-1 text-foreground text-sm">{userName}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">
-                Email
-              </Label>
-              <p className="mt-1 text-foreground text-sm">{userEmail}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="mb-5 animate-enter-up p-6 [animation-delay:120ms]">
-          <div className="mb-4">
-            <h2 className="font-semibold text-base text-foreground">
-              AI Model
-            </h2>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Used for resume analysis, editing, and job customization. Saved
-              locally.
-            </p>
-          </div>
-          <Select onValueChange={handleModelChange} value={modelId}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span>{model.name}</span>
-                    <span className="text-muted-foreground text-xs uppercase">
-                      {model.provider}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Card>
-
-        <Card className="animate-enter-up p-6 [animation-delay:150ms]">
-          <div className="mb-4">
-            <h2 className="font-semibold text-base text-foreground">
-              AI Analysis Preferences
-            </h2>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Context the AI uses when analyzing your resume. Be specific about
-              your goals.
-            </p>
-          </div>
-          <Textarea
-            onChange={(e) => setAiPreferences(e.target.value)}
-            placeholder='e.g. "I am targeting senior backend engineering roles at startups. I have 5 years of Python and Go experience. Emphasize distributed systems work and de-emphasize frontend."'
-            rows={5}
-            value={aiPreferences}
-          />
-          <div className="mt-4 flex items-center justify-between">
-            <span
-              className={`text-xs ${isDirty ? "text-warning" : "text-muted-foreground"}`}
-            >
-              {isDirty ? "Unsaved changes" : ""}
-            </span>
-            <Button
-              disabled={saving || !isDirty}
-              onClick={handleSave}
-              size="sm"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 size-3.5 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 size-3.5" />
-                  Save
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
-      </div>
-    </main>
+          <p className="mt-0.5 text-muted-foreground text-xs">
+            Context the AI uses when analyzing your resume. Be specific about
+            your goals.
+          </p>
+        </div>
+        <Textarea
+          onChange={(e) => setAiPreferences(e.target.value)}
+          placeholder='e.g. "I am targeting senior backend engineering roles at startups. I have 5 years of Python and Go experience. Emphasize distributed systems work and de-emphasize frontend."'
+          rows={5}
+          value={aiPreferences}
+        />
+        <div className="mt-4 flex items-center justify-between">
+          <span
+            className={`text-xs ${isDirty ? "text-warning" : "text-muted-foreground"}`}
+          >
+            {isDirty ? "Unsaved changes" : ""}
+          </span>
+          <Button disabled={saving || !isDirty} onClick={handleSave} size="sm">
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 size-3.5 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 size-3.5" />
+                Save
+              </>
+            )}
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }

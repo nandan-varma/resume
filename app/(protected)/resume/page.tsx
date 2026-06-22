@@ -15,23 +15,27 @@ async function ResumeContent() {
 
 function ResumeContentSkeleton() {
   return (
-    <main className="min-h-screen p-6 md:p-10">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-8">
-          <Skeleton className="mb-2 h-9 w-28" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        <Skeleton className="mb-4 h-[200px]" />
-        <Skeleton className="h-[100px]" />
-      </div>
-    </main>
+    <div className="mx-auto max-w-2xl px-6 pb-10 md:px-10">
+      <Skeleton className="mb-4 h-[200px]" />
+      <Skeleton className="h-[100px]" />
+    </div>
   );
 }
 
 export default function ResumePage() {
   return (
-    <Suspense fallback={<ResumeContentSkeleton />}>
-      <ResumeContent />
-    </Suspense>
+    <main className="min-h-screen pt-6 md:pt-10" id="main-content">
+      <div className="mx-auto max-w-2xl px-6 md:px-10">
+        <div className="mb-8 animate-enter-up">
+          <h1 className="font-bold text-3xl text-foreground">Resume</h1>
+          <p className="mt-1 text-muted-foreground">
+            Your resume is used for all AI analysis
+          </p>
+        </div>
+      </div>
+      <Suspense fallback={<ResumeContentSkeleton />}>
+        <ResumeContent />
+      </Suspense>
+    </main>
   );
 }

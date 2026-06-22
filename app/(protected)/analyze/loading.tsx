@@ -5,8 +5,10 @@ export default function AnalyzeLoading() {
     <main className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8">
-          <Skeleton className="mb-2 h-9 w-36" />
-          <Skeleton className="h-4 w-64" />
+          <h1 className="font-bold text-3xl text-foreground">Analyze Match</h1>
+          <p className="mt-1 text-muted-foreground">
+            See how well your resume fits a job posting
+          </p>
         </div>
         <div className="space-y-4">
           <Skeleton className="h-[52px] w-full" />

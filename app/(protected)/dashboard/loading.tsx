@@ -5,8 +5,10 @@ export default function DashboardLoading() {
     <main className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8">
-          <Skeleton className="mb-2 h-9 w-56" />
-          <Skeleton className="h-4 w-48" />
+          <h1 className="font-bold text-3xl text-foreground">Welcome back</h1>
+          <p className="mt-1 text-muted-foreground">
+            Here's your job search at a glance
+          </p>
         </div>
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {["a", "b", "c", "d"].map((id) => (

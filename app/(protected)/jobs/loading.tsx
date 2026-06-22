@@ -6,8 +6,8 @@ export default function JobsLoading() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <Skeleton className="mb-2 h-9 w-44" />
-            <Skeleton className="h-4 w-48" />
+            <h1 className="font-bold text-3xl text-foreground">Applications</h1>
+            <Skeleton className="mt-2 h-4 w-40" />
           </div>
           <Skeleton className="h-9 w-24 shrink-0" />
         </div>
