@@ -229,6 +229,7 @@ export function NetworkBackground() {
       className="pointer-events-none fixed inset-0"
       ref={ref}
       style={{ zIndex: 0 }}
+      tabIndex={-1}
     />
   );
 }

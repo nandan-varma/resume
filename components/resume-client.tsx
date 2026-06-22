@@ -37,11 +37,12 @@ export function ResumeClient({
   const uploadLabel = resumeUrl
     ? "Replace resume (PDF only)"
     : "Upload resume (PDF only)";
-  const latexStatusLabel = latexDirty
-    ? "Unsaved changes"
-    : latexContent
-      ? "Saved"
-      : "";
+  let latexStatusLabel = "";
+  if (latexDirty) {
+    latexStatusLabel = "Unsaved changes";
+  } else if (latexContent) {
+    latexStatusLabel = "Saved";
+  }
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

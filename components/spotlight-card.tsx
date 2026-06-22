@@ -32,6 +32,7 @@ export function SpotlightCard({
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: mouse events drive a pure visual spotlight effect, not interactive semantics
     <div
       className={cn(
         "spotlight-card relative overflow-hidden border border-border bg-card",

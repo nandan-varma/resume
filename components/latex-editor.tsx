@@ -45,8 +45,8 @@ type EnginePhase =
   | { phase: "error"; message: string };
 
 type ChatMsg =
-  | { role: "user" | "assistant"; content: string }
-  | { role: "notice"; content: string };
+  | { id: string; role: "user" | "assistant"; content: string }
+  | { id: string; role: "notice"; content: string };
 
 const MAX_AUTO_FIX = 2;
 
@@ -254,6 +254,7 @@ export function LatexEditor({
   useEffect(() => () => revokePdf(), [revokePdf]);
 
   // Scroll chat to bottom on new messages
+  // biome-ignore lint/correctness/useExhaustiveDependencies: chatMessages is the trigger dep (not used inside body)
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
@@ -269,7 +270,11 @@ export function LatexEditor({
       if (noticeMsg) {
         setChatMessages((prev) => [
           ...prev,
-          { role: "notice" as const, content: noticeMsg },
+          {
+            id: crypto.randomUUID(),
+            role: "notice" as const,
+            content: noticeMsg,
+          },
         ]);
       }
       setChatLoading(true);
@@ -297,10 +302,11 @@ export function LatexEditor({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulated = "";
+        const assistantId = crypto.randomUUID();
 
         setChatMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "" },
+          { id: assistantId, role: "assistant", content: "" },
         ]);
 
         while (true) {
@@ -312,6 +318,7 @@ export function LatexEditor({
           setChatMessages((prev) => {
             const updated = [...prev];
             updated[updated.length - 1] = {
+              id: assistantId,
               role: "assistant",
               content: accumulated,
             };
@@ -349,7 +356,7 @@ export function LatexEditor({
     autoFixCountRef.current = 0;
     setChatMessages((prev) => [
       ...prev,
-      { role: "user", content: instruction },
+      { id: crypto.randomUUID(), role: "user", content: instruction },
     ]);
 
     const history = chatMessages
@@ -421,6 +428,7 @@ export function LatexEditor({
         setChatMessages((prev) => [
           ...prev,
           {
+            id: crypto.randomUUID(),
             role: "notice" as const,
             content:
               "Could not fix compilation errors automatically — please edit manually or try a different instruction.",
@@ -680,21 +688,19 @@ export function LatexEditor({
                   LaTeX.
                 </p>
               ) : (
-                chatMessages.map((msg, i) =>
+                chatMessages.map((msg) =>
                   msg.role === "notice" ? (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: chat messages are append-only and never reordered
                     <div
                       className="flex items-center justify-center gap-1.5 py-0.5 text-muted-foreground text-xs"
-                      key={i}
+                      key={msg.id}
                     >
                       <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
                       {msg.content}
                     </div>
                   ) : (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: chat messages are append-only and never reordered
                     <div
                       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                      key={i}
+                      key={msg.id}
                     >
                       <span
                         className={`inline-block max-w-[85%] rounded px-2.5 py-1.5 text-xs leading-relaxed ${
@@ -707,7 +713,7 @@ export function LatexEditor({
                           <AssistantBubble
                             content={msg.content}
                             streaming={
-                              chatLoading && i === chatMessages.length - 1
+                              chatLoading && msg.id === chatMessages.at(-1)?.id
                             }
                           />
                         ) : (

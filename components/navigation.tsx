@@ -60,9 +60,10 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   }>({ left: 0, width: 0, visible: false, animated: false });
 
   // Close mobile menu when active tab changes (page navigation)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeTab is the trigger dep (not used inside body)
   useEffect(() => {
     setMobileOpen(false);
-  }, [activeTab, setMobileOpen]);
+  }, [activeTab]);
 
   // Alt+Arrow keyboard navigation between tabs
   useEffect(() => {
@@ -180,6 +181,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
         </Link>
 
         {/* Desktop tab list — hidden on mobile */}
+        {/* biome-ignore lint/a11y/useSemanticElements: nav tab group — fieldset is inappropriate for non-form navigation */}
         <div
           aria-label="Main menu"
           className="relative hidden items-stretch gap-0.5 md:flex"
