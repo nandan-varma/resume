@@ -6,7 +6,21 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DEFAULT_MODEL_ID,
+  isValidModelId,
+  MODEL_STORAGE_KEY,
+  type ModelId,
+  models,
+} from "@/lib/models";
 import { saveAiPreferences } from "@/server/resume";
 
 interface SettingsClientProps {
@@ -23,6 +37,23 @@ export function SettingsClient({
   const [aiPreferences, setAiPreferences] = useState(initialPreferences);
   const [originalPrefs, setOriginalPrefs] = useState(initialPreferences);
   const [saving, setSaving] = useState(false);
+  const [modelId, setModelId] = useState<ModelId>(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_MODEL_ID;
+    }
+    const stored = localStorage.getItem(MODEL_STORAGE_KEY);
+    return stored && isValidModelId(stored)
+      ? (stored as ModelId)
+      : DEFAULT_MODEL_ID;
+  });
+
+  const handleModelChange = (value: string) => {
+    if (isValidModelId(value)) {
+      setModelId(value as ModelId);
+      localStorage.setItem(MODEL_STORAGE_KEY, value);
+      toast.success("Model saved");
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -66,6 +97,35 @@ export function SettingsClient({
               <p className="mt-1 text-foreground text-sm">{userEmail}</p>
             </div>
           </div>
+        </Card>
+
+        <Card className="mb-5 animate-enter-up p-6 [animation-delay:120ms]">
+          <div className="mb-4">
+            <h2 className="font-semibold text-base text-foreground">
+              AI Model
+            </h2>
+            <p className="mt-0.5 text-muted-foreground text-xs">
+              Used for resume analysis, editing, and job customization. Saved
+              locally.
+            </p>
+          </div>
+          <Select onValueChange={handleModelChange} value={modelId}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  <div className="flex flex-col">
+                    <span>{model.name}</span>
+                    <span className="text-muted-foreground text-xs uppercase">
+                      {model.provider}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Card>
 
         <Card className="animate-enter-up p-6 [animation-delay:150ms]">

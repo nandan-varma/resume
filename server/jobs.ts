@@ -69,6 +69,20 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
   }
 };
 
+export const getJobById = async (jobId: number) => {
+  try {
+    const session = await getSession();
+    if (!session?.user.id) {
+      return null;
+    }
+    return await db.query.jobs.findFirst({
+      where: and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)),
+    });
+  } catch {
+    return null;
+  }
+};
+
 export const deleteJob = async (jobId: number) => {
   try {
     const session = await getSession();

@@ -1,5 +1,9 @@
 import type { JobStatus } from "@/db/schema";
 
+/**
+ * Configuration for job status display including colors and icons.
+ * Used across the application to consistently display job application statuses.
+ */
 export const STATUS_CONFIG: Record<JobStatus, { color: string; icon: string }> =
   {
     submitted: { color: "bg-info/10 text-info", icon: "📤" },

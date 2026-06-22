@@ -7,6 +7,10 @@ import { getModelInstanceById } from "@/lib/models";
 const MARKDOWN_FENCE_START = /^```(?:latex)?\s*/i;
 const MARKDOWN_FENCE_END = /\s*```\s*$/;
 
+/**
+ * System prompt for converting PDF resumes to LaTeX.
+ * Strict requirements ensure consistent output format without external dependencies.
+ */
 const LATEX_PROMPT = `Convert this resume PDF to a clean LaTeX document.
 
 STRICT REQUIREMENTS:
@@ -15,7 +19,7 @@ STRICT REQUIREMENTS:
 - \\textbf{} \\textit{} \\emph{} for emphasis
 - itemize / enumerate with \\item for lists
 - Use tabular for ALL multi-column layouts including name/date pairs:
-    \\begin{tabular}{lr} Left text & Right text \\\\ \\end{tabular}
+    \\begin{tabular}{lr} Left text & Right text \\\\\\ \\end{tabular}
 - \\begin{center}...\\end{center} for centred blocks
 - \\vspace{4pt} for vertical spacing between sections
 - Font size commands: \\small \\large \\Large \\LARGE \\huge for sizing

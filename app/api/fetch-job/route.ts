@@ -121,9 +121,10 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("fetch-job error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch page. Paste the description manually." },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch page. Paste the description manually.";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

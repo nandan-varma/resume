@@ -28,6 +28,7 @@ export function ScoreRing({
   useEffect(() => {
     const start = performance.now();
     const dur = 1300;
+    let frameId: number;
 
     function tick(now: number) {
       const t = Math.min((now - start) / dur, 1);
@@ -35,13 +36,14 @@ export function ScoreRing({
       const eased = 1 - (1 - t) ** 3;
       setProgress(eased * score);
       if (t < 1) {
-        requestAnimationFrame(tick);
+        frameId = requestAnimationFrame(tick);
       } else {
         setProgress(score);
       }
     }
 
-    requestAnimationFrame(tick);
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
   }, [score]);
 
   const dashOffset = circumference - (progress / 100) * circumference;

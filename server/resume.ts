@@ -1,8 +1,8 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { personalInformation } from "@/db/schema";
+import { jobResumes, personalInformation } from "@/db/schema";
 import { uploadToR2 } from "@/lib/r2";
 import { getSession } from "./session";
 
@@ -90,6 +90,67 @@ export const saveResumeLatex = async (resumeLatex: string) => {
     return {
       success: false,
       message: error instanceof Error ? error.message : "Failed to save LaTeX.",
+    };
+  }
+};
+
+export const getJobResume = async (jobId: number) => {
+  try {
+    const session = await getSession();
+    if (!session?.user.id) {
+      return null;
+    }
+    return await db.query.jobResumes.findFirst({
+      where: and(
+        eq(jobResumes.jobId, jobId),
+        eq(jobResumes.userId, session.user.id)
+      ),
+    });
+  } catch {
+    return null;
+  }
+};
+
+export const saveJobResumeLatex = async (
+  jobId: number,
+  resumeLatex: string
+) => {
+  try {
+    const session = await getSession();
+    if (!session?.user.id) {
+      return { success: false, message: "Unauthorized" };
+    }
+
+    const existing = await db.query.jobResumes.findFirst({
+      where: and(
+        eq(jobResumes.jobId, jobId),
+        eq(jobResumes.userId, session.user.id)
+      ),
+      columns: { id: true },
+    });
+
+    if (existing) {
+      await db
+        .update(jobResumes)
+        .set({ resumeLatex })
+        .where(
+          and(
+            eq(jobResumes.jobId, jobId),
+            eq(jobResumes.userId, session.user.id)
+          )
+        );
+    } else {
+      await db
+        .insert(jobResumes)
+        .values({ jobId, userId: session.user.id, resumeLatex });
+    }
+
+    return { success: true, message: "Job resume saved." };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to save job resume.",
     };
   }
 };

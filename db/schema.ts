@@ -191,6 +191,7 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     references: [user.id],
   }),
   analysis: many(analysis),
+  jobResumes: many(jobResumes),
 }));
 
 export const personalInformationRelations = relations(
@@ -214,6 +215,34 @@ export const analysisRelations = relations(analysis, ({ one }) => ({
   }),
 }));
 
+export const jobResumes = pgTable(
+  "job_resumes",
+  {
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    resumeLatex: text("resume_latex").notNull().default(""),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("job_resumes_jobId_idx").on(table.jobId),
+    index("job_resumes_userId_idx").on(table.userId),
+  ]
+);
+
+export const jobResumesRelations = relations(jobResumes, ({ one }) => ({
+  user: one(user, { fields: [jobResumes.userId], references: [user.id] }),
+  job: one(jobs, { fields: [jobResumes.jobId], references: [jobs.id] }),
+}));
+
 export type Job = typeof jobs.$inferSelect;
 
 export const schema = {
@@ -224,4 +253,5 @@ export const schema = {
   jobs,
   personalInformation,
   analysis,
+  jobResumes,
 };

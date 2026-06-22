@@ -1,4 +1,4 @@
-import { generateText, Output } from "ai";
+import { generateObject } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
@@ -7,11 +7,16 @@ import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
 
 const analysisSchema = z.object({
+  short_title: z
+    .string()
+    .describe(
+      "Very concise job name in 'Role - Company' format, e.g. 'Senior Engineer - Google'. Max 40 chars."
+    ),
   match_percentage: z
     .number()
     .min(0)
     .max(100)
-    .describe("Match percentage from 0–100"),
+    .describe("Match percentage 0–100"),
   summary: z.string().describe("2–3 sentence explanation of the match"),
   missing_keywords: z
     .array(z.string())
@@ -27,29 +32,27 @@ const analysisSchema = z.object({
 
 export type AnalysisResult = z.infer<typeof analysisSchema>;
 
-const MAX_JOB_DESCRIPTION_LENGTH = 8000;
+const MAX_JD_LENGTH = 8000;
 
 async function fetchResumeBase64(userId: string): Promise<string> {
   const info = await db.query.personalInformation.findFirst({
     where: eq(personalInformation.userId, userId),
     columns: { resumeUrl: true },
   });
-
   if (!info?.resumeUrl) {
     throw new Error(
       "No resume found. Upload your resume on the Resume page first."
     );
   }
 
-  const response = await fetch(info.resumeUrl);
-  if (!response.ok) {
+  const res = await fetch(info.resumeUrl);
+  if (!res.ok) {
     throw new Error(
       "Could not fetch your resume from storage. Please re-upload it."
     );
   }
 
-  const buffer = await response.arrayBuffer();
-  return Buffer.from(buffer).toString("base64");
+  return Buffer.from(await res.arrayBuffer()).toString("base64");
 }
 
 export async function POST(req: Request) {
@@ -67,35 +70,26 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (
-    !jobDescription ||
-    typeof jobDescription !== "string" ||
-    !jobDescription.trim()
-  ) {
+  if (!jobDescription?.trim()) {
     return Response.json(
       { error: "Job description is required" },
       { status: 400 }
     );
   }
 
-  const trimmedDescription = jobDescription
-    .trim()
-    .slice(0, MAX_JOB_DESCRIPTION_LENGTH);
-  const modelInstance = resolveModel(modelId);
-
   try {
     const resumeBase64 = await fetchResumeBase64(session.user.id);
 
-    const { output } = await generateText({
-      model: modelInstance,
-      output: Output.object({ schema: analysisSchema }),
+    const { object } = await generateObject({
+      model: resolveModel(modelId),
+      schema: analysisSchema,
       messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `You are an expert career coach and technical recruiter. Analyze the attached resume against the job description below and provide detailed, actionable feedback.\n\nJob Description:\n${trimmedDescription}`,
+              text: `You are an expert career coach. Analyze the attached resume against the job description and provide detailed, actionable feedback.\n\nJob Description:\n${jobDescription.trim().slice(0, MAX_JD_LENGTH)}`,
             },
             {
               type: "file",
@@ -108,13 +102,13 @@ export async function POST(req: Request) {
       ],
     });
 
-    return Response.json({ result: output });
+    return Response.json({ result: object });
   } catch (error) {
-    console.error("Analysis error:", error);
-    const message =
+    console.error("[analyze]", error);
+    const errorMessage =
       error instanceof Error
         ? error.message
         : "Analysis failed. Please try again.";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: errorMessage }, { status: 500 });
   }
 }

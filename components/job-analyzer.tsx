@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, Link2, Loader2, Search } from "lucide-react";
+import { AlertTriangle, Link2, Loader2, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { AnalysisResult } from "@/app/api/analyze/route";
@@ -22,12 +23,11 @@ import type { Job } from "@/db/schema";
 import {
   DEFAULT_MODEL_ID,
   isValidModelId,
+  MODEL_STORAGE_KEY,
   type ModelId,
-  models,
 } from "@/lib/models";
 import { saveAnalysis } from "@/server/analysis";
-
-const MODEL_STORAGE_KEY = "job-match-ai-model";
+import { createJob } from "@/server/jobs";
 
 type JobSummary = Pick<Job, "id" | "jobTitle">;
 
@@ -37,18 +37,20 @@ interface JobAnalyzerProps {
 }
 
 export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
+  const router = useRouter();
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
-  const [jobs] = useState<JobSummary[]>(initialJobs);
+  const [jobs, setJobs] = useState<JobSummary[]>(initialJobs);
   const [linkedJobId, setLinkedJobId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [creatingJob, setCreatingJob] = useState(false);
 
-  const [modelId, setModelId] = useState<ModelId>(() => {
+  const [modelId] = useState<ModelId>(() => {
     if (typeof window === "undefined") {
       return DEFAULT_MODEL_ID;
     }
@@ -58,16 +60,14 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       : DEFAULT_MODEL_ID;
   });
 
-  const handleModelChange = (value: string) => {
-    if (isValidModelId(value)) {
-      setModelId(value as ModelId);
-      localStorage.setItem(MODEL_STORAGE_KEY, value);
-    }
-  };
+  // Add loading state for better UX
+  const [_isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleFetchDescription = async () => {
     if (!url.trim()) {
-      setError("Please enter a valid job URL.");
+      setError(
+        "Please enter a valid job URL (e.g., LinkedIn, company career page)."
+      );
       return;
     }
     setUrlLoading(true);
@@ -98,32 +98,42 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       return;
     }
     setSaving(true);
-    const saveResult = await saveAnalysis(jobId, {
-      match_percentage: result.match_percentage,
-      summary: result.summary,
-      strengths: result.strengths,
-      missing_keywords: result.missing_keywords,
-      improvement_suggestions: result.improvement_suggestions,
-      additional_insights: result.additional_insights,
-    });
-    setSaving(false);
-    if (saveResult.success) {
-      setSaved(true);
-      toast.success("Analysis saved to job");
-    } else {
-      toast.error(saveResult.message || "Failed to save analysis");
+    try {
+      const saveResult = await saveAnalysis(jobId, {
+        match_percentage: result.match_percentage,
+        summary: result.summary,
+        strengths: result.strengths,
+        missing_keywords: result.missing_keywords,
+        improvement_suggestions: result.improvement_suggestions,
+        additional_insights: result.additional_insights,
+      });
+      if (saveResult.success) {
+        setSaved(true);
+        toast.success("Analysis saved to job");
+      } else {
+        toast.error(saveResult.message || "Failed to save analysis");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save analysis"
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
   const analyzeMatch = async () => {
     if (!jobDescription.trim()) {
-      setError("Please add a job description first.");
+      setError(
+        "Please add a job description first. You can paste it directly or fetch from a job URL."
+      );
       return;
     }
     setLoading(true);
     setError(null);
     setResult(null);
     setSaved(false);
+    setIsAnalyzing(true);
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -150,10 +160,39 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
       toast.error(msg);
     } finally {
       setLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
-  const currentModel = models.find((m) => m.id === modelId);
+  const handleCustomize = async () => {
+    if (linkedJobId && linkedJobId !== "none") {
+      router.push(`/editor?jobId=${linkedJobId}`);
+      return;
+    }
+    if (!jobDescription.trim()) {
+      return;
+    }
+    // Auto-create job using the AI-generated short title from analysis
+    const title = result?.short_title ?? "Job Application";
+    setCreatingJob(true);
+    try {
+      const res = await createJob(title, jobDescription.trim());
+      if (res.success && res.job) {
+        setJobs((prev) => [
+          ...prev,
+          { id: res.job?.id, jobTitle: res.job?.jobTitle },
+        ]);
+        setLinkedJobId(String(res.job.id));
+        router.push(`/editor?jobId=${res.job.id}`);
+      } else {
+        toast.error(res.message ?? "Failed to create job");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create job");
+    } finally {
+      setCreatingJob(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -255,53 +294,36 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
             </div>
           )}
 
-          <div className="space-y-1">
-            <Label className="text-muted-foreground text-xs">AI model</Label>
-            <Select onValueChange={handleModelChange} value={modelId}>
-              <SelectTrigger className="h-8 w-56 text-sm">
-                <SelectValue>
-                  <span className="truncate">
-                    {currentModel?.name ?? modelId}
-                  </span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {models.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    <div className="flex flex-col">
-                      <span>{model.name}</span>
-                      <span className="text-muted-foreground text-xs uppercase">
-                        {model.provider}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="ml-auto flex flex-col items-end gap-1">
+            <Button
+              className="h-8 w-full sm:w-auto"
+              disabled={loading || !jobDescription.trim()}
+              onClick={analyzeMatch}
+              title={
+                jobDescription.trim()
+                  ? undefined
+                  : "Paste a job description first"
+              }
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Analyzing…
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 size-4" />
+                  Analyze Match
+                </>
+              )}
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              Model: {modelId} ·{" "}
+              <Link className="underline hover:no-underline" href="/settings">
+                change
+              </Link>
+            </p>
           </div>
-
-          <Button
-            className="ml-auto h-8 w-full sm:w-auto"
-            disabled={loading || !jobDescription.trim()}
-            onClick={analyzeMatch}
-            title={
-              jobDescription.trim()
-                ? undefined
-                : "Paste a job description first"
-            }
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                Analyzing…
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 size-4" />
-                Analyze Match
-              </>
-            )}
-          </Button>
         </div>
 
         {error && (
@@ -354,6 +376,27 @@ export function JobAnalyzer({ initialJobs, hasResume }: JobAnalyzerProps) {
               ✓ Analysis saved to job
             </p>
           )}
+
+          {/* Customize CTA */}
+          <div className="flex animate-enter-up items-center gap-3 border border-primary/20 bg-primary/5 px-4 py-3 [animation-delay:320ms]">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-foreground text-sm">
+                Customize your resume for this role
+              </p>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                Opens AI editor pre-loaded with this job — saves as a separate
+                job resume
+              </p>
+            </div>
+            <Button disabled={creatingJob} onClick={handleCustomize} size="sm">
+              {creatingJob ? (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1.5 size-3.5" />
+              )}
+              Customize resume
+            </Button>
+          </div>
         </>
       )}
     </div>

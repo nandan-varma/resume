@@ -1,6 +1,14 @@
 "use client";
 
-import { Briefcase, ExternalLink, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  Briefcase,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -285,15 +293,30 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
                     </div>
                   </div>
 
-                  <Button
-                    aria-label={`Delete ${job.jobTitle}`}
-                    className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDelete(job.id)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      asChild
+                      size="sm"
+                      title="Open resume editor for this job"
+                      variant="outline"
+                    >
+                      <Link href={`/editor?jobId=${job.id}`}>
+                        <FileText className="size-3.5" />
+                        <span className="ml-1.5 hidden sm:inline">
+                          Edit resume
+                        </span>
+                      </Link>
+                    </Button>
+                    <Button
+                      aria-label={`Delete ${job.jobTitle}`}
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleDelete(job.id)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))}
