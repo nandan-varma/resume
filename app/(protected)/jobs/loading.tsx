@@ -1,20 +1,6 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { JobsList } from "@/components/jobs-list";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getJobs } from "@/server/jobs";
 
-export const metadata: Metadata = {
-  title: "Applications",
-  description: "Track and manage your job applications.",
-};
-
-async function JobsContent() {
-  const jobs = await getJobs();
-  return <JobsList initialJobs={jobs} />;
-}
-
-function JobsContentSkeleton() {
+export default function JobsLoading() {
   return (
     <main className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-4xl">
@@ -36,13 +22,5 @@ function JobsContentSkeleton() {
         </div>
       </div>
     </main>
-  );
-}
-
-export default function JobsPage() {
-  return (
-    <Suspense fallback={<JobsContentSkeleton />}>
-      <JobsContent />
-    </Suspense>
   );
 }

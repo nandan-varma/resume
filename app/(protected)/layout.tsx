@@ -10,7 +10,7 @@ export default async function ProtectedLayout({
   return (
     <>
       <Navigation user={{ name: currentUser.name, email: currentUser.email }} />
-      <main id="main-content">{children}</main>
+      {children}
     </>
   );
 }

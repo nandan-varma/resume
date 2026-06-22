@@ -6,15 +6,19 @@ import type { EnginePhase } from "./types";
 
 const PACKAGES_JS = "/core/busytex/texlive-extra.js";
 
+// Module-level singletons — survive navigation away from and back to /editor
+let _runner: InstanceType<typeof BusyTexRunner> | null = null;
+let _compiler: InstanceType<typeof PdfLatex> | null = null;
+let _initPromise: Promise<void> | null = null;
+
 export function useEngine() {
-  const [engine, setEngine] = useState<EnginePhase>({ phase: "idle" });
+  const [engine, setEngine] = useState<EnginePhase>(
+    _runner ? { phase: "ready" } : { phase: "idle" }
+  );
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [compileLog, setCompileLog] = useState("");
   const [showLog, setShowLog] = useState(false);
 
-  const runnerRef = useRef<InstanceType<typeof BusyTexRunner> | null>(null);
-  const compilerRef = useRef<InstanceType<typeof PdfLatex> | null>(null);
-  const initPromiseRef = useRef<Promise<void> | null>(null);
   const pdfBlobUrlRef = useRef<string | null>(null);
 
   useEffect(
@@ -27,14 +31,14 @@ export function useEngine() {
   );
 
   const initEngine = useCallback((): Promise<void> => {
-    if (runnerRef.current) {
+    if (_runner) {
       return Promise.resolve();
     }
-    if (initPromiseRef.current) {
-      return initPromiseRef.current;
+    if (_initPromise) {
+      return _initPromise;
     }
 
-    initPromiseRef.current = (async () => {
+    _initPromise = (async () => {
       setEngine({ phase: "loading", label: "Loading LaTeX engine…" });
       const { BusyTexRunner, PdfLatex } = await import("texlyre-busytex");
       setEngine({
@@ -48,19 +52,19 @@ export function useEngine() {
         verbose: false,
       });
       await runner.initialize(true);
-      runnerRef.current = runner;
-      compilerRef.current = new PdfLatex(runner);
+      _runner = runner;
+      _compiler = new PdfLatex(runner);
       setEngine({ phase: "ready" });
     })().catch((err) => {
       setEngine({
         phase: "error",
         message: err instanceof Error ? err.message : String(err),
       });
-      initPromiseRef.current = null;
+      _initPromise = null;
       throw err;
     });
 
-    return initPromiseRef.current;
+    return _initPromise;
   }, []);
 
   const compile = useCallback(
@@ -77,10 +81,10 @@ export function useEngine() {
       try {
         await initEngine();
         setEngine({ phase: "compiling" });
-        if (!compilerRef.current) {
+        if (!_compiler) {
           throw new Error("Compiler not initialized");
         }
-        const result = await compilerRef.current.compile({
+        const result = await _compiler.compile({
           input: src,
           rerun: true,
           verbose: "silent",
