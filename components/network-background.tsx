@@ -10,6 +10,7 @@ const MAX_N = 220; // upper cap for pre-allocation
 
 // ─── Pre-allocated edge storage (module-level = allocated once, never GC'd) ──
 // Worst case: all MAX_N*(MAX_N-1)/2 edges land in one bucket.
+// biome-ignore lint/suspicious/noBitwiseOperators: integer division via bit shift
 const MAX_EDGES = (MAX_N * (MAX_N - 1)) >> 1; // 24 090
 const _bufs = Array.from(
   { length: BUCKETS },
@@ -19,7 +20,12 @@ const _lens = new Int32Array(BUCKETS);
 const TAU = Math.PI * 2;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-type Node = { x: number; y: number; vx: number; vy: number };
+interface Node {
+  vx: number;
+  vy: number;
+  x: number;
+  y: number;
+}
 
 /** Node density scales with viewport area so density looks consistent everywhere. */
 function targetCount(w: number, h: number): number {
@@ -50,7 +56,10 @@ export function NetworkBackground() {
       return;
     }
 
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return;
+    }
     let raf = 0;
     let W = window.innerWidth;
     let H = window.innerHeight;
@@ -92,6 +101,7 @@ export function NetworkBackground() {
     window.addEventListener("resize", onResize);
 
     // ── Main loop ─────────────────────────────────────────────────────────────
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: intentional hot-path canvas animation
     const tick = () => {
       const dark = document.documentElement.classList.contains("dark");
       const fg = dark ? "#ffffff" : "#000000";
@@ -131,7 +141,9 @@ export function NetworkBackground() {
           const d2 = dx * dx + dy * dy;
           if (d2 < DIST_SQ) {
             const t = 1 - Math.sqrt(d2) / CONNECT_DIST;
+            // biome-ignore lint/suspicious/noBitwiseOperators: integer floor/shift for hot-path perf
             const b = Math.min(BUCKETS - 1, (t * BUCKETS) | 0);
+            // biome-ignore lint/suspicious/noBitwiseOperators: multiply by 4 via shift in hot path
             const off = _lens[b] << 2; // * 4 — flat [x1,y1,x2,y2] layout
             _bufs[b][off] = ax;
             _bufs[b][off + 1] = ay;
@@ -152,6 +164,7 @@ export function NetworkBackground() {
         const c = _lens[b];
         const buf = _bufs[b];
         for (let e = 0; e < c; e++) {
+          // biome-ignore lint/suspicious/noBitwiseOperators: multiply by 4 via shift in hot path
           const o = e << 2;
           ctx.moveTo(buf[o], buf[o + 1]);
           ctx.lineTo(buf[o + 2], buf[o + 3]);
@@ -171,6 +184,7 @@ export function NetworkBackground() {
         const buf = _bufs[b];
         ctx.beginPath();
         for (let e = 0; e < c; e++) {
+          // biome-ignore lint/suspicious/noBitwiseOperators: multiply by 4 via shift in hot path
           const o = e << 2;
           ctx.moveTo(buf[o], buf[o + 1]);
           ctx.lineTo(buf[o + 2], buf[o + 3]);

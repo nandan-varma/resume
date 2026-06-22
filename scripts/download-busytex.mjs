@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import fs from "fs";
-import https from "https";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import https from "node:https";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEST = path.resolve(__dirname, "../public/core/busytex");
@@ -81,7 +81,9 @@ function downloadFile(url, dest) {
               resolve();
             });
             file.on("error", (err) => {
-              fs.unlink(dest, () => {});
+              fs.unlink(dest, () => {
+                /* ignore cleanup error */
+              });
               reject(err);
             });
             res.on("error", reject);
@@ -101,9 +103,13 @@ async function main() {
 
   fs.mkdirSync(DEST, { recursive: true });
 
-  console.log("Fetching latest texlyre-busytex-build release...");
+  const PINNED_TAG =
+    "build_wasm_50e6f7860148cfe83b513c632c9fd8686868a9e1_24612671804_1";
+  console.log(
+    `Fetching pinned texlyre-busytex-build release: ${PINNED_TAG}...`
+  );
   const release = await getJson(
-    "https://api.github.com/repos/TeXlyre/texlyre-busytex-build/releases/latest"
+    `https://api.github.com/repos/TeXlyre/texlyre-busytex-build/releases/tags/${PINNED_TAG}`
   );
   console.log(`Release: ${release.tag_name}\n`);
 

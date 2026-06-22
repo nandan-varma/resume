@@ -4,6 +4,9 @@ import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { getModelInstanceById } from "@/lib/models";
 
+const MARKDOWN_FENCE_START = /^```(?:latex)?\s*/i;
+const MARKDOWN_FENCE_END = /\s*```\s*$/;
+
 const LATEX_PROMPT = `Convert this resume PDF to a clean LaTeX document.
 
 STRICT REQUIREMENTS:
@@ -57,8 +60,8 @@ export async function generateLatexFromPdf(
 
     // Strip any accidental markdown fences the model might add
     const latex = text
-      .replace(/^```(?:latex)?\s*/i, "")
-      .replace(/\s*```\s*$/, "")
+      .replace(MARKDOWN_FENCE_START, "")
+      .replace(MARKDOWN_FENCE_END, "")
       .trim();
 
     await db

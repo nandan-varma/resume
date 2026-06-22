@@ -62,7 +62,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
   // Close mobile menu when active tab changes (page navigation)
   useEffect(() => {
     setMobileOpen(false);
-  }, [activeTab]);
+  }, [activeTab, setMobileOpen]);
 
   // Alt+Arrow keyboard navigation between tabs
   useEffect(() => {
@@ -153,6 +153,16 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
     ? (session.user.name ?? session.user.email).charAt(0).toUpperCase()
     : null;
 
+  const indicatorTransition = () => {
+    if (indicator.animated) {
+      return "left 350ms cubic-bezier(0.16,1,0.3,1), width 350ms cubic-bezier(0.16,1,0.3,1), opacity 150ms ease";
+    }
+    if (indicator.visible) {
+      return "opacity 150ms ease";
+    }
+    return "none";
+  };
+
   return (
     <nav
       aria-label="Site navigation"
@@ -173,6 +183,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
         <div
           aria-label="Main menu"
           className="relative hidden items-stretch gap-0.5 md:flex"
+          role="group"
         >
           {/* Sliding indicator */}
           <span
@@ -182,11 +193,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
               left: indicator.left,
               width: indicator.width,
               opacity: indicator.visible ? 1 : 0,
-              transition: indicator.animated
-                ? "left 350ms cubic-bezier(0.16,1,0.3,1), width 350ms cubic-bezier(0.16,1,0.3,1), opacity 150ms ease"
-                : indicator.visible
-                  ? "opacity 150ms ease"
-                  : "none",
+              transition: indicatorTransition(),
             }}
           >
             <span
@@ -288,7 +295,7 @@ export function Navigation({ activeTab = "analyze" }: NavigationProps) {
           className="border-border border-t bg-background/95 backdrop-blur-sm md:hidden"
           id="mobile-nav-menu"
         >
-          <ul className="py-1" role="list">
+          <ul className="py-1">
             {tabs.map(({ id, label, to, Icon }) => (
               <li key={id}>
                 <Link

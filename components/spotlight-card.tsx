@@ -40,6 +40,7 @@ export function SpotlightCard({
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
       ref={ref}
+      role="presentation"
       {...props}
     >
       <div className="relative z-10">{children}</div>

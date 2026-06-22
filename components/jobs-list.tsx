@@ -91,10 +91,9 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
     }
   };
 
-  const statusCounts = JOB_STATUSES.reduce<Record<JobStatus, number>>(
-    (acc, s) => ({ ...acc, [s]: jobs.filter((j) => j.status === s).length }),
-    {} as Record<JobStatus, number>
-  );
+  const statusCounts = Object.fromEntries(
+    JOB_STATUSES.map((s) => [s, jobs.filter((j) => j.status === s).length])
+  ) as Record<JobStatus, number>;
 
   return (
     <main className="min-h-screen p-6 md:p-10" id="main-content">
@@ -181,25 +180,23 @@ export function JobsList({ initialJobs }: { initialJobs: Job[] }) {
         </div>
 
         {jobs.length > 0 && (
-          <div
+          <ul
             aria-label="Application status summary"
             className="mb-6 flex animate-enter flex-wrap gap-2 [animation-delay:80ms]"
-            role="list"
           >
             {JOB_STATUSES.filter((s) => statusCounts[s] > 0).map((s) => (
-              <span
+              <li
                 className="inline-flex items-center gap-1.5 border border-border bg-background px-3 py-1 text-muted-foreground text-xs"
                 key={s}
-                role="listitem"
               >
                 <span aria-hidden="true">{STATUS_CONFIG[s].icon}</span>
                 <span className="font-medium text-foreground">
                   {statusCounts[s]}
                 </span>
                 <span className="capitalize">{s}</span>
-              </span>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
         {jobs.length === 0 ? (

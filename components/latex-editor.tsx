@@ -17,7 +17,13 @@ import {
   ZoomOut,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_MODEL_ID, isValidModelId, type ModelId } from "@/lib/models";
@@ -26,6 +32,7 @@ import { saveResumeLatex } from "@/server/resume";
 const MODEL_STORAGE_KEY = "job-match-ai-model";
 
 const DEBOUNCE_MS = 2500;
+const LATEX_BLOCK_REGEX = /```latex\n([\s\S]*?)\n?```/;
 // texlive-extra is the cumulative tier: includes collection-latex, collection-latexrecommended,
 // collection-latexextra, collection-fontsrecommended (cm-super, lm, etc.) and more.
 const PACKAGES_JS = "/core/busytex/texlive-extra.js";
@@ -88,6 +95,7 @@ interface LatexEditorProps {
   initialResumeUrl: string | null;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: LaTeX editor is a single coherent component managing engine, compile, and chat state together
 export function LatexEditor({
   initialLatex,
   initialResumeUrl,
@@ -102,7 +110,7 @@ export function LatexEditor({
   const [zoom, setZoom] = useState(100);
 
   // Chat state
-  const [chatOpen, setChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"editor" | "chat">("editor");
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -119,21 +127,25 @@ export function LatexEditor({
   const aiAppliedRef = useRef(false);
   const autoFixCountRef = useRef(0);
   // Holds the latest runAutoFix so the compile-error effect never captures a stale closure
-  const runAutoFixRef = useRef<(log: string) => void>(() => {});
+  const runAutoFixRef = useRef<(log: string) => void>(() => {
+    /* noop until first render */
+  });
 
+  // biome-ignore lint/suspicious/noExplicitAny: WASM module types resolved via dynamic import
   const runnerRef = useRef<any>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: WASM module types resolved via dynamic import
   const compilerRef = useRef<any>(null);
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const pdfBlobUrlRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const revokePdf = () => {
+  const revokePdf = useCallback(() => {
     if (pdfBlobUrlRef.current) {
       URL.revokeObjectURL(pdfBlobUrlRef.current);
       pdfBlobUrlRef.current = null;
     }
-  };
+  }, []);
 
   const initEngine = useCallback((): Promise<void> => {
     if (runnerRef.current) {
@@ -210,12 +222,14 @@ export function LatexEditor({
         setEngine({ phase: "error", message });
       }
     },
-    [initEngine]
+    [initEngine, revokePdf]
   );
 
   // Pre-initialize engine on mount so it's ready when user starts typing
   useEffect(() => {
-    initEngine().catch(() => {});
+    initEngine().catch(() => {
+      /* pre-init failure handled by engine state */
+    });
   }, [initEngine]);
 
   // Debounced compile on latex change
@@ -234,10 +248,10 @@ export function LatexEditor({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [latex, compile]);
+  }, [latex, compile, revokePdf]);
 
   // Cleanup blob URL on unmount
-  useEffect(() => () => revokePdf(), []);
+  useEffect(() => () => revokePdf(), [revokePdf]);
 
   // Scroll chat to bottom on new messages
   useEffect(() => {
@@ -277,7 +291,10 @@ export function LatexEditor({
           throw new Error(err.error ?? "Request failed");
         }
 
-        const reader = response.body!.getReader();
+        if (!response.body) {
+          throw new Error("No response body");
+        }
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulated = "";
 
@@ -302,7 +319,7 @@ export function LatexEditor({
           });
         }
 
-        const match = accumulated.match(/```latex\n([\s\S]*?)\n?```/);
+        const match = accumulated.match(LATEX_BLOCK_REGEX);
         if (match) {
           setLatex(match[1].trim());
           setDirty(true);
@@ -313,7 +330,7 @@ export function LatexEditor({
           err instanceof Error ? err.message : "AI request failed";
         toast.error(message);
         setChatMessages((prev) =>
-          prev[prev.length - 1]?.content === "" ? prev.slice(0, -1) : prev
+          prev.at(-1)?.content === "" ? prev.slice(0, -1) : prev
         );
       } finally {
         setChatLoading(false);
@@ -414,7 +431,7 @@ export function LatexEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.phase, compileLog]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     const result = await saveResumeLatex(latex);
     setSaving(false);
@@ -424,7 +441,7 @@ export function LatexEditor({
     } else {
       toast.error(result.message ?? "Failed to save");
     }
-  };
+  }, [latex]);
 
   const handleDownload = () => {
     if (!pdfUrl) {
@@ -445,7 +462,7 @@ export function LatexEditor({
           return;
         }
         const { selectionStart: s, selectionEnd: end } = ta;
-        const next = latex.slice(0, s) + "  " + latex.slice(end);
+        const next = `${latex.slice(0, s)}  ${latex.slice(end)}`;
         setLatex(next);
         setDirty(true);
         requestAnimationFrame(() => {
@@ -459,19 +476,76 @@ export function LatexEditor({
         }
       }
     },
-    [latex, dirty, saving]
+    [latex, dirty, saving, handleSave]
   );
 
   const isEmpty = !latex.trim();
   const isLoading = engine.phase === "loading" || engine.phase === "compiling";
   const hasError = engine.phase === "error";
 
-  const statusLabel =
-    engine.phase === "loading"
-      ? engine.label
-      : engine.phase === "compiling"
-        ? "Compiling…"
-        : null;
+  let statusLabel: string | null = null;
+  if (engine.phase === "loading") {
+    statusLabel = engine.label;
+  } else if (engine.phase === "compiling") {
+    statusLabel = "Compiling…";
+  }
+
+  let previewContent: ReactNode;
+  if (isEmpty) {
+    previewContent = (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center text-muted-foreground text-sm">
+          <p className="mb-1 font-medium">No preview yet</p>
+          <p className="text-xs">Add LaTeX source to see a live preview</p>
+        </div>
+      </div>
+    );
+  } else if (!pdfUrl && hasError) {
+    previewContent = (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
+        <p className="text-center text-destructive text-sm">
+          {engine.phase === "error" ? engine.message : "Compilation error"}
+        </p>
+        {compileLog && !showLog && (
+          <button
+            className="text-muted-foreground text-xs underline"
+            onClick={() => setShowLog(true)}
+            type="button"
+          >
+            Show compilation log
+          </button>
+        )}
+      </div>
+    );
+  } else if (pdfUrl) {
+    previewContent = (
+      <div className="flex-1 overflow-auto">
+        <div
+          style={{
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: "top left",
+            width: `${10_000 / zoom}%`,
+            minHeight: "100%",
+          }}
+        >
+          <iframe
+            className="h-[calc(100vh-7rem)] w-full border-0"
+            src={pdfUrl}
+            title="LaTeX PDF preview"
+          />
+        </div>
+      </div>
+    );
+  } else {
+    previewContent = (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center text-muted-foreground text-sm">
+          <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
+          <p className="text-xs">{statusLabel ?? "Initializing…"}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -552,32 +626,32 @@ export function LatexEditor({
       <div className="flex min-h-0 flex-1">
         {/* LaTeX source editor */}
         <div className="flex min-h-0 w-1/2 flex-col border-border border-r">
-          <div className="flex shrink-0 items-center justify-between border-border/50 border-b px-3 py-1">
-            <span className="text-muted-foreground text-xs">LaTeX Source</span>
-            <div className="flex items-center gap-3">
-              <span className="text-muted-foreground text-xs">
+          <div className="flex shrink-0 items-center border-border/50 border-b">
+            <button
+              className={`border-b-2 px-3 py-2 text-xs transition-colors ${activeTab === "editor" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setActiveTab("editor")}
+              type="button"
+            >
+              Editor
+            </button>
+            <button
+              className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs transition-colors ${activeTab === "chat" ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setActiveTab("chat")}
+              type="button"
+            >
+              <Sparkles className="size-3" />
+              AI Chat
+            </button>
+            {activeTab === "editor" && (
+              <span className="ml-auto px-3 text-muted-foreground text-xs">
                 {latex.split("\n").length} lines
               </span>
-              <button
-                className="flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
-                onClick={() => setChatOpen((v) => !v)}
-                title="Toggle AI chat"
-                type="button"
-              >
-                <Sparkles className="size-3" />
-                AI
-                {chatOpen ? (
-                  <ChevronDown className="size-3" />
-                ) : (
-                  <ChevronUp className="size-3" />
-                )}
-              </button>
-            </div>
+            )}
           </div>
 
           <textarea
             aria-label="LaTeX source"
-            className="min-h-0 flex-1 resize-none bg-background p-4 font-mono text-foreground text-sm focus:outline-none"
+            className={`min-h-0 flex-1 resize-none bg-background p-4 font-mono text-foreground text-sm focus:outline-none ${activeTab === "chat" ? "hidden" : ""}`}
             onChange={(e) => {
               setLatex(e.target.value);
               setDirty(true);
@@ -595,96 +669,97 @@ export function LatexEditor({
           />
 
           {/* AI chat panel */}
-          {chatOpen && (
-            <div className="flex h-64 shrink-0 flex-col border-border border-t">
-              {/* Message list */}
-              <div className="flex-1 space-y-2 overflow-y-auto p-3">
-                {chatMessages.length === 0 ? (
-                  <p className="py-4 text-center text-muted-foreground text-xs">
-                    Describe what you'd like to change and AI will edit your
-                    LaTeX.
-                  </p>
-                ) : (
-                  chatMessages.map((msg, i) =>
-                    msg.role === "notice" ? (
-                      <div
-                        className="flex items-center justify-center gap-1.5 py-0.5 text-muted-foreground text-xs"
-                        key={i}
+          <div
+            className={`min-h-0 flex-col border-border border-t ${activeTab === "chat" ? "flex flex-1" : "hidden"}`}
+          >
+            {/* Message list */}
+            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+              {chatMessages.length === 0 ? (
+                <p className="py-4 text-center text-muted-foreground text-xs">
+                  Describe what you'd like to change and AI will edit your
+                  LaTeX.
+                </p>
+              ) : (
+                chatMessages.map((msg, i) =>
+                  msg.role === "notice" ? (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: chat messages are append-only and never reordered
+                    <div
+                      className="flex items-center justify-center gap-1.5 py-0.5 text-muted-foreground text-xs"
+                      key={i}
+                    >
+                      <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
+                      {msg.content}
+                    </div>
+                  ) : (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: chat messages are append-only and never reordered
+                    <div
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                      key={i}
+                    >
+                      <span
+                        className={`inline-block max-w-[85%] rounded px-2.5 py-1.5 text-xs leading-relaxed ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground"
+                        }`}
                       >
-                        <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
-                        {msg.content}
-                      </div>
-                    ) : (
-                      <div
-                        className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                        key={i}
-                      >
-                        <span
-                          className={`inline-block max-w-[85%] rounded px-2.5 py-1.5 text-xs leading-relaxed ${
-                            msg.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-foreground"
-                          }`}
-                        >
-                          {msg.role === "assistant" ? (
-                            <AssistantBubble
-                              content={msg.content}
-                              streaming={
-                                chatLoading && i === chatMessages.length - 1
-                              }
-                            />
-                          ) : (
-                            msg.content
-                          )}
-                        </span>
-                      </div>
-                    )
-                  )
-                )}
-                {chatLoading &&
-                  chatMessages[chatMessages.length - 1]?.role === "user" && (
-                    <div className="flex justify-start">
-                      <span className="inline-flex items-center gap-1 rounded bg-muted px-2.5 py-1.5 text-muted-foreground text-xs">
-                        <Loader2 className="size-3 animate-spin" />
-                        Thinking…
+                        {msg.role === "assistant" ? (
+                          <AssistantBubble
+                            content={msg.content}
+                            streaming={
+                              chatLoading && i === chatMessages.length - 1
+                            }
+                          />
+                        ) : (
+                          msg.content
+                        )}
                       </span>
                     </div>
-                  )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Input row */}
-              <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2">
-                <input
-                  className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-                  disabled={chatLoading}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleChatSend();
-                    }
-                  }}
-                  placeholder="e.g. Add a skills section, make fonts smaller…"
-                  type="text"
-                  value={chatInput}
-                />
-                <Button
-                  aria-label="Send"
-                  className="h-7 w-7 shrink-0 p-0"
-                  disabled={chatLoading || !chatInput.trim()}
-                  onClick={handleChatSend}
-                  size="sm"
-                >
-                  {chatLoading ? (
+                  )
+                )
+              )}
+              {chatLoading && chatMessages.at(-1)?.role === "user" && (
+                <div className="flex justify-start">
+                  <span className="inline-flex items-center gap-1 rounded bg-muted px-2.5 py-1.5 text-muted-foreground text-xs">
                     <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    <Send className="size-3" />
-                  )}
-                </Button>
-              </div>
+                    Thinking…
+                  </span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
             </div>
-          )}
+
+            {/* Input row */}
+            <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2">
+              <input
+                className="h-7 flex-1 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                disabled={chatLoading}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleChatSend();
+                  }
+                }}
+                placeholder="e.g. Add a skills section, make fonts smaller…"
+                type="text"
+                value={chatInput}
+              />
+              <Button
+                aria-label="Send"
+                className="h-7 w-7 shrink-0 p-0"
+                disabled={chatLoading || !chatInput.trim()}
+                onClick={handleChatSend}
+                size="sm"
+              >
+                {chatLoading ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Send className="size-3" />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Live preview */}
@@ -725,57 +800,7 @@ export function LatexEditor({
             </div>
           )}
 
-          {isEmpty ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center text-muted-foreground text-sm">
-                <p className="mb-1 font-medium">No preview yet</p>
-                <p className="text-xs">
-                  Add LaTeX source to see a live preview
-                </p>
-              </div>
-            </div>
-          ) : !pdfUrl && hasError ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
-              <p className="text-center text-destructive text-sm">
-                {engine.phase === "error"
-                  ? engine.message
-                  : "Compilation error"}
-              </p>
-              {compileLog && !showLog && (
-                <button
-                  className="text-muted-foreground text-xs underline"
-                  onClick={() => setShowLog(true)}
-                  type="button"
-                >
-                  Show compilation log
-                </button>
-              )}
-            </div>
-          ) : pdfUrl ? (
-            <div className="flex-1 overflow-auto">
-              <div
-                style={{
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: "top left",
-                  width: `${10_000 / zoom}%`,
-                  minHeight: "100%",
-                }}
-              >
-                <iframe
-                  className="h-[calc(100vh-7rem)] w-full border-0"
-                  src={pdfUrl}
-                  title="LaTeX PDF preview"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center text-muted-foreground text-sm">
-                <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
-                <p className="text-xs">{statusLabel ?? "Initializing…"}</p>
-              </div>
-            </div>
-          )}
+          {previewContent}
         </div>
       </div>
     </div>

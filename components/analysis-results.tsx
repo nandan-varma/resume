@@ -43,16 +43,33 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
     }
   };
 
-  const scoreColor = (s: number) =>
-    s >= 80 ? "text-success" : s >= 60 ? "text-warning" : "text-destructive";
-  const scoreBg = (s: number) =>
-    s >= 80
-      ? "bg-success/8 border-success/20"
-      : s >= 60
-        ? "bg-warning/8 border-warning/20"
-        : "bg-destructive/8 border-destructive/20";
-  const scoreLabel = (s: number) =>
-    s >= 80 ? "Strong match" : s >= 60 ? "Partial match" : "Weak match";
+  const scoreColor = (s: number) => {
+    if (s >= 80) {
+      return "text-success";
+    }
+    if (s >= 60) {
+      return "text-warning";
+    }
+    return "text-destructive";
+  };
+  const scoreBg = (s: number) => {
+    if (s >= 80) {
+      return "bg-success/8 border-success/20";
+    }
+    if (s >= 60) {
+      return "bg-warning/8 border-warning/20";
+    }
+    return "bg-destructive/8 border-destructive/20";
+  };
+  const scoreLabel = (s: number) => {
+    if (s >= 80) {
+      return "Strong match";
+    }
+    if (s >= 60) {
+      return "Partial match";
+    }
+    return "Weak match";
+  };
 
   return (
     <div className="space-y-5">

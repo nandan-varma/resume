@@ -34,6 +34,15 @@ export function ResumeClient({
   const [latexDirty, setLatexDirty] = useState(false);
   const [latexOpen, setLatexOpen] = useState(!!initialLatex);
 
+  const uploadLabel = resumeUrl
+    ? "Replace resume (PDF only)"
+    : "Upload resume (PDF only)";
+  const latexStatusLabel = latexDirty
+    ? "Unsaved changes"
+    : latexContent
+      ? "Saved"
+      : "";
+
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
@@ -159,11 +168,7 @@ export function ResumeClient({
               <Upload className="size-4 shrink-0 text-muted-foreground" />
             )}
             <span className="text-muted-foreground text-sm">
-              {uploading
-                ? "Uploading…"
-                : resumeUrl
-                  ? "Replace resume (PDF only)"
-                  : "Upload resume (PDF only)"}
+              {uploading ? "Uploading…" : uploadLabel}
             </span>
             <input
               accept=".pdf"
@@ -212,7 +217,7 @@ export function ResumeClient({
               />
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs">
-                  {latexDirty ? "Unsaved changes" : latexContent ? "Saved" : ""}
+                  {latexStatusLabel}
                 </span>
                 <Button
                   disabled={savingLatex || !latexDirty}
