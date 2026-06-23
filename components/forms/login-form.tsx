@@ -59,7 +59,7 @@ export function LoginForm({
 
     if (success) {
       toast.success(message as string);
-      router.push("/dashboard");
+      router.push("/jobs");
     } else {
       toast.error(message as string);
     }

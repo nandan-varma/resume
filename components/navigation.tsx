@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Briefcase,
-  FileText,
-  LayoutDashboard,
-  Menu,
-  Settings,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { Briefcase, FileText, Menu, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +9,7 @@ import { ModeSwitcher } from "@/components/mode-switcher";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
-export type Tab = "dashboard" | "analyze" | "jobs" | "resume" | "settings";
+export type Tab = "jobs" | "editor" | "settings";
 
 interface NavigationProps {
   user: { name: string; email: string } | null;
@@ -32,15 +24,8 @@ const tabs: {
     "aria-hidden"?: boolean | "true" | "false";
   }>;
 }[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    to: "/dashboard",
-    Icon: LayoutDashboard,
-  },
-  { id: "analyze", label: "Analyze", to: "/analyze", Icon: Sparkles },
   { id: "jobs", label: "Jobs", to: "/jobs", Icon: Briefcase },
-  { id: "resume", label: "Resume", to: "/resume", Icon: FileText },
+  { id: "editor", label: "Editor", to: "/editor", Icon: FileText },
   { id: "settings", label: "Settings", to: "/settings", Icon: Settings },
 ];
 
@@ -51,7 +36,7 @@ export function Navigation({ user }: NavigationProps) {
 
   const activeTab =
     (tabs.find((t) => pathname === t.to || pathname.startsWith(`${t.to}/`))
-      ?.id as Tab | undefined) ?? "dashboard";
+      ?.id as Tab | undefined) ?? "jobs";
 
   const tabRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
   const prevTabRef = useRef<Tab | null>(null);
@@ -179,7 +164,7 @@ export function Navigation({ user }: NavigationProps) {
         <Link
           aria-label="JobMatch — home"
           className="flex items-center transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          href="/dashboard"
+          href="/jobs"
         >
           <Logo iconSize={24} />
         </Link>

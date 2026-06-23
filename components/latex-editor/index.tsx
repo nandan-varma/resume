@@ -59,7 +59,7 @@ export function LatexEditor({
 
   return (
     <ErrorBoundary reload>
-      <div className="flex h-screen flex-col bg-background">
+      <div className="flex h-[calc(100vh-3rem)] flex-col bg-background">
         <EditorHeader
           autoSaving={autoSaving}
           dirty={dirty}

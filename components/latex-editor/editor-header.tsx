@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   Briefcase,
   Download,
   Loader2,
@@ -11,7 +10,6 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import Link from "next/link";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import type { EditorJob } from "./types";
@@ -45,15 +43,7 @@ function EditorHeader({
 }: EditorHeaderProps) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-border border-b px-4">
-      <div className="flex items-center gap-4">
-        <Link
-          className="flex items-center gap-1.5 text-muted-foreground text-sm transition-colors hover:text-foreground"
-          href="/dashboard"
-        >
-          <ArrowLeft className="size-3.5" />
-          Dashboard
-        </Link>
-        <span className="select-none text-border">|</span>
+      <div className="flex items-center gap-3">
         <span className="font-medium text-sm">LaTeX Editor</span>
         {job && (
           <span className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-primary text-xs">

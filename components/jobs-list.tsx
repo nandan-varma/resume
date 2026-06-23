@@ -2,11 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  BarChart3,
   Briefcase,
+  CheckCircle2,
   ExternalLink,
   FileText,
   Loader2,
   Plus,
+  Target,
   Trash2,
   X,
 } from "lucide-react";
@@ -14,6 +17,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { AnalyzeDialog } from "@/components/analyze-dialog";
+import { CountUp } from "@/components/count-up";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -183,9 +188,30 @@ function WrappedJobsList() {
     ? jobs.filter((j) => j.status === filterStatus)
     : jobs;
 
+  const stats = [
+    { label: "Applications", value: jobs.length, Icon: Briefcase, color: "text-primary" },
+    { label: "Interviews", value: statusCounts.interview ?? 0, Icon: BarChart3, color: "text-info" },
+    { label: "Offers", value: statusCounts.offer ?? 0, Icon: Target, color: "text-success" },
+    { label: "Accepted", value: statusCounts.accepted ?? 0, Icon: CheckCircle2, color: "text-success" },
+  ] as const;
+
   return (
     <>
-      <div className="mb-5 flex animate-enter-up items-center justify-between gap-4">
+      <div className="mb-6 grid animate-enter-up grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map(({ label, value, Icon, color }) => (
+          <Card className="p-4" key={label}>
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">{label}</p>
+              <Icon aria-hidden="true" className={`size-4 ${color} opacity-70`} />
+            </div>
+            <p className="mt-1.5 font-bold text-2xl tabular-nums">
+              <CountUp to={value} />
+            </p>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mb-5 flex animate-enter-up items-center justify-between gap-4 [animation-delay:60ms]">
         <p className="text-muted-foreground text-sm">
           {jobs.length > 0
             ? `${filterStatus ? `${displayed.length} of ${jobs.length}` : jobs.length} application${jobs.length === 1 ? "" : "s"}`
@@ -238,12 +264,16 @@ function WrappedJobsList() {
           </h3>
           <p className="mb-5 text-muted-foreground text-sm">
             Track your first application or{" "}
-            <a
-              className="text-primary underline underline-offset-3 hover:no-underline"
-              href="/analyze"
-            >
-              analyze a job
-            </a>{" "}
+            <AnalyzeDialog
+              trigger={
+                <button
+                  className="text-primary underline underline-offset-3 hover:no-underline"
+                  type="button"
+                >
+                  analyze a job
+                </button>
+              }
+            />{" "}
             to get started.
           </p>
         </Card>

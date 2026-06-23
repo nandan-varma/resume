@@ -149,7 +149,7 @@ export function JobAnalyzer() {
             No resume uploaded yet.{" "}
             <Link
               className="font-medium underline underline-offset-3 hover:no-underline"
-              href="/resume"
+              href="/settings"
             >
               Add your resume
             </Link>{" "}

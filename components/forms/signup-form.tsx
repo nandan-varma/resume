@@ -55,7 +55,7 @@ export function SignupForm({
     );
     if (success) {
       toast.success("Account created! Check your email to verify.");
-      router.push("/dashboard");
+      router.push("/jobs");
     } else {
       toast.error(message as string);
     }

@@ -2,20 +2,28 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
+import { AnalyzeDialog } from "@/components/analyze-dialog";
 import { JobsList } from "@/components/jobs-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { jobsQueryKey } from "@/lib/queries/jobs";
+import { personalInfoQueryKey } from "@/lib/queries/resume";
 import { getJobs } from "@/server/jobs";
+import { getPersonalInformation } from "@/server/resume";
 
 export const metadata: Metadata = {
-  title: "Applications",
-  description: "Track and manage your job applications.",
+  title: "Jobs",
+  description: "Track applications and analyze job fits.",
 };
 
 function JobsContentSkeleton() {
   return (
     <>
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {["a", "b", "c", "d"].map((id) => (
+          <Skeleton className="h-[72px]" key={id} />
+        ))}
+      </div>
+      <div className="mb-5 flex gap-2">
         <Skeleton className="h-7 w-24 rounded-full" />
         <Skeleton className="h-7 w-24 rounded-full" />
         <Skeleton className="h-7 w-20 rounded-full" />
@@ -32,6 +40,10 @@ function JobsContentSkeleton() {
 export default function JobsPage() {
   const queryClient = getQueryClient();
   queryClient.prefetchQuery({ queryKey: jobsQueryKey, queryFn: getJobs });
+  queryClient.prefetchQuery({
+    queryKey: personalInfoQueryKey,
+    queryFn: getPersonalInformation,
+  });
 
   return (
     <main className="min-h-screen" id="main-content">
@@ -40,17 +52,18 @@ export default function JobsPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="font-bold text-3xl text-foreground tracking-tight">
-                Applications
+                Jobs
               </h1>
               <p className="mt-0.5 text-muted-foreground text-sm">
-                Track your job applications
+                Track applications and analyze job fits
               </p>
             </div>
+            <AnalyzeDialog />
           </div>
         </div>
       </div>
       <div className="px-4 py-6 md:px-6 md:py-8">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
           <HydrationBoundary state={dehydrate(queryClient)}>
             <Suspense fallback={<JobsContentSkeleton />}>
               <JobsList />

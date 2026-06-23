@@ -105,7 +105,7 @@ function actionButtons(jobId) {
       <a href="${appUrl}/jobs" target="_blank" class="jm-btn jm-btn-o${isFloat() ? " jm-full" : ""}">View Tracker</a>`;
   }
   return `
-    <a href="${appUrl}/analyze" target="_blank" class="jm-btn jm-btn-p${isFloat() ? " jm-full" : ""}">Full Analysis →</a>
+    <a href="${appUrl}/jobs" target="_blank" class="jm-btn jm-btn-p${isFloat() ? " jm-full" : ""}">Open Tracker →</a>
     <button class="jm-btn jm-btn-o${isFloat() ? " jm-full" : ""}" id="jm-save">💾 Save Job</button>`;
 }
 

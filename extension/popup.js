@@ -8,7 +8,7 @@ function hide(id) { document.getElementById(id).classList.add("hidden"); }
 async function init() {
   const { loggedIn, user, settings, appUrl } = await msg({ type: "GET_INIT" });
 
-  document.getElementById("dashboard-btn").href = `${appUrl}/dashboard`;
+  document.getElementById("jobs-btn").href = `${appUrl}/jobs`;
   document.getElementById("login-btn").href = `${appUrl}/login`;
 
   hide("auth-loading");
@@ -21,7 +21,7 @@ async function init() {
     document.getElementById("user-email").textContent = user.email || "";
     show("auth-user");
     show("settings-section");
-    show("dashboard-btn");
+    show("jobs-btn");
     show("signout-btn");
   } else {
     show("auth-anon");

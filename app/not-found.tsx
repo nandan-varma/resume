@@ -18,8 +18,8 @@ export default function NotFound() {
         </p>
       </div>
       <div className="flex animate-enter-up gap-3 [animation-delay:80ms]">
-        <Link href="/dashboard">
-          <Button>Go to Dashboard</Button>
+        <Link href="/jobs">
+          <Button>Go to Jobs</Button>
         </Link>
         <Link href="/">
           <Button variant="outline">Home</Button>

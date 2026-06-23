@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PROTECTED = ["/dashboard", "/jobs", "/analyze", "/settings", "/resume"];
+const PROTECTED = ["/jobs", "/settings", "/editor"];
 const AUTH_ONLY = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAuthOnly && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/jobs", request.url));
   }
 
   return NextResponse.next();
@@ -31,11 +31,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
     "/jobs/:path*",
-    "/analyze/:path*",
     "/settings/:path*",
-    "/resume/:path*",
+    "/editor/:path*",
     "/login",
     "/signup",
     "/forgot-password",

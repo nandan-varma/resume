@@ -3,11 +3,10 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
 import { LatexEditor } from "@/components/latex-editor";
+import { jobResumeQueryKey, personalInfoQueryKey } from "@/lib/queries/resume";
 import { getAnalysisByJobId } from "@/server/analysis";
 import { getJobById } from "@/server/jobs";
 import { getJobResume, getPersonalInformation } from "@/server/resume";
-import { requireSession } from "@/server/session";
-import { jobResumeQueryKey, personalInfoQueryKey } from "@/lib/queries/resume";
 
 export const metadata: Metadata = {
   title: "LaTeX Editor",
@@ -15,12 +14,12 @@ export const metadata: Metadata = {
 
 function EditorSkeleton() {
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-[calc(100vh-3rem)] flex-col bg-background">
       <div className="flex h-12 shrink-0 items-center justify-between border-border border-b px-4">
         <div className="flex items-center gap-4">
-          <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-px bg-border" />
           <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-px bg-border" />
+          <div className="h-4 w-20 animate-pulse rounded bg-muted" />
         </div>
         <div className="flex items-center gap-2">
           <div className="h-8 w-24 animate-pulse rounded bg-muted" />
@@ -46,17 +45,13 @@ export default async function EditorPage({
 
   const queryClient = getQueryClient();
 
-  // Prefetch into TanStack cache so mutations have a base to update
-  // and navigating back to the editor is instant (no re-fetch)
-  const [, personalInfo, job, jobResume, existingAnalysis] = await Promise.all([
-    requireSession(),
+  const [personalInfo, job, jobResume] = await Promise.all([
     getPersonalInformation(),
     jobId ? getJobById(jobId) : Promise.resolve(null),
     jobId ? getJobResume(jobId) : Promise.resolve(null),
     jobId ? getAnalysisByJobId(jobId) : Promise.resolve(null),
   ]);
 
-  // Seed the query cache with what we already fetched
   if (jobId && jobResume !== undefined) {
     queryClient.setQueryData(jobResumeQueryKey(jobId), jobResume);
   }
@@ -65,12 +60,10 @@ export default async function EditorPage({
   }
 
   const initialLatex = jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
-  // Each job's chatMessages lives in its own JSONB column — no cross-contamination
   const initialChatMessages = jobId
     ? (jobResume?.chatMessages ?? [])
     : (personalInfo?.chatMessages ?? []);
 
-  // ponytail: no resumeLatex + no chat history = truly new. Existing chatMessages means consultation started/done — don't restart.
   const existingChat = Array.isArray(jobResume?.chatMessages) ? (jobResume.chatMessages as unknown[]) : [];
   const isNewJobResume = !!job && !jobResume?.resumeLatex && existingChat.length === 0;
 
