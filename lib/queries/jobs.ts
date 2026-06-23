@@ -109,6 +109,9 @@ export function useUpdateJobStatus() {
       );
       return { previous };
     },
+    onSuccess: () => {
+      toast.success("Status updated");
+    },
     onError: (err, _, context) => {
       if (context?.previous) {
         queryClient.setQueryData(jobsQueryKey, context.previous);

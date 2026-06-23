@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         improvementSuggestions: analysisData.improvement_suggestions,
         additionalInsights: analysisData.additional_insights ?? null,
       });
-      // Placeholder so editor sees an existing jobResume and skips consultation
+      // Placeholder row so the first autosave can upsert instead of insert
       await tx.insert(jobResumes).values({ jobId: job.id, userId, resumeLatex: "" });
     }
 

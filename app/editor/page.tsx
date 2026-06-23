@@ -6,7 +6,7 @@ import { LatexEditor } from "@/components/latex-editor";
 import { getAnalysisByJobId } from "@/server/analysis";
 import { getJobById } from "@/server/jobs";
 import { getJobResume, getPersonalInformation } from "@/server/resume";
-import { getCurrentUser } from "@/server/users";
+import { requireSession } from "@/server/session";
 import { jobResumeQueryKey, personalInfoQueryKey } from "@/lib/queries/resume";
 
 export const metadata: Metadata = {
@@ -49,7 +49,7 @@ export default async function EditorPage({
   // Prefetch into TanStack cache so mutations have a base to update
   // and navigating back to the editor is instant (no re-fetch)
   const [, personalInfo, job, jobResume, existingAnalysis] = await Promise.all([
-    getCurrentUser(),
+    requireSession(),
     getPersonalInformation(),
     jobId ? getJobById(jobId) : Promise.resolve(null),
     jobId ? getJobResume(jobId) : Promise.resolve(null),
@@ -70,7 +70,9 @@ export default async function EditorPage({
     ? (jobResume?.chatMessages ?? [])
     : (personalInfo?.chatMessages ?? []);
 
-  const isNewJobResume = !!job && !jobResume && !existingAnalysis;
+  // ponytail: no resumeLatex + no chat history = truly new. Existing chatMessages means consultation started/done — don't restart.
+  const existingChat = Array.isArray(jobResume?.chatMessages) ? (jobResume.chatMessages as unknown[]) : [];
+  const isNewJobResume = !!job && !jobResume?.resumeLatex && existingChat.length === 0;
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

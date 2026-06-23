@@ -2,18 +2,12 @@
 
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { requireSession } from "./session";
 
 const signUpSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   username: z.string().min(1, "Username is required").max(100),
 });
-
-export const getCurrentUser = async () => {
-  const { session, currentUser } = await requireSession();
-  return { ...session, currentUser };
-};
 
 export const signIn = async (email: string, password: string) => {
   try {

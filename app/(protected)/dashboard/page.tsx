@@ -1,5 +1,11 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { BarChart3, Briefcase, CheckCircle2, Puzzle, Target } from "lucide-react";
+import {
+  BarChart3,
+  Briefcase,
+  CheckCircle2,
+  Puzzle,
+  Target,
+} from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
@@ -8,6 +14,7 @@ import { SpotlightCard } from "@/components/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { jobStatus } from "@/db/schema";
 import { jobsQueryKey } from "@/lib/queries/jobs";
 import { STATUS_CONFIG } from "@/lib/status";
 import { getJobs } from "@/server/jobs";
@@ -76,21 +83,26 @@ async function DashboardContent() {
         ))}
       </div>
 
-      <SpotlightCard className="animate-enter-up mb-6 p-5 [animation-delay:240ms]">
+      <SpotlightCard className="mb-6 animate-enter-up p-5 [animation-delay:240ms]">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
               <Puzzle className="size-5 text-indigo-400" />
             </div>
             <div>
-              <p className="font-semibold text-foreground text-sm">Chrome Extension</p>
+              <p className="font-semibold text-foreground text-sm">
+                Chrome Extension
+              </p>
               <p className="mt-0.5 text-muted-foreground text-xs">
                 See your match score on any LinkedIn job — right on the page.
               </p>
             </div>
           </div>
-          <Button asChild size="sm" variant="outline" className="shrink-0">
-            <Link href="https://github.com/nandan-varma/resume/tree/main/extension" target="_blank">
+          <Button asChild className="shrink-0" size="sm" variant="outline">
+            <Link
+              href="https://github.com/nandan-varma/resume/tree/main/extension"
+              target="_blank"
+            >
               Install
             </Link>
           </Button>
@@ -117,7 +129,7 @@ async function DashboardContent() {
         </Card>
       ) : (
         <div className="animate-enter-up [animation-delay:300ms]">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between">
             <h2 className="font-medium text-foreground text-sm uppercase tracking-wide">
               Recent Applications
             </h2>
@@ -128,6 +140,23 @@ async function DashboardContent() {
               View all →
             </Link>
           </div>
+          <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1">
+            {jobStatus.map((s) => {
+              const Icon = STATUS_CONFIG[s].icon;
+              return (
+                <span
+                  className="inline-flex items-center gap-1 text-muted-foreground text-xs"
+                  key={s}
+                >
+                  <Icon
+                    aria-hidden="true"
+                    className={`size-3.5 ${STATUS_CONFIG[s].color.split(" ")[1]}`}
+                  />
+                  <span className="capitalize">{s}</span>
+                </span>
+              );
+            })}
+          </div>
           <Card>
             <div className="divide-y divide-border">
               {jobs.slice(0, 6).map((job, i) => (
@@ -136,19 +165,21 @@ async function DashboardContent() {
                   key={job.id}
                   style={{ animationDelay: `${320 + i * 35}ms` }}
                 >
-                  <p className="font-medium text-foreground text-sm">
+                  <p className="min-w-0 flex-1 truncate font-medium text-foreground text-sm">
                     {job.jobTitle}
                   </p>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs capitalize ${
-                      STATUS_CONFIG[job.status].color
-                    }`}
-                  >
-                    <span aria-hidden="true">
-                      {STATUS_CONFIG[job.status].icon}
-                    </span>
-                    {job.status}
-                  </span>
+                  {(() => {
+                    const Icon = STATUS_CONFIG[job.status].icon;
+                    return (
+                      <span
+                        className={`ml-3 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 ${STATUS_CONFIG[job.status].color}`}
+                        title={job.status}
+                      >
+                        <Icon aria-hidden="true" className="size-3.5" />
+                        <span className="sr-only capitalize">{job.status}</span>
+                      </span>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

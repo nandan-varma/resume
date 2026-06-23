@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ChevronDown,
   ExternalLink,
   FileText,
   Loader2,
@@ -41,7 +40,6 @@ function ResumeClientInner({
   const [latexContent, setLatexContent] = useState(initialLatex ?? "");
   const [savingLatex, setSavingLatex] = useState(false);
   const [latexDirty, setLatexDirty] = useState(false);
-  const [latexOpen, setLatexOpen] = useState(!!initialLatex);
 
   const uploadLabel = resumeUrl ? "Replace resume" : "Upload your resume";
   let latexStatusLabel = "";
@@ -101,88 +99,84 @@ function ResumeClientInner({
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-10 md:px-6">
-      <Card className="mb-4 animate-enter-up p-6 [animation-delay:80ms]">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-base text-foreground">
-            PDF Resume
-          </h2>
-          <div className="flex items-center gap-3">
-            {resumeUrl && (
-              <a
-                className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
-                href={resumeUrl}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <FileText className="size-3" />
-                View current
-                <ExternalLink className="size-3" />
-              </a>
-            )}
-            <Link
-              className="inline-flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
-              href="/editor"
-            >
-              <Pencil className="size-3" />
-              Open editor
-            </Link>
-          </div>
-        </div>
-
-        {resumeUrl && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-info/20 bg-info/10 px-3 py-2.5 text-info text-sm">
-            <FileText className="mt-0.5 size-4 shrink-0" />
-            <span>
-              After uploading, AI auto-generates editable LaTeX in the{" "}
+    <div className="mx-auto max-w-6xl px-4 pb-10 md:px-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Card className="flex animate-enter-up flex-col p-6 [animation-delay:80ms]">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold text-base text-foreground">
+              PDF Resume
+            </h2>
+            <div className="flex items-center gap-3">
+              {resumeUrl && (
+                <a
+                  className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+                  href={resumeUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <FileText className="size-3" />
+                  View current
+                  <ExternalLink className="size-3" />
+                </a>
+              )}
               <Link
-                className="font-medium underline underline-offset-3 hover:no-underline"
+                className="inline-flex items-center gap-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
                 href="/editor"
               >
-                editor
+                <Pencil className="size-3" />
+                Open editor
               </Link>
-              . This may take a moment.
-            </span>
+            </div>
           </div>
-        )}
 
-        <label
-          className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-border border-dashed py-10",
-            "transition-all hover:border-primary/40 hover:bg-primary/5",
-            uploading && "pointer-events-none opacity-60"
+          {resumeUrl && (
+            <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-info/20 bg-info/10 px-3 py-2.5 text-info text-sm">
+              <FileText className="mt-0.5 size-4 shrink-0" />
+              <span>
+                After uploading, AI auto-generates editable LaTeX in the{" "}
+                <Link
+                  className="font-medium underline underline-offset-3 hover:no-underline"
+                  href="/editor"
+                >
+                  editor
+                </Link>
+                . This may take a moment.
+              </span>
+            </div>
           )}
-        >
-          {uploading ? (
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          ) : (
-            <Upload className="size-8 text-muted-foreground" />
-          )}
-          <div className="text-center">
-            <p className="font-medium text-foreground text-sm">
-              {uploading ? "Uploading…" : uploadLabel}
-            </p>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              PDF only · max 10 MB
-            </p>
-          </div>
-          <input
-            accept=".pdf"
-            className="hidden"
-            disabled={uploading}
-            onChange={handleResumeUpload}
-            type="file"
-          />
-        </label>
-      </Card>
 
-      <Card className="animate-enter-up p-6 [animation-delay:150ms]">
-        <button
-          className="flex w-full items-center justify-between text-left"
-          onClick={() => setLatexOpen((v) => !v)}
-          type="button"
-        >
-          <div>
+          <label
+            className={cn(
+              "flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-border border-dashed",
+              "transition-all hover:border-primary/40 hover:bg-primary/5",
+              uploading && "pointer-events-none opacity-60"
+            )}
+          >
+            {uploading ? (
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            ) : (
+              <Upload className="size-8 text-muted-foreground" />
+            )}
+            <div className="text-center">
+              <p className="font-medium text-foreground text-sm">
+                {uploading ? "Uploading…" : uploadLabel}
+              </p>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                PDF only · max 10 MB
+              </p>
+            </div>
+            <input
+              accept=".pdf"
+              className="hidden"
+              disabled={uploading}
+              onChange={handleResumeUpload}
+              type="file"
+            />
+          </label>
+        </Card>
+
+        <Card className="flex animate-enter-up flex-col p-6 [animation-delay:150ms]">
+          <div className="mb-4">
             <h2 className="font-semibold text-base text-foreground">
               LaTeX Source
             </h2>
@@ -190,52 +184,40 @@ function ResumeClientInner({
               Store your resume source for version control
             </p>
           </div>
-          <ChevronDown
-            className={cn(
-              "size-4 text-muted-foreground transition-transform duration-200",
-              latexOpen && "rotate-180"
-            )}
+          <Textarea
+            aria-label="LaTeX resume source code"
+            className="mb-3 flex-1 resize-none font-mono text-sm"
+            onChange={(e) => {
+              setLatexContent(e.target.value);
+              setLatexDirty(true);
+            }}
+            placeholder="Paste your LaTeX resume source here…"
+            value={latexContent}
           />
-        </button>
-
-        {latexOpen && (
-          <div className="mt-4 space-y-3">
-            <Textarea
-              aria-label="LaTeX resume source code"
-              className="resize-y font-mono text-sm"
-              onChange={(e) => {
-                setLatexContent(e.target.value);
-                setLatexDirty(true);
-              }}
-              placeholder="Paste your LaTeX resume source here…"
-              rows={18}
-              value={latexContent}
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs">
-                {latexStatusLabel}
-              </span>
-              <Button
-                disabled={savingLatex || !latexDirty}
-                onClick={handleSaveLatex}
-                size="sm"
-              >
-                {savingLatex ? (
-                  <>
-                    <Loader2 className="mr-2 size-3.5 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 size-3.5" />
-                    Save LaTeX
-                  </>
-                )}
-              </Button>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs">
+              {latexStatusLabel}
+            </span>
+            <Button
+              disabled={savingLatex || !latexDirty}
+              onClick={handleSaveLatex}
+              size="sm"
+            >
+              {savingLatex ? (
+                <>
+                  <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 size-3.5" />
+                  Save LaTeX
+                </>
+              )}
+            </Button>
           </div>
-        )}
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

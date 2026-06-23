@@ -48,6 +48,7 @@ export function LatexEditor({
     handleConsultPick,
     handleConsultSkip,
     handleForceRecompile,
+    clearChat,
     undo,
     redo,
   } = useLatexEditor(initialLatex, job, isNewJobResume, initialChatMessages);
@@ -88,6 +89,7 @@ export function LatexEditor({
               latex={latex}
               onChatInputChange={setChatInput}
               onChatSend={handleChatSend}
+              onClearChat={clearChat}
               onConsultPick={handleConsultPick}
               onConsultSkip={handleConsultSkip}
               onLatexChange={handleLatexChange}

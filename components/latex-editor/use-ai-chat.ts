@@ -22,6 +22,21 @@ function assistantMsg(content: string, editsApplied?: number): ChatMsg {
   return { id: createMsgId(), role: "assistant", content, editsApplied };
 }
 
+// ponytail: collapse consecutive blank lines, track original indices for splice-back
+function collapseBlankLines(lines: string[]): { out: string[]; idx: number[] } {
+  const out: string[] = [];
+  const idx: number[] = [];
+  let prevBlank = false;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t === "" && prevBlank) continue;
+    out.push(t);
+    idx.push(i);
+    prevBlank = t === "";
+  }
+  return { out, idx };
+}
+
 function applyEdits(
   source: string,
   edits: { find: string; replace: string }[]
@@ -30,9 +45,44 @@ function applyEdits(
   let applied = 0;
   for (const { find, replace } of edits) {
     const f = find.replace(/\r\n/g, "\n");
+
+    // Pass 1: exact
     if (next.includes(f)) {
       next = next.replace(f, replace);
       applied++;
+      continue;
+    }
+
+    const srcLines = next.split("\n");
+    const findLines = f.split("\n");
+
+    // Pass 2: trim each line (handles indentation differences)
+    const findTrimmed = findLines.map((l) => l.trim()).join("\n");
+    let matched = false;
+    for (let i = 0; i <= srcLines.length - findLines.length; i++) {
+      if (srcLines.slice(i, i + findLines.length).map((l) => l.trim()).join("\n") === findTrimmed) {
+        srcLines.splice(i, findLines.length, ...replace.split("\n"));
+        next = srcLines.join("\n");
+        applied++;
+        matched = true;
+        break;
+      }
+    }
+    if (matched) continue;
+
+    // Pass 3: trim + collapse consecutive blank lines (handles models that normalize blank line counts)
+    const { out: fNorm } = collapseBlankLines(findLines);
+    const { out: sNorm, idx: sIdx } = collapseBlankLines(srcLines);
+    const fJoined = fNorm.join("\n");
+    for (let i = 0; i <= sNorm.length - fNorm.length; i++) {
+      if (sNorm.slice(i, i + fNorm.length).join("\n") === fJoined) {
+        const origStart = sIdx[i];
+        const origEnd = sIdx[i + fNorm.length - 1];
+        srcLines.splice(origStart, origEnd - origStart + 1, ...replace.split("\n"));
+        next = srcLines.join("\n");
+        applied++;
+        break;
+      }
     }
   }
   return { next, applied };

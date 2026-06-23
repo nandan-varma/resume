@@ -58,6 +58,20 @@ export function useLatexEditor(
     job
   );
 
+  const clearChat = useCallback(() => {
+    setChatMessages([]);
+    markDirty();
+  }, [markDirty]);
+
+  // ponytail: persist consultation progress so revisits don't restart from scratch
+  const prevChatCountRef = useRef(chatMessages.length);
+  useEffect(() => {
+    if (chatMessages.length !== prevChatCountRef.current) {
+      prevChatCountRef.current = chatMessages.length;
+      markDirty();
+    }
+  }, [chatMessages.length, markDirty]);
+
   const { chatInput, setChatInput, handleChatSend, executeAIEdit, undo, redo } =
     useAiChat(
       getLatex,
@@ -164,6 +178,7 @@ export function useLatexEditor(
     handleConsultPick,
     handleConsultSkip,
     handleForceRecompile,
+    clearChat,
     undo,
     redo,
   };

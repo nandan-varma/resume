@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEasedValue } from "@/lib/use-eased-value";
 import { cn } from "@/lib/utils";
+
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
 interface ScoreRingProps {
   className?: string;
@@ -18,34 +20,12 @@ export function ScoreRing({
   strokeWidth = 3,
   className,
 }: ScoreRingProps) {
-  const [progress, setProgress] = useState(0);
+  const progress = useEasedValue(score, 1300, easeOutCubic);
 
   const cx = size / 2;
   const cy = size / 2;
   const r = (size - strokeWidth * 2 - 2) / 2;
   const circumference = 2 * Math.PI * r;
-
-  useEffect(() => {
-    const start = performance.now();
-    const dur = 1300;
-    let frameId: number;
-
-    function tick(now: number) {
-      const t = Math.min((now - start) / dur, 1);
-      // ease-out-cubic
-      const eased = 1 - (1 - t) ** 3;
-      setProgress(eased * score);
-      if (t < 1) {
-        frameId = requestAnimationFrame(tick);
-      } else {
-        setProgress(score);
-      }
-    }
-
-    frameId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameId);
-  }, [score]);
-
   const dashOffset = circumference - (progress / 100) * circumference;
 
   return (

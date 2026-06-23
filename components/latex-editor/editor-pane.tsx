@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Loader2, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, Loader2, Send, Sparkles, Trash2 } from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { AssistantBubble, LoadingBubble, QuestionBubble } from "./chat-bubbles";
@@ -28,6 +28,7 @@ interface EditorPaneProps {
   onRecompile: () => void;
   onRedo: () => void;
   onSave: () => void;
+  onClearChat: () => void;
   onTabChange: (tab: "editor" | "chat") => void;
   onUndo: () => void;
   pendingQuestion: boolean;
@@ -98,6 +99,7 @@ function EditorPane({
   onChatInputChange,
   onChatSend,
   pendingQuestion,
+  onClearChat,
   onConsultPick,
   onConsultSkip,
   onSave,
@@ -254,6 +256,18 @@ function EditorPane({
           <span className="ml-auto px-3 text-muted-foreground text-xs">
             {latex.split("\n").length} lines
           </span>
+        )}
+        {activeTab === "chat" && chatMessages.length > 0 && (
+          <button
+            aria-label="Clear chat"
+            className="ml-auto px-3 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
+            disabled={chatLoading}
+            onClick={onClearChat}
+            title="Clear chat"
+            type="button"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
         )}
       </div>
 

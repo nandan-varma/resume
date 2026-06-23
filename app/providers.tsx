@@ -8,7 +8,7 @@ const NetworkBackground = dynamic(
   () => import("@/components/network-background").then((m) => m.NetworkBackground),
   { ssr: false }
 );
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { getQueryClient } from "./get-query-client";
 

@@ -11,5 +11,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export const db = drizzle(pool, {
   schema,
-  logger: process.env.NODE_ENV === "development",
+  logger: process.env.NODE_ENV === "development"
+    ? { logQuery: (q: string) => console.log(q.length > 150 ? `${q.slice(0, 40)}...` : q) }
+    : false,
 });

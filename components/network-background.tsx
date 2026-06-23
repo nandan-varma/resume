@@ -7,12 +7,17 @@ const DIST_SQ = CONNECT_DIST * CONNECT_DIST;
 const MAX_SPEED = 0.28;
 const BUCKETS = 5; // alpha tiers → 5 stroke() calls for all edges
 const MAX_N = 220; // upper cap for pre-allocation
-const ATTRACT_DIST = 180; // mouse attraction radius
+const ATTRACT_DIST = 150; // mouse attraction radius
 const ATTRACT_DIST_SQ = ATTRACT_DIST * ATTRACT_DIST;
 const NODE_GLOW_R = 130; // radius for per-node mouse glow
 const NODE_GLOW_SQ = NODE_GLOW_R * NODE_GLOW_R;
+const REPEL_DIST = 65; // node-node repulsion radius
+const REPEL_DIST_SQ = REPEL_DIST * REPEL_DIST;
 
-// ─── Pre-allocated edge storage (module-level = allocated once, never GC'd) ──
+// ─── Pre-allocated scratch buffers (module-level = allocated once, never GC'd) ─
+const _nearMouse = new Uint8Array(MAX_N); // 1 if node is within mouse attract zone
+
+// ─── Pre-allocated edge storage ──────────────────────────────────────────────
 // Worst case: all MAX_N*(MAX_N-1)/2 edges land in one bucket.
 // biome-ignore lint/suspicious/noBitwiseOperators: integer division via bit shift
 const MAX_EDGES = (MAX_N * (MAX_N - 1)) >> 1; // 24 090
@@ -117,9 +122,25 @@ export function NetworkBackground() {
     window.addEventListener("mousemove", onMouse, { passive: true });
     document.addEventListener("mouseleave", onMouseLeave);
 
+    let running = true;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        running = false;
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (!running) {
+        running = true;
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     // ── Main loop ─────────────────────────────────────────────────────────────
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: intentional hot-path canvas animation
     const tick = () => {
+      if (!running) {
+        return;
+      }
       const dark = document.documentElement.classList.contains("dark");
       const fg = dark ? "#ffffff" : "#000000";
       const n = nodes.length;
@@ -158,13 +179,17 @@ export function NetworkBackground() {
           nd.y = H;
           nd.vy = -nd.vy;
         }
-        // Weak attraction toward mouse — O(n), one sqrt per attracted node.
+        // Weak attraction toward mouse — O(n), marks _nearMouse[i] for Phase 2 repulsion.
+        _nearMouse[i] = 0;
         if (mx > -999) {
           const ddx = mx - nd.x;
           const ddy = my - nd.y;
           const dd2 = ddx * ddx + ddy * ddy;
-          if (dd2 < ATTRACT_DIST_SQ && dd2 > 1) {
-            const f = 0.012 / Math.sqrt(dd2);
+          if (dd2 < ATTRACT_DIST_SQ && dd2 > 4) {
+            _nearMouse[i] = 1;
+            const dist = Math.sqrt(dd2);
+            const t = 1 - dist / ATTRACT_DIST; // 0 at boundary → 1 at cursor
+            const f = (0.016 * t * t) / dist; // quadratic fade × 1/d: smooth + accelerates when close
             nd.vx += ddx * f;
             nd.vy += ddy * f;
             // Soft speed cap — no hard clamp to avoid jerking.
@@ -178,26 +203,43 @@ export function NetworkBackground() {
         }
       }
 
-      // Phase 2 — bucket edges by proximity tier (one O(n²) pass, no per-frame alloc).
+      // Phase 2 — bucket edges + node-node repulsion (one O(n²) pass, no per-frame alloc).
       _lens.fill(0);
       for (let i = 0; i < n; i++) {
-        const ax = nodes[i].x,
-          ay = nodes[i].y;
+        const ni = nodes[i];
+        const ax = ni.x,
+          ay = ni.y;
         for (let j = i + 1; j < n; j++) {
-          const dx = ax - nodes[j].x;
-          const dy = ay - nodes[j].y;
+          const nj = nodes[j];
+          const dx = ax - nj.x;
+          const dy = ay - nj.y;
           const d2 = dx * dx + dy * dy;
           if (d2 < DIST_SQ) {
-            const t = 1 - Math.sqrt(d2) / CONNECT_DIST;
+            const dist = Math.sqrt(d2);
+            const t = 1 - dist / CONNECT_DIST;
             // biome-ignore lint/suspicious/noBitwiseOperators: integer floor/shift for hot-path perf
             const b = Math.min(BUCKETS - 1, (t * BUCKETS) | 0);
             // biome-ignore lint/suspicious/noBitwiseOperators: multiply by 4 via shift in hot path
             const off = _lens[b] << 2; // * 4 — flat [x1,y1,x2,y2] layout
             _bufs[b][off] = ax;
             _bufs[b][off + 1] = ay;
-            _bufs[b][off + 2] = nodes[j].x;
-            _bufs[b][off + 3] = nodes[j].y;
+            _bufs[b][off + 2] = nj.x;
+            _bufs[b][off + 3] = nj.y;
             _lens[b]++;
+            // Repulsion — only near-mouse nodes, smooth quadratic fade to 0 at REPEL_DIST.
+            if (
+              d2 < REPEL_DIST_SQ &&
+              d2 > 4 &&
+              _nearMouse[i] &&
+              _nearMouse[j]
+            ) {
+              const t = 1 - dist / REPEL_DIST; // 0 at boundary → 1 at overlap
+              const repF = (0.6 * t * t) / dist;
+              ni.vx += dx * repF;
+              ni.vy += dy * repF;
+              nj.vx -= dx * repF;
+              nj.vy -= dy * repF;
+            }
           }
         }
       }
@@ -299,10 +341,12 @@ export function NetworkBackground() {
     raf = requestAnimationFrame(tick);
 
     return () => {
+      running = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouse);
       document.removeEventListener("mouseleave", onMouseLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 

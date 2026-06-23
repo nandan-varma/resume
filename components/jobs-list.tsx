@@ -8,12 +8,12 @@ import {
   Loader2,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -202,32 +202,35 @@ function WrappedJobsList() {
               onClick={() => setFilterStatus(null)}
               type="button"
             >
-              ✕ All
+              <X className="size-3" /> All
             </button>
           )}
           {jobStatus
             .filter((s) => statusCounts[s] > 0)
-            .map((s) => (
-              <button
-                aria-pressed={filterStatus === s}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
-                  filterStatus === s
-                    ? `${STATUS_CONFIG[s].color} border-current/20 font-medium`
-                    : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                }`}
-                key={s}
-                onClick={() => setFilterStatus(filterStatus === s ? null : s)}
-                type="button"
-              >
-                <span aria-hidden="true">{STATUS_CONFIG[s].icon}</span>
-                <span>{statusCounts[s]}</span>
-                <span className="capitalize">{s}</span>
-              </button>
-            ))}
+            .map((s) => {
+              const Icon = STATUS_CONFIG[s].icon;
+              return (
+                <button
+                  aria-pressed={filterStatus === s}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
+                    filterStatus === s
+                      ? `${STATUS_CONFIG[s].color} border-current/20 font-medium`
+                      : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                  }`}
+                  key={s}
+                  onClick={() => setFilterStatus(filterStatus === s ? null : s)}
+                  type="button"
+                >
+                  <Icon aria-hidden="true" className="size-3.5" />
+                  <span>{statusCounts[s]}</span>
+                  <span className="capitalize">{s}</span>
+                </button>
+              );
+            })}
         </div>
       )}
 
-      {jobs.length === 0 ? (
+      {jobs.length === 0 && (
         <Card className="py-16 text-center">
           <Briefcase className="mx-auto mb-3 size-10 text-muted-foreground/30" />
           <h3 className="mb-1 font-semibold text-foreground">
@@ -244,46 +247,81 @@ function WrappedJobsList() {
             to get started.
           </p>
         </Card>
-      ) : (
-        <div className="space-y-3">
-          {displayed.map((job, i) => (
-            <Card
-              className="animate-enter-up p-5"
-              key={job.id}
-              style={{ animationDelay: `${Math.min(i * 50, 250)}ms` }}
+      )}
+      {jobs.length > 0 && displayed.length === 0 && (
+        <Card className="py-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No applications with this status.{" "}
+            <button
+              className="text-primary underline underline-offset-3 hover:no-underline"
+              onClick={() => setFilterStatus(null)}
+              type="button"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate font-semibold text-foreground">
-                      {job.jobTitle}
-                    </h3>
-                    <Badge
-                      className={`${STATUS_CONFIG[job.status].color} border-0 text-xs`}
+              Clear filter
+            </button>
+          </p>
+        </Card>
+      )}
+      {displayed.length > 0 && (
+        <div className="space-y-3">
+          {displayed.map((job, i) => {
+            const StatusIcon = STATUS_CONFIG[job.status].icon;
+            return (
+              <Card
+                className="animate-enter-up overflow-hidden"
+                key={job.id}
+                style={{ animationDelay: `${Math.min(i * 50, 250)}ms` }}
+              >
+                <div className="p-5">
+                  {/* Header row */}
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${STATUS_CONFIG[job.status].color}`}
                     >
-                      {STATUS_CONFIG[job.status].icon} {job.status}
-                    </Badge>
+                      <StatusIcon aria-hidden="true" className="size-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="min-w-0 font-semibold text-foreground leading-snug">
+                          {job.jobTitle}
+                        </h3>
+                        <Button
+                          aria-label={`Delete ${job.jobTitle}`}
+                          className="-mt-1 -mr-1 shrink-0 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => deleteJob.mutate(job.id)}
+                          size="icon"
+                          variant="ghost"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2 text-muted-foreground text-xs">
+                        <span>{formatDate(job.createdAt)}</span>
+                        {job.link && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <a
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                              href={job.link}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            >
+                              View posting
+                              <ExternalLink className="size-3" />
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-muted-foreground text-xs">
-                    <span>Added {formatDate(job.createdAt)}</span>
-                    {job.link && (
-                      <a
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                        href={job.link}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        View posting <ExternalLink className="size-3" />
-                      </a>
-                    )}
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-muted-foreground text-sm">
+
+                  {/* Description */}
+                  <p className="mt-3 line-clamp-2 text-muted-foreground text-sm leading-relaxed">
                     {job.jobDescription}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-muted-foreground text-xs">
-                      Status:
-                    </span>
+
+                  {/* Footer */}
+                  <div className="mt-4 flex items-center justify-between gap-3">
                     <Select
                       onValueChange={(v) => {
                         const parsed = z.enum(jobStatus).safeParse(v);
@@ -296,46 +334,40 @@ function WrappedJobsList() {
                       }}
                       value={job.status}
                     >
-                      <SelectTrigger className="h-7 w-44 text-xs">
+                      <SelectTrigger
+                        aria-label={`Change status: ${job.status}`}
+                        className={`h-8 max-w-44 gap-1.5 rounded-full border-current/20 px-3 font-medium text-xs ${STATUS_CONFIG[job.status].color}`}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {jobStatus.map((s) => (
-                          <SelectItem className="text-xs" key={s} value={s}>
-                            {STATUS_CONFIG[s].icon} {s}
-                          </SelectItem>
-                        ))}
+                        {jobStatus.map((s) => {
+                          const Icon = STATUS_CONFIG[s].icon;
+                          return (
+                            <SelectItem className="text-xs" key={s} value={s}>
+                              <span
+                                className={`inline-flex items-center gap-1.5 ${STATUS_CONFIG[s].color}`}
+                              >
+                                <Icon aria-hidden="true" className="size-3.5" />
+                                <span className="capitalize">{s}</span>
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
+
+                    <Button asChild size="sm">
+                      <Link href={`/editor?jobId=${job.id}`}>
+                        <FileText className="size-3.5" />
+                        Edit resume
+                      </Link>
+                    </Button>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    asChild
-                    size="sm"
-                    title="Open resume editor for this job"
-                    variant="outline"
-                  >
-                    <Link href={`/editor?jobId=${job.id}`}>
-                      <FileText className="size-3.5" />
-                      <span className="ml-1.5 hidden sm:inline">
-                        Edit resume
-                      </span>
-                    </Link>
-                  </Button>
-                  <Button
-                    aria-label={`Delete ${job.jobTitle}`}
-                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => deleteJob.mutate(job.id)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
     </>

@@ -21,9 +21,11 @@ async function ResumeContent() {
 
 function ResumeContentSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl px-4 md:px-6">
-      <Skeleton className="mb-4 h-[200px]" />
-      <Skeleton className="h-[100px]" />
+    <div className="mx-auto max-w-6xl px-4 md:px-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Skeleton className="h-[280px]" />
+        <Skeleton className="h-[280px]" />
+      </div>
     </div>
   );
 }

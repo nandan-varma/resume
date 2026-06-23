@@ -177,7 +177,15 @@ function renderError(msg) {
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 function sendMsg(payload) {
-  return new Promise((resolve) => chrome.runtime.sendMessage(payload, resolve));
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(payload, resolve);
+    } catch {
+      // ponytail: extension was reloaded; stop the observer so it doesn't keep firing
+      observer?.disconnect();
+      resolve({ error: "Extension reloaded — refresh the page to re-enable." });
+    }
+  });
 }
 
 async function runAnalysis() {

@@ -20,8 +20,27 @@ function RawQuestionBubble({
   options,
   question,
 }: QuestionBubbleProps) {
+  const [selected, setSelected] = useState<string[]>([]);
   const [showCustom, setShowCustom] = useState(false);
   const [custom, setCustom] = useState("");
+
+  const toggle = (opt: string) =>
+    setSelected((prev) =>
+      prev.includes(opt) ? prev.filter((s) => s !== opt) : [...prev, opt]
+    );
+
+  const addCustom = () => {
+    const t = custom.trim();
+    if (!t) return;
+    if (!selected.includes(t)) setSelected((prev) => [...prev, t]);
+    setCustom("");
+    setShowCustom(false);
+  };
+
+  const submit = () => {
+    if (selected.length === 0) return;
+    onPick(selected.join(", "));
+  };
 
   return (
     <div className="max-w-[90%] space-y-2.5 rounded-lg border border-border/60 bg-muted/60 px-3 py-2.5 text-xs">
@@ -34,48 +53,52 @@ function RawQuestionBubble({
       ) : (
         <>
           <div className="flex flex-wrap gap-1.5">
-            {options.map((opt) => (
-              <button
-                className="rounded-md border border-border bg-background px-2.5 py-1 transition-colors hover:border-primary/60 hover:bg-primary/5 disabled:opacity-50"
-                disabled={loading}
-                key={opt}
-                onClick={() => onPick(opt)}
-                type="button"
-              >
-                {opt}
-              </button>
-            ))}
+            {options.map((opt) => {
+              const isSelected = selected.includes(opt);
+              return (
+                <button
+                  className={`rounded-md border px-2.5 py-1 transition-colors disabled:opacity-50 ${isSelected ? "border-primary bg-primary/10 text-primary" : "border-border bg-background hover:border-primary/60 hover:bg-primary/5"}`}
+                  disabled={loading}
+                  key={opt}
+                  onClick={() => toggle(opt)}
+                  type="button"
+                >
+                  {opt}
+                </button>
+              );
+            })}
           </div>
-          {showCustom ? (
+          {showCustom && (
             <div className="flex gap-1.5">
               <input
                 autoFocus
                 className="h-6 flex-1 rounded border border-border bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
                 onChange={(e) => setCustom(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && custom.trim() && onPick(custom.trim())
-                }
+                onKeyDown={(e) => e.key === "Enter" && addCustom()}
                 placeholder="Type your answer…"
                 value={custom}
               />
               <button
                 className="rounded bg-primary px-2 text-primary-foreground disabled:opacity-50"
-                disabled={!custom.trim() || loading}
-                onClick={() => onPick(custom.trim())}
+                disabled={!custom.trim()}
+                onClick={addCustom}
                 type="button"
               >
-                OK
+                Add
               </button>
             </div>
-          ) : (
+          )}
+          <div className="flex items-center justify-between">
             <div className="flex gap-3 text-muted-foreground">
-              <button
-                className="underline hover:text-foreground"
-                onClick={() => setShowCustom(true)}
-                type="button"
-              >
-                Other…
-              </button>
+              {!showCustom && (
+                <button
+                  className="underline hover:text-foreground"
+                  onClick={() => setShowCustom(true)}
+                  type="button"
+                >
+                  Other…
+                </button>
+              )}
               <button
                 className="underline hover:text-foreground"
                 disabled={loading}
@@ -85,7 +108,15 @@ function RawQuestionBubble({
                 Skip
               </button>
             </div>
-          )}
+            <button
+              className="rounded bg-primary px-2.5 py-1 text-primary-foreground disabled:opacity-50"
+              disabled={selected.length === 0 || loading}
+              onClick={submit}
+              type="button"
+            >
+              Submit
+            </button>
+          </div>
         </>
       )}
     </div>

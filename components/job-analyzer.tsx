@@ -10,7 +10,6 @@ import type { AnalysisResult } from "@/app/api/analyze/route";
 import { AnalysisResults } from "@/components/analysis-results";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAnalyzeMatch, useFetchJobDescription } from "@/lib/queries/analyze";
+import { useAnalyzeMatch } from "@/lib/queries/analyze";
 import { useCreateJob, useJobs } from "@/lib/queries/jobs";
 import { usePersonalInfo } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
@@ -29,7 +28,6 @@ import { saveAnalysis } from "@/server/analysis";
 interface FormValues {
   jobDescription: string;
   linkedJobId: string;
-  url: string;
 }
 interface AnalysisState {
   linkedJobId: string;
@@ -37,33 +35,6 @@ interface AnalysisState {
   saved: boolean;
 }
 
-function FetchButton({
-  control,
-  isPending,
-  onFetch,
-}: {
-  control: Control<FormValues>;
-  isPending: boolean;
-  onFetch: () => void;
-}) {
-  const url = useWatch({ control, name: "url" });
-  return (
-    <Button
-      className="shrink-0"
-      disabled={isPending || !url.trim()}
-      onClick={onFetch}
-      type="button"
-      variant="outline"
-    >
-      {isPending ? (
-        <Loader2 className="size-4 animate-spin" />
-      ) : (
-        <Search className="size-4" />
-      )}
-      <span className="ml-1.5">Fetch</span>
-    </Button>
-  );
-}
 
 function AnalyzeButton({
   control,
@@ -102,26 +73,13 @@ export function JobAnalyzer() {
   const { data: jobs } = useJobs();
   const { data: personalInfo } = usePersonalInfo();
   const createJob = useCreateJob();
-  const fetchJob = useFetchJobDescription();
   const analyze = useAnalyzeMatch();
 
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
 
   const form = useForm<FormValues>({
-    defaultValues: { url: "", jobDescription: "", linkedJobId: "" },
+    defaultValues: { jobDescription: "", linkedJobId: "" },
   });
-
-  const handleFetch = async () => {
-    const url = form.getValues("url").trim();
-    if (!url) {
-      return;
-    }
-    const description = await fetchJob.mutateAsync(url).catch(() => undefined);
-    if (description) {
-      form.setValue("jobDescription", description);
-      toast.success("Job description fetched");
-    }
-  };
 
   const handleSaveToJob = async (jobId: number, result: AnalysisResult) => {
     const res = await saveAnalysis(jobId, {
@@ -209,35 +167,6 @@ export function JobAnalyzer() {
       >
         <Card className="space-y-4 p-5 sm:p-6">
           <form className="space-y-3" onSubmit={handleAnalyze}>
-            <div className="space-y-1.5">
-              <Label className="font-medium text-sm" htmlFor="url">
-                Job posting URL
-                <span className="ml-2 font-normal text-muted-foreground text-xs">
-                  auto-fills description
-                </span>
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  className="min-w-0 flex-1"
-                  id="url"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleFetch();
-                    }
-                  }}
-                  placeholder="https://www.linkedin.com/jobs/view/…"
-                  type="url"
-                  {...form.register("url")}
-                />
-                <FetchButton
-                  control={form.control}
-                  isPending={fetchJob.isPending}
-                  onFetch={handleFetch}
-                />
-              </div>
-            </div>
-
             <div className="space-y-1.5">
               <Label className="font-medium text-sm" htmlFor="jobDescription">
                 Job description
