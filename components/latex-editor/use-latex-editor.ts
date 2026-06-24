@@ -52,7 +52,7 @@ export function useLatexEditor(
   const { engine, pageCount, pdfUrl, compileLog, showLog, setShowLog, compile } =
     useEngine();
 
-  const { saving, dirty, autoSaving, handleSave, markDirty } = useAutoSave(
+  const { saving, dirty, autoSaving, incognito, toggleIncognito, handleSave, markDirty } = useAutoSave(
     getLatex,
     chatMessages,
     job
@@ -154,6 +154,8 @@ export function useLatexEditor(
 
   return {
     autoSaving,
+    incognito,
+    toggleIncognito,
     latex,
     pdfUrl,
     engine,

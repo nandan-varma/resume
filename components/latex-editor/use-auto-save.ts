@@ -14,6 +14,8 @@ export function useAutoSave(
 
   const [dirty, setDirty] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [incognito, setIncognito] = useState(false);
+  const toggleIncognito = useCallback(() => setIncognito((v) => !v), []);
 
   const chatMessagesRef = useRef(chatMessages);
   chatMessagesRef.current = chatMessages;
@@ -33,7 +35,7 @@ export function useAutoSave(
   const markDirty = useCallback(() => setDirty(true), []);
 
   useEffect(() => {
-    if (!dirty || saving) return;
+    if (!dirty || saving || incognito) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       setAutoSaving(true);
@@ -42,7 +44,7 @@ export function useAutoSave(
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [dirty, saving, handleSave]);
+  }, [dirty, saving, incognito, handleSave]);
 
-  return { saving, dirty, autoSaving, handleSave, markDirty };
+  return { saving, dirty, autoSaving, incognito, toggleIncognito, handleSave, markDirty };
 }

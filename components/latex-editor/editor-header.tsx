@@ -3,6 +3,8 @@
 import {
   Briefcase,
   Download,
+  Eye,
+  EyeOff,
   Loader2,
   Play,
   RotateCcw,
@@ -17,11 +19,13 @@ import type { EditorJob } from "./types";
 interface EditorHeaderProps {
   autoSaving: boolean;
   dirty: boolean;
+  incognito: boolean;
   isCompiling: boolean;
   isEngineReady: boolean;
   job: EditorJob | null;
   onRecompile: () => void;
   onSave: () => void;
+  onToggleIncognito: () => void;
   onZoomChange: (zoom: number) => void;
   pdfUrl: string | null;
   saving: boolean;
@@ -31,6 +35,7 @@ interface EditorHeaderProps {
 function EditorHeader({
   autoSaving,
   dirty,
+  incognito,
   job,
   pdfUrl,
   saving,
@@ -38,6 +43,7 @@ function EditorHeader({
   isCompiling,
   isEngineReady,
   onSave,
+  onToggleIncognito,
   onZoomChange,
   onRecompile,
 }: EditorHeaderProps) {
@@ -51,7 +57,13 @@ function EditorHeader({
             {job.title}
           </span>
         )}
-        {dirty && (
+        {incognito && (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <EyeOff className="size-3" />
+            Saves paused
+          </span>
+        )}
+        {!incognito && dirty && (
           <span className="inline-flex items-center gap-1 text-xs text-yellow-500 dark:text-yellow-400">
             {autoSaving && <Loader2 className="size-3 animate-spin" />}
             {autoSaving ? "Saving…" : "Unsaved changes"}
@@ -119,7 +131,15 @@ function EditorHeader({
             <span className="hidden sm:inline">Download PDF</span>
           </span>
         )}
-        <Button disabled={saving || !dirty} onClick={onSave} size="sm">
+        <button
+          className={`rounded p-1 transition-colors ${incognito ? "text-foreground bg-muted" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+          onClick={onToggleIncognito}
+          title={incognito ? "Resume saving (incognito off)" : "Pause saving (incognito)"}
+          type="button"
+        >
+          {incognito ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+        </button>
+        <Button disabled={saving || !dirty || incognito} onClick={onSave} size="sm">
           {saving ? (
             <Loader2 className="mr-1.5 size-3.5 animate-spin" />
           ) : (

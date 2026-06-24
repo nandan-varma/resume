@@ -24,6 +24,8 @@ export function LatexEditor({
 }: LatexEditorProps) {
   const {
     autoSaving,
+    incognito,
+    toggleIncognito,
     latex,
     pdfUrl,
     engine,
@@ -63,11 +65,13 @@ export function LatexEditor({
         <EditorHeader
           autoSaving={autoSaving}
           dirty={dirty}
+          incognito={incognito}
           isCompiling={isCompiling}
           isEngineReady={isEngineReady}
           job={job}
           onRecompile={handleForceRecompile}
           onSave={handleSave}
+          onToggleIncognito={toggleIncognito}
           onZoomChange={setZoom}
           pdfUrl={pdfUrl}
           saving={saving}
