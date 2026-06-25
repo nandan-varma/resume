@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function getSessionCookie() {
+function getSessionCookie() {
   return chrome.cookies.get({
     url: APP_URL,
     name: "better-auth.session_token",
@@ -32,7 +32,7 @@ async function authedFetch(path, options = {}) {
   });
 }
 
-async function getSettings() {
+function getSettings() {
   return chrome.storage.sync.get({ ...DEFAULT_SETTINGS, appUrl: APP_URL });
 }
 

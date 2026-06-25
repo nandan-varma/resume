@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
         <Toaster position="top-right" richColors />
       </ThemeProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

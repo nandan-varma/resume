@@ -5,6 +5,9 @@
     "ultracite/biome/react"
   ],
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "javascript": {
+    "globals": ["chrome"]
+  },
   "files": {
     "includes": [
       "!public",

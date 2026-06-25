@@ -18,7 +18,9 @@ npx drizzle-kit studio  # open database GUI
 npx drizzle-kit generate  # generate migration files
 ```
 
-There are no tests. The linter is **Biome** (configured in `biome.jsonc`, extends `ultracite`). `pnpm fix` handles most auto-fixable issues; run `pnpm check` to verify.
+There are no tests. The linter is **Biome** (configured in `biome.jsonc`, extends `ultracite`). `pnpm fix` handles most auto-fixable issues; run `pnpm check` to verify. A husky pre-commit hook runs `pnpm check` automatically — fix violations before committing.
+
+Notable enforced rules: `noNestedTernary` (use if-else for 3-way conditionals), `useBlockStatements` (braces required on if bodies), `useTopLevelRegex` (declare regex at module scope). The `extension/` JS files have pre-existing `noUndeclaredVariables` warnings for `chrome.*` globals — ignore them.
 
 **Schema type changes**: `drizzle-kit push` cannot automatically cast column types (e.g. `text → jsonb`). When this happens, run the cast manually:
 ```bash
@@ -59,14 +61,16 @@ Drizzle ORM on Neon (serverless PostgreSQL). Schema in `db/schema.ts`; use `db.q
 Key tables:
 - `personalInformation` — one row per user; stores global `resumeLatex`, `resumeUrl`, `aiPreferences`, `chatMessages` (JSONB).
 - `jobResumes` — per-job resume variant; stores `resumeLatex` and `chatMessages` (JSONB). Unique on `(jobId, userId)`. Upserted via `onConflictDoUpdate`.
-- `analysis` — stores `matchPercentage`, `summary`, `additionalInsights`, and `strengths`/`missingKeywords`/`improvementSuggestions` as **JSONB** (`string[]`). No manual `JSON.stringify`/`JSON.parse` needed — Drizzle handles it via `.$type<string[]>()`.
+- `analysis` — stores `matchPercentage`, `summary`, `additionalInsights`, and `strengths`/`missingKeywords`/`improvementSuggestions` as **JSONB** (`string[]`). No manual `JSON.stringify`/`JSON.parse` needed — Drizzle handles it via `.$type<string[]>()`. Has a unique index on `(jobId, userId)`; `saveAnalysis` upserts via `onConflictDoUpdate`.
+
+**Critical**: the `schema` export in `db/schema.ts` must include both table objects **and** relation objects (`userRelations`, `jobsRelations`, etc.). Without the relation objects, `db.query.*` with `with:` clauses types the result as `never[]`.
 
 ### TanStack Query
 
 **`app/get-query-client.ts`** — singleton factory. Uses React's `cache()` so all server components in a single request share one `QueryClient`; the browser gets a module-level singleton.
 
 **`lib/queries/`** — hooks split by domain:
-- `jobs.ts`: `useJobs()`, `useCreateJob()`, `useDeleteJob()`, `useUpdateJobStatus()` — delete and status mutations do optimistic updates with rollback.
+- `jobs.ts`: `useJobs()`, `useCreateJob()`, `useDeleteJob()`, `useUpdateJobStatus()`, `useReanalyzeJob()` — delete and status mutations do optimistic updates with rollback.
 - `resume.ts`: `usePersonalInfo()`, `useJobResume(jobId)`, `useSaveAiPreferences()`, `useSaveEditorState(jobId | null)` — save mutations update the cache directly so navigation back is instant.
 - `analyze.ts`: `useFetchJobDescription()`, `useAnalyzeMatch()`.
 
@@ -92,6 +96,8 @@ Key tables:
 | `jobs` | POST — creates a job; accepts optional `analysis` payload to save analysis + empty `jobResume` in one transaction |
 
 All routes validate the session via `auth.api.getSession({ headers: req.headers })` and parse the request body with Zod before any AI calls.
+
+Rate limiting (`lib/rate-limit.ts`) — per-instance sliding window — is applied in `analyze` (10/min), `edit-latex` (30/min), and `job-customize` (30/min).
 
 ### AI models (`lib/models.ts`)
 
@@ -130,7 +136,9 @@ Manifest V3 extension that shows resume match scores on LinkedIn job pages.
 
 **Design tokens** (`card.css`): injected by the browser via `content_scripts.css` in the manifest. Token names map to `app/globals.css` oklch values — `--jm-bg`, `--jm-fg`, `--jm-bd`, `--jm-ac`, etc. The `[data-mode="float"]` selector switches to dark tokens. `--r: 0px` matches the app's `--radius`.
 
-**To load locally**: `chrome://extensions` → Developer Mode → Load unpacked → select `extension/`. Update `APP_URL` in `background.js` and `host_permissions` in `manifest.json` before publishing.
+**App URL**: `manifest.json`'s `homepage_url` is the single source of truth — `background.js` reads it via `chrome.runtime.getManifest().homepage_url`. Production value is `https://resume.nandan.fyi`; change it to `http://localhost:3000` for local dev. Also update `host_permissions` in `manifest.json` if needed.
+
+**To load locally**: `chrome://extensions` → Developer Mode → Load unpacked → select `extension/`.
 
 ### Storage
 

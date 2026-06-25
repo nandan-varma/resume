@@ -1,5 +1,8 @@
 // ponytail: card.css injected via manifest; tokens match app globals.css oklch values
 const CARD_ID = "jm-card";
+const RE_SELECTED_PREFIX = /^Selected,\s*/;
+const RE_VERIFIED_SUFFIX = /\s*\(Verified job\)$/;
+const RE_LINKEDIN_SUFFIX = /\s*\|\s*LinkedIn$/;
 
 function escHtml(s) {
   return String(s)
@@ -44,11 +47,11 @@ function extractJobTitle() {
   if (sel) {
     return sel
       .getAttribute("aria-label")
-      .replace(/^Selected,\s*/, "")
-      .replace(/\s*\(Verified job\)$/, "")
+      .replace(RE_SELECTED_PREFIX, "")
+      .replace(RE_VERIFIED_SUFFIX, "")
       .trim();
   }
-  return document.title.replace(/\s*\|\s*LinkedIn$/, "").trim() || "Job";
+  return document.title.replace(RE_LINKEDIN_SUFFIX, "").trim() || "Job";
 }
 
 // ── Card DOM ──────────────────────────────────────────────────────────────────
@@ -137,7 +140,13 @@ function renderLoading(text = "Analyzing…") {
 }
 
 function scoreClass(pct) {
-  return pct >= 70 ? "jm-c-ok" : pct >= 50 ? "jm-c-wa" : "jm-c-er";
+  if (pct >= 70) {
+    return "jm-c-ok";
+  }
+  if (pct >= 50) {
+    return "jm-c-wa";
+  }
+  return "jm-c-er";
 }
 
 function actionButtons(jobId) {
