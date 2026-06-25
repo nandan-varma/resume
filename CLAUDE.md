@@ -37,7 +37,7 @@ sql\`ALTER TABLE t ALTER COLUMN c TYPE jsonb USING c::jsonb\`
 
 - **`proxy.ts`** exports `proxy` (the middleware function) and `config` (the matcher). Next.js picks this up as `middleware.ts` via a config alias — do not rename it to `middleware.ts`.
 - Auth is **better-auth** (`lib/auth.ts` server, `lib/auth-client.ts` client). Session cookie: `better-auth.session_token`.
-- The middleware's `PROTECTED` list covers `/dashboard`, `/jobs`, `/analyze`, `/settings`, `/resume`. The `/editor` route is outside the `(protected)` group but protected via `getCurrentUser()` → `requireSession()`.
+- The middleware's `PROTECTED` list covers `/jobs`, `/settings`, `/editor`. All three are also inside `app/(protected)/` — the layout calls `requireSession()` as a double guard.
 - Server-side auth: `app/(protected)/layout.tsx` calls `requireSession()` from `server/session.ts`. Individual protected pages do **not** need their own auth guard.
 
 ### Server actions (`server/`)
@@ -59,7 +59,7 @@ Drizzle ORM on Neon (serverless PostgreSQL). Schema in `db/schema.ts`; use `db.q
 Key tables:
 - `personalInformation` — one row per user; stores global `resumeLatex`, `resumeUrl`, `aiPreferences`, `chatMessages` (JSONB).
 - `jobResumes` — per-job resume variant; stores `resumeLatex` and `chatMessages` (JSONB). Unique on `(jobId, userId)`. Upserted via `onConflictDoUpdate`.
-- `analysis` — stores `matchPercentage`, `summary`, and `strengths`/`missingKeywords`/`improvementSuggestions` as **JSONB** (`string[]`). No manual `JSON.stringify`/`JSON.parse` needed — Drizzle handles it via `.$type<string[]>()`.
+- `analysis` — stores `matchPercentage`, `summary`, `additionalInsights`, and `strengths`/`missingKeywords`/`improvementSuggestions` as **JSONB** (`string[]`). No manual `JSON.stringify`/`JSON.parse` needed — Drizzle handles it via `.$type<string[]>()`.
 
 ### TanStack Query
 
@@ -142,4 +142,4 @@ PDF resumes are stored in **Cloudflare R2** via `lib/r2.ts`. After upload, `gene
 
 ### Environment variables
 
-See `env.example` for all required variables. Key groups: `DATABASE_URL`, Resend (`RESEND_API_KEY`, `EMAIL_SENDER_*`), R2 (`R2_*`), better-auth (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`), Google AI (`GOOGLE_GENERATIVE_AI_API_KEY`), OpenAI (`OPENAI_API_KEY`).
+See `env.example` for all required variables. Key groups: `DATABASE_URL`, Resend (`RESEND_API_KEY`, `EMAIL_SENDER_*`), R2 (`R2_*`), better-auth (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`), Google AI (`GOOGLE_GENERATIVE_AI_API_KEY`), OpenAI (`OPENAI_API_KEY`), Mistral (`MISTRAL_API_KEY`).

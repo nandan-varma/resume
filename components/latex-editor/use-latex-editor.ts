@@ -33,9 +33,7 @@ export function useLatexEditor(
   }, []);
 
   const [zoom, setZoom] = useState(100);
-  const [activeTab, setActiveTab] = useState<"editor" | "chat">(() =>
-    job && isNewJobResume ? "chat" : "editor"
-  );
+  const [activeTab, setActiveTab] = useState<"editor" | "chat" | "preview">("chat");
 
   const [modelId] = useModelId();
 

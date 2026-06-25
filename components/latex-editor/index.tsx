@@ -3,7 +3,6 @@
 import EditorHeader from "./editor-header";
 import EditorPane from "./editor-pane";
 import { ErrorBoundary } from "@/lib/error-boundary";
-import JobBanner from "./job-banner";
 import PdfPreview from "./pdf-preview";
 import { ResizablePanel } from "./resizable-panel";
 import type { EditorJob } from "./types";
@@ -63,6 +62,7 @@ export function LatexEditor({
     <ErrorBoundary reload>
       <div className="flex h-[calc(100vh-3rem)] flex-col bg-background">
         <EditorHeader
+          activeTab={activeTab}
           autoSaving={autoSaving}
           dirty={dirty}
           incognito={incognito}
@@ -71,6 +71,7 @@ export function LatexEditor({
           job={job}
           onRecompile={handleForceRecompile}
           onSave={handleSave}
+          onTabChange={setActiveTab}
           onToggleIncognito={toggleIncognito}
           onZoomChange={setZoom}
           pdfUrl={pdfUrl}
@@ -78,11 +79,19 @@ export function LatexEditor({
           zoom={zoom}
         />
 
-        <JobBanner job={job} />
-
-        <ResizablePanel
-          defaultLeftPercent={50}
-          left={
+        {/* Mobile: single pane, tab-switched */}
+        <div className="flex min-h-0 flex-1 sm:hidden">
+          {activeTab === "preview" ? (
+            <PdfPreview
+              compileLog={compileLog}
+              engine={engine}
+              isEmpty={isEmpty}
+              onShowLogChange={setShowLog}
+              pdfUrl={pdfUrl}
+              showLog={showLog}
+              zoom={zoom}
+            />
+          ) : (
             <EditorPane
               activeTab={activeTab}
               chatInput={chatInput}
@@ -100,23 +109,51 @@ export function LatexEditor({
               onRecompile={handleForceRecompile}
               onRedo={redo}
               onSave={handleSave}
-              onTabChange={setActiveTab}
               onUndo={undo}
               pendingQuestion={pendingQuestion}
             />
-          }
-          right={
-            <PdfPreview
-              compileLog={compileLog}
-              engine={engine}
-              isEmpty={isEmpty}
-              onShowLogChange={setShowLog}
-              pdfUrl={pdfUrl}
-              showLog={showLog}
-              zoom={zoom}
-            />
-          }
-        />
+          )}
+        </div>
+
+        {/* Desktop: side-by-side resizable */}
+        <div className="hidden min-h-0 flex-1 sm:flex">
+          <ResizablePanel
+            defaultLeftPercent={50}
+            left={
+              <EditorPane
+                activeTab={activeTab}
+                chatInput={chatInput}
+                chatLoading={chatLoading}
+                chatMessages={chatMessages}
+                isEmpty={isEmpty}
+                job={job}
+                latex={latex}
+                onChatInputChange={setChatInput}
+                onChatSend={handleChatSend}
+                onClearChat={clearChat}
+                onConsultPick={handleConsultPick}
+                onConsultSkip={handleConsultSkip}
+                onLatexChange={handleLatexChange}
+                onRecompile={handleForceRecompile}
+                onRedo={redo}
+                onSave={handleSave}
+                onUndo={undo}
+                pendingQuestion={pendingQuestion}
+              />
+            }
+            right={
+              <PdfPreview
+                compileLog={compileLog}
+                engine={engine}
+                isEmpty={isEmpty}
+                onShowLogChange={setShowLog}
+                pdfUrl={pdfUrl}
+                showLog={showLog}
+                zoom={zoom}
+              />
+            }
+          />
+        </div>
       </div>
     </ErrorBoundary>
   );

@@ -137,8 +137,7 @@ function PdfPreview({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-border/50 border-b px-3 py-1">
-        <span className="text-muted-foreground text-xs">Preview</span>
+      <div className="flex items-center justify-end border-border/50 border-b px-3 py-1">
         <div className="flex items-center gap-2">
           {isCompiling && (
             <span className="flex items-center gap-1 text-muted-foreground text-xs">

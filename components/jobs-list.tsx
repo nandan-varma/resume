@@ -201,7 +201,7 @@ function WrappedJobsList() {
         {stats.map(({ label, value, Icon, color }) => (
           <Card className="p-4" key={label}>
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">{label}</p>
+              <p className="truncate text-muted-foreground text-xs uppercase tracking-wide">{label}</p>
               <Icon aria-hidden="true" className={`size-4 ${color} opacity-70`} />
             </div>
             <p className="mt-1.5 font-bold text-2xl tabular-nums">
@@ -351,7 +351,7 @@ function WrappedJobsList() {
                   </p>
 
                   {/* Footer */}
-                  <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <Select
                       onValueChange={(v) => {
                         const parsed = z.enum(jobStatus).safeParse(v);
@@ -390,7 +390,7 @@ function WrappedJobsList() {
                     <Button asChild size="sm">
                       <Link href={`/editor?jobId=${job.id}`}>
                         <FileText className="size-3.5" />
-                        Edit resume
+                        <span className="hidden sm:inline">Edit resume</span>
                       </Link>
                     </Button>
                   </div>

@@ -30,12 +30,12 @@ export default function Home() {
       </header>
 
       <main
-        className="flex flex-1 flex-col items-center justify-center gap-16 px-5 py-16 text-center"
+        className="flex flex-1 flex-col items-center justify-center gap-10 px-5 py-12 text-center sm:gap-16 sm:py-16"
         id="main-content"
       >
         {/* Hero */}
         <div className="relative mx-auto max-w-2xl space-y-6">
-          <h1 className="animate-enter-blur font-bold text-4xl text-foreground tracking-tight sm:text-5xl">
+          <h1 className="animate-enter-blur font-bold text-3xl text-foreground tracking-tight sm:text-5xl">
             Land more interviews
             <br />
             with AI resume matching
@@ -44,7 +44,7 @@ export default function Home() {
             Paste any job description. Get a match score, missing keywords, and
             concrete edits — in seconds.
           </p>
-          <div className="flex animate-enter-up justify-center gap-3 pt-2 [animation-delay:180ms]">
+          <div className="flex animate-enter-up flex-wrap justify-center gap-3 pt-2 [animation-delay:180ms]">
             <Link href="/signup">
               <Button size="lg">Get started free</Button>
             </Link>
@@ -90,6 +90,18 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      <footer className="border-border border-t px-5 py-6 text-center text-muted-foreground text-xs">
+        <div className="flex justify-center gap-4">
+          <Link className="hover:text-foreground" href="/privacy">
+            Privacy
+          </Link>
+          <Link className="hover:text-foreground" href="/terms">
+            Terms
+          </Link>
+        </div>
+        <p className="mt-2">© {new Date().getFullYear()} JobMatch</p>
+      </footer>
     </div>
   );
 }

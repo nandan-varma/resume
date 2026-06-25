@@ -8,7 +8,7 @@ import { LatexEditorCm } from "./latex-editor-cm";
 import type { ChatMsg } from "./types";
 
 interface EditorPaneProps {
-  activeTab: "editor" | "chat";
+  activeTab: "editor" | "chat" | "preview";
   chatInput: string;
   chatLoading: boolean;
   chatMessages: ChatMsg[];
@@ -29,7 +29,6 @@ interface EditorPaneProps {
   onRedo: () => void;
   onSave: () => void;
   onClearChat: () => void;
-  onTabChange: (tab: "editor" | "chat") => void;
   onUndo: () => void;
   pendingQuestion: boolean;
 }
@@ -90,7 +89,6 @@ function renderMessage(
 
 function EditorPane({
   activeTab,
-  onTabChange,
   latex,
   onLatexChange,
   chatMessages,
@@ -137,6 +135,18 @@ function EditorPane({
             <div ref={chatEndRef} />
           </div>
           <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2.5">
+            {chatMessages.length > 0 && (
+              <button
+                aria-label="Clear chat"
+                className="shrink-0 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
+                disabled={chatLoading}
+                onClick={onClearChat}
+                title="Clear chat"
+                type="button"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
             <input
               className="h-8 flex-1 rounded-lg border border-border bg-background px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
               disabled={chatLoading || pendingQuestion}
@@ -178,49 +188,51 @@ function EditorPane({
     }
 
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-6">
-        <div className="rounded-full bg-primary/10 p-3">
-          <Sparkles className="size-6 text-primary" />
-        </div>
-        <div className="text-center">
-          <p className="font-medium text-foreground text-sm">
-            What would you like to change?
-          </p>
-          <p className="mt-1 text-muted-foreground text-xs">
-            {job
-              ? "Resume customized — ask for further changes."
-              : "Describe what you'd like to change and AI will edit your LaTeX."}
-          </p>
-        </div>
-        <div className="flex w-full max-w-md items-center gap-2">
-          <input
-            autoFocus
-            className="h-10 flex-1 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-            disabled={chatLoading || pendingQuestion}
-            onChange={(e) => onChatInputChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onChatSend();
-              }
-            }}
-            placeholder={placeholder}
-            type="text"
-            value={chatInput}
-          />
-          <Button
-            aria-label="Send"
-            className="h-10 w-10 shrink-0 rounded-lg p-0"
-            disabled={chatLoading || !chatInput.trim() || pendingQuestion}
-            onClick={onChatSend}
-            size="sm"
-          >
-            {chatLoading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Send className="size-4" />
-            )}
-          </Button>
+      <div className="relative flex-1">
+        <div className="absolute inset-x-0 top-16 flex flex-col items-center gap-5 px-6">
+          <div className="rounded-full bg-primary/10 p-3">
+            <Sparkles className="size-6 text-primary" />
+          </div>
+          <div className="text-center">
+            <p className="font-medium text-foreground text-sm">
+              What would you like to change?
+            </p>
+            <p className="mt-1 text-muted-foreground text-xs">
+              {job
+                ? "Resume customized — ask for further changes."
+                : "Describe what you'd like to change and AI will edit your LaTeX."}
+            </p>
+          </div>
+          <div className="flex w-full max-w-md items-center gap-2">
+            <input
+              autoFocus
+              className="h-12 flex-1 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+              disabled={chatLoading || pendingQuestion}
+              onChange={(e) => onChatInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onChatSend();
+                }
+              }}
+              placeholder={placeholder}
+              type="text"
+              value={chatInput}
+            />
+            <Button
+              aria-label="Send"
+              className="h-12 w-12 shrink-0 rounded-lg p-0"
+              disabled={chatLoading || !chatInput.trim() || pendingQuestion}
+              onClick={onChatSend}
+              size="sm"
+            >
+              {chatLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -240,36 +252,6 @@ function EditorPane({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col border-border border-r">
-      <div className="flex shrink-0 items-center border-border/50 border-b">
-        {(["editor", "chat"] as const).map((tab) => (
-          <button
-            className={`flex items-center gap-1 border-b-2 px-3 py-2 text-xs transition-colors ${activeTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            key={tab}
-            onClick={() => onTabChange(tab)}
-            type="button"
-          >
-            {tab === "chat" && <Sparkles className="size-3" />}
-            {tab === "editor" ? "Editor" : "AI Chat"}
-          </button>
-        ))}
-        {activeTab === "editor" && (
-          <span className="ml-auto px-3 text-muted-foreground text-xs">
-            {latex.split("\n").length} lines
-          </span>
-        )}
-        {activeTab === "chat" && chatMessages.length > 0 && (
-          <button
-            aria-label="Clear chat"
-            className="ml-auto px-3 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
-            disabled={chatLoading}
-            onClick={onClearChat}
-            title="Clear chat"
-            type="button"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        )}
-      </div>
 
       <div
         className={activeTab === "editor" ? "flex min-h-0 flex-1" : "hidden"}
