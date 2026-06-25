@@ -1,5 +1,5 @@
-// ponytail: APP_URL hardcoded; change before publishing to production domain
-const APP_URL = "http://localhost:3000";
+// Update homepage_url in manifest.json before publishing
+const APP_URL = chrome.runtime.getManifest().homepage_url ?? "http://localhost:3000";
 
 const DEFAULT_SETTINGS = {
   autoAnalyze: false,

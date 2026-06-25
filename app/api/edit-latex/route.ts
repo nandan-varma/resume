@@ -5,6 +5,7 @@ import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
+import { rateLimit } from "@/lib/rate-limit";
 
 const historyMessageSchema = z.object({
   content: z.string(),
@@ -13,7 +14,7 @@ const historyMessageSchema = z.object({
 
 const requestSchema = z.object({
   instruction: z.string().min(1, "Instruction is required"),
-  latex: z.string(),
+  latex: z.string().max(60_000, "LaTeX too large (max 60 000 chars)"),
   modelId: z.string(),
   history: z.array(historyMessageSchema).default([]),
   jobDescription: z.string().optional(),
@@ -57,6 +58,10 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!rateLimit(`edit-latex:${session.user.id}`, 30, 60_000)) {
+    return Response.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
   }
 
   let instruction: string;

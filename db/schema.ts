@@ -163,6 +163,7 @@ export const analysis = pgTable(
   (table) => [
     index("analysis_jobId_idx").on(table.jobId),
     index("analysis_userId_idx").on(table.userId),
+    uniqueIndex("analysis_jobId_userId_unique").on(table.jobId, table.userId),
   ]
 );
 

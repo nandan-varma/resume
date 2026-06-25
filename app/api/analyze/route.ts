@@ -5,6 +5,7 @@ import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
+import { rateLimit } from "@/lib/rate-limit";
 import { getAnalysisByJobId } from "@/server/analysis";
 
 const analysisSchema = z.object({
@@ -58,7 +59,13 @@ const requestSchema = z.object({
 
 const MAX_JD_LENGTH = 8000;
 
+// ponytail: per-instance cache; 5-min TTL means stale at most 5 min after upload
+const resumeCache = new Map<string, { b64: string; exp: number }>();
+
 async function fetchResumeBase64(userId: string): Promise<string> {
+  const hit = resumeCache.get(userId);
+  if (hit && hit.exp > Date.now()) return hit.b64;
+
   const info = await db.query.personalInformation.findFirst({
     where: eq(personalInformation.userId, userId),
     columns: { resumeUrl: true },
@@ -76,13 +83,19 @@ async function fetchResumeBase64(userId: string): Promise<string> {
     );
   }
 
-  return Buffer.from(await res.arrayBuffer()).toString("base64");
+  const b64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+  resumeCache.set(userId, { b64, exp: Date.now() + 5 * 60_000 });
+  return b64;
 }
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!rateLimit(`analyze:${session.user.id}`, 10, 60_000)) {
+    return Response.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
   }
 
   let body: unknown;

@@ -1,5 +1,9 @@
 // ponytail: card.css injected via manifest; tokens match app globals.css oklch values
 const CARD_ID = "jm-card";
+
+function escHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 let appUrl = "http://localhost:3000";
 let currentUrl = location.href;
 let autoAnalyze = false;
@@ -121,7 +125,7 @@ function renderResult(data, jobId) {
          <button class="jm-btn-g" id="jm-close" style="font-size:18px;line-height:1;">✕</button>
        </div>
        <div class="jm-score-lg ${cls}">${pct}%</div>
-       <p class="jm-body" style="margin-bottom:14px;">${summary}</p>
+       <p class="jm-body" style="margin-bottom:14px;">${escHtml(summary)}</p>
        <div class="jm-col">${actionButtons(jobId)}</div>`
     : `<div class="jm-btwn">
          <div class="jm-grow">
@@ -129,7 +133,7 @@ function renderResult(data, jobId) {
              <span class="jm-score ${cls}">${pct}%</span>
              <span class="jm-badge">match</span>
            </div>
-           <p class="jm-body">${summary}</p>
+           <p class="jm-body">${escHtml(summary)}</p>
          </div>
          <div class="jm-col jm-shrink">
            ${actionButtons(jobId)}
@@ -156,10 +160,10 @@ function renderError(msg) {
          <span class="jm-label">JobMatch</span>
          <button class="jm-btn-g" id="jm-close" style="font-size:18px;line-height:1;">✕</button>
        </div>
-       <p class="jm-body jm-c-er" style="margin-bottom:12px;">${msg}</p>
+       <p class="jm-body jm-c-er" style="margin-bottom:12px;">${escHtml(msg)}</p>
        ${isAuth ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p jm-full">Log In →</a>` : ""}`
     : `<div class="jm-btwn" style="align-items:center;">
-         <p class="jm-body jm-c-er">${msg}</p>
+         <p class="jm-body jm-c-er">${escHtml(msg)}</p>
          ${isAuth
            ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p">Log In →</a>`
            : `<button class="jm-btn-g" id="jm-retry">Retry</button>`

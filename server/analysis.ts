@@ -45,17 +45,22 @@ export const saveAnalysis = async (
       return { success: false, message: "Unauthorized" };
     }
 
+    const values = {
+      jobId: parsed.data.jobId,
+      userId: session.user.id,
+      matchPercentage: parsed.data.match_percentage,
+      summary: parsed.data.summary,
+      strengths: parsed.data.strengths,
+      missingKeywords: parsed.data.missing_keywords,
+      improvementSuggestions: parsed.data.improvement_suggestions,
+      additionalInsights: parsed.data.additional_insights ?? null,
+    };
     const [result] = await db
       .insert(analysis)
-      .values({
-        jobId: parsed.data.jobId,
-        userId: session.user.id,
-        matchPercentage: parsed.data.match_percentage,
-        summary: parsed.data.summary,
-        strengths: parsed.data.strengths,
-        missingKeywords: parsed.data.missing_keywords,
-        improvementSuggestions: parsed.data.improvement_suggestions,
-        additionalInsights: parsed.data.additional_insights ?? null,
+      .values(values)
+      .onConflictDoUpdate({
+        target: [analysis.jobId, analysis.userId],
+        set: values,
       })
       .returning();
 

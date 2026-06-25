@@ -2,6 +2,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/models";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MAX_LATEX_CHARS = 4000;
 const MAX_JOB_DESC_CHARS = 3000;
@@ -48,6 +49,10 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!rateLimit(`job-customize:${session.user.id}`, 30, 60_000)) {
+    return Response.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
   }
 
   let latex: string;

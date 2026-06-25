@@ -72,6 +72,7 @@ export const getJobs = async () => {
     return await db.query.jobs.findMany({
       where: eq(jobs.userId, session.user.id),
       orderBy: [desc(jobs.createdAt)],
+      limit: 200, // ponytail: 200 cap; add cursor pagination when users hit this
     });
   } catch {
     return [];

@@ -3,6 +3,7 @@
   "name": "JobMatch - Resume Analyzer",
   "version": "1.1.0",
   "description": "See your resume match score on LinkedIn job pages",
+  "homepage_url": "http://localhost:3000",
   "permissions": ["cookies", "storage", "tabs"],
   "host_permissions": [
     "https://www.linkedin.com/*",
