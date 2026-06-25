@@ -30,7 +30,6 @@ import { cn } from "@/lib/utils";
 import { signIn } from "@/server/users";
 import { Badge } from "../ui/badge";
 
-
 const formSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),

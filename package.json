@@ -54,7 +54,7 @@
     "typescript": "^6.0.3",
     "ultracite": "^7.7.0"
   },
-  "name": "better-auth-starter",
+  "name": "jobmatch",
   "scripts": {
     "dev": "next dev --turbopack",
     "prebuild": "node scripts/download-busytex.mjs",

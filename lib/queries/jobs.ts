@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Job, JobStatus } from "@/db/schema";
+import { saveAnalysis } from "@/server/analysis";
 import { createJob, deleteJob, getJobs, updateJobStatus } from "@/server/jobs";
 
 export const jobsQueryKey = ["jobs"] as const;
@@ -81,6 +82,43 @@ export function useDeleteJob() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: jobsQueryKey });
     },
+  });
+}
+
+export function useReanalyzeJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      jobId,
+      jobDescription,
+      modelId,
+    }: {
+      jobId: number;
+      jobDescription: string;
+      modelId: string;
+    }) => {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobDescription, modelId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Analysis failed");
+      }
+      const { result } = await res.json();
+      const saved = await saveAnalysis(jobId, result);
+      if (!saved.success) {
+        throw new Error(saved.message ?? "Failed to save");
+      }
+      return result.match_percentage as number;
+    },
+    onSuccess: (matchPercentage) => {
+      queryClient.invalidateQueries({ queryKey: jobsQueryKey });
+      toast.success(`Score updated: ${matchPercentage}%`);
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Re-analyze failed"),
   });
 }
 

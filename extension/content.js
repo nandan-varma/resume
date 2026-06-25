@@ -2,7 +2,11 @@
 const CARD_ID = "jm-card";
 
 function escHtml(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 let appUrl = "http://localhost:3000";
 let currentUrl = location.href;
@@ -13,38 +17,60 @@ let lastAnalysis = null;
 let lastJd = null;
 let savedJobId = null;
 
-function resetPageState() { lastAnalysis = null; lastJd = null; savedJobId = null; }
+function resetPageState() {
+  lastAnalysis = null;
+  lastJd = null;
+  savedJobId = null;
+}
 
 // ── Extraction ────────────────────────────────────────────────────────────────
 
 function extractJobDescription() {
   const el = document.querySelector('[data-testid="expandable-text-box"]');
-  if (el?.textContent?.trim()) return el.textContent.trim().slice(0, 8000);
+  if (el?.textContent?.trim()) {
+    return el.textContent.trim().slice(0, 8000);
+  }
   for (const sel of ["#job-details", "article"]) {
     const fb = document.querySelector(sel);
-    if (fb?.textContent?.trim()) return fb.textContent.trim().slice(0, 8000);
+    if (fb?.textContent?.trim()) {
+      return fb.textContent.trim().slice(0, 8000);
+    }
   }
   return null;
 }
 
 function extractJobTitle() {
   const sel = document.querySelector('[aria-label^="Selected,"]');
-  if (sel) return sel.getAttribute("aria-label").replace(/^Selected,\s*/, "").replace(/\s*\(Verified job\)$/, "").trim();
+  if (sel) {
+    return sel
+      .getAttribute("aria-label")
+      .replace(/^Selected,\s*/, "")
+      .replace(/\s*\(Verified job\)$/, "")
+      .trim();
+  }
   return document.title.replace(/\s*\|\s*LinkedIn$/, "").trim() || "Job";
 }
 
 // ── Card DOM ──────────────────────────────────────────────────────────────────
 
-function getCard() { return document.getElementById(CARD_ID); }
-function removeCard() { getCard()?.remove(); }
-function isFloat() { return getCard()?.dataset.mode === "float"; }
+function getCard() {
+  return document.getElementById(CARD_ID);
+}
+function removeCard() {
+  getCard()?.remove();
+}
+function isFloat() {
+  return getCard()?.dataset.mode === "float";
+}
 
 function findAnchor() {
   return document.querySelector('[componentkey*="JobDetails_AboutTheJob_"]');
 }
 
 function injectCard() {
-  if (getCard()) return;
+  if (getCard()) {
+    return;
+  }
   resetPageState();
 
   const card = document.createElement("div");
@@ -60,14 +86,18 @@ function injectCard() {
   }
 
   renderTrigger();
-  if (autoAnalyze) runAnalysis();
+  if (autoAnalyze) {
+    runAnalysis();
+  }
 }
 
 // ── Render states ─────────────────────────────────────────────────────────────
 
 function setHtml(html) {
   const c = getCard();
-  if (c) c.innerHTML = html;
+  if (c) {
+    c.innerHTML = html;
+  }
 }
 
 // Wrap content for floating card (adds padding + fixed width)
@@ -81,7 +111,9 @@ function renderTrigger() {
       <span style="font-size:20px;">🎯</span>
       <span class="jm-title">Match Score</span>
     </div>`);
-    getCard().querySelector("#jm-trigger").addEventListener("click", runAnalysis);
+    getCard()
+      .querySelector("#jm-trigger")
+      .addEventListener("click", runAnalysis);
   } else {
     setHtml(`<div class="jm-btwn" style="align-items:center;">
       <div class="jm-row">
@@ -90,12 +122,18 @@ function renderTrigger() {
       </div>
       <button class="jm-btn jm-btn-p" id="jm-analyze">Analyze →</button>
     </div>`);
-    getCard().querySelector("#jm-analyze").addEventListener("click", runAnalysis);
+    getCard()
+      .querySelector("#jm-analyze")
+      .addEventListener("click", runAnalysis);
   }
 }
 
 function renderLoading(text = "Analyzing…") {
-  setHtml(wrap(`<div class="jm-row"><div class="jm-spin"></div><span class="jm-body">${text}</span></div>`));
+  setHtml(
+    wrap(
+      `<div class="jm-row"><div class="jm-spin"></div><span class="jm-body">${text}</span></div>`
+    )
+  );
 }
 
 function scoreClass(pct) {
@@ -115,7 +153,9 @@ function actionButtons(jobId) {
 
 function renderResult(data, jobId) {
   const card = getCard();
-  if (!card) return;
+  if (!card) {
+    return;
+  }
   const { match_percentage: pct, summary } = data.result;
   const cls = scoreClass(pct);
 
@@ -146,13 +186,17 @@ function renderResult(data, jobId) {
   card.querySelector("#jm-save")?.addEventListener("click", doSaveJob);
   card.querySelector("#jm-close")?.addEventListener("click", () => {
     removeCard();
-    if (isFloat()) setTimeout(() => injectCard(), 600);
+    if (isFloat()) {
+      setTimeout(() => injectCard(), 600);
+    }
   });
 }
 
 function renderError(msg) {
   const card = getCard();
-  if (!card) return;
+  if (!card) {
+    return;
+  }
   const isAuth = msg === "Not logged in";
 
   const inner = isFloat()
@@ -164,17 +208,20 @@ function renderError(msg) {
        ${isAuth ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p jm-full">Log In →</a>` : ""}`
     : `<div class="jm-btwn" style="align-items:center;">
          <p class="jm-body jm-c-er">${escHtml(msg)}</p>
-         ${isAuth
-           ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p">Log In →</a>`
-           : `<button class="jm-btn-g" id="jm-retry">Retry</button>`
-         }
+         ${
+           isAuth
+             ? `<a href="${appUrl}/login" target="_blank" class="jm-btn jm-btn-p">Log In →</a>`
+             : `<button class="jm-btn-g" id="jm-retry">Retry</button>`
+}
        </div>`;
 
   setHtml(wrap(inner));
   card.querySelector("#jm-retry")?.addEventListener("click", runAnalysis);
   card.querySelector("#jm-close")?.addEventListener("click", () => {
     removeCard();
-    if (isFloat()) setTimeout(() => injectCard(), 600);
+    if (isFloat()) {
+      setTimeout(() => injectCard(), 600);
+    }
   });
 }
 
@@ -194,11 +241,17 @@ function sendMsg(payload) {
 
 async function runAnalysis() {
   const jd = extractJobDescription();
-  if (!jd) { renderError("Could not read job description from this page."); return; }
+  if (!jd) {
+    renderError("Could not read job description from this page.");
+    return;
+  }
 
   renderLoading("Analyzing your resume…");
   const result = await sendMsg({ type: "ANALYZE", jobDescription: jd });
-  if (result?.error) { renderError(result.error); return; }
+  if (result?.error) {
+    renderError(result.error);
+    return;
+  }
 
   lastAnalysis = result.result;
   lastJd = jd;
@@ -212,7 +265,9 @@ async function runAnalysis() {
       link: location.href,
       analysis: result.result,
     });
-    if (!saveRes?.error) savedJobId = saveRes?.job?.id ?? null;
+    if (!saveRes?.error) {
+      savedJobId = saveRes?.job?.id ?? null;
+    }
   }
 
   renderResult(result, savedJobId);
@@ -220,7 +275,10 @@ async function runAnalysis() {
 
 async function doSaveJob() {
   const btn = getCard()?.querySelector("#jm-save");
-  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+  }
 
   const res = await sendMsg({
     type: "SAVE_JOB",
@@ -231,7 +289,10 @@ async function doSaveJob() {
   });
 
   if (res?.error) {
-    if (btn) { btn.disabled = false; btn.textContent = "💾 Save Job"; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "💾 Save Job";
+    }
     return;
   }
   savedJobId = res?.job?.id ?? null;
@@ -242,16 +303,23 @@ async function doSaveJob() {
 
 function isJobPage() {
   const u = new URL(location.href);
-  return u.pathname.startsWith("/jobs/") &&
-    (u.searchParams.has("currentJobId") || u.pathname.includes("/view/"));
+  return (
+    u.pathname.startsWith("/jobs/") &&
+    (u.searchParams.has("currentJobId") || u.pathname.includes("/view/"))
+  );
 }
 
 let settleTimer = null;
 function scheduleInject() {
   clearTimeout(settleTimer);
   settleTimer = setTimeout(() => {
-    if (!isJobPage()) { removeCard(); return; }
-    if (!getCard() && findAnchor()) injectCard();
+    if (!isJobPage()) {
+      removeCard();
+      return;
+    }
+    if (!getCard() && findAnchor()) {
+      injectCard();
+    }
   }, 800);
 }
 
@@ -260,13 +328,21 @@ const observer = new MutationObserver(() => {
     currentUrl = location.href;
     removeCard();
   }
-  if (isJobPage() && !getCard()) scheduleInject();
+  if (isJobPage() && !getCard()) {
+    scheduleInject();
+  }
 });
 
 chrome.runtime.sendMessage({ type: "GET_INIT" }, (res) => {
-  if (res?.appUrl) appUrl = res.appUrl;
-  if (res?.settings?.autoAnalyze) autoAnalyze = true;
-  if (res?.settings?.autoSave) autoSave = true;
+  if (res?.appUrl) {
+    appUrl = res.appUrl;
+  }
+  if (res?.settings?.autoAnalyze) {
+    autoAnalyze = true;
+  }
+  if (res?.settings?.autoSave) {
+    autoSave = true;
+  }
   observer.observe(document.body, { childList: true, subtree: true });
   scheduleInject();
 });

@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function useEasedValue(to: number, duration: number, ease: (t: number) => number): number {
+export function useEasedValue(
+  to: number,
+  duration: number,
+  ease: (t: number) => number
+): number {
   const [value, setValue] = useState(0);
   const easeRef = useRef(ease);
   easeRef.current = ease;
@@ -14,7 +18,9 @@ export function useEasedValue(to: number, duration: number, ease: (t: number) =>
     function tick(now: number) {
       const t = Math.min((now - start) / duration, 1);
       setValue(t < 1 ? easeRef.current(t) * to : to);
-      if (t < 1) frameId = requestAnimationFrame(tick);
+      if (t < 1) {
+        frameId = requestAnimationFrame(tick);
+      }
     }
 
     frameId = requestAnimationFrame(tick);

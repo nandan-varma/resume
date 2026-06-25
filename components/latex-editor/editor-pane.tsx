@@ -17,6 +17,7 @@ interface EditorPaneProps {
   latex: string;
   onChatInputChange: (val: string) => void;
   onChatSend: () => void;
+  onClearChat: () => void;
   onConsultPick: (
     idx: number,
     key: string,
@@ -28,7 +29,6 @@ interface EditorPaneProps {
   onRecompile: () => void;
   onRedo: () => void;
   onSave: () => void;
-  onClearChat: () => void;
   onUndo: () => void;
   pendingQuestion: boolean;
 }
@@ -131,7 +131,11 @@ function EditorPane({
             {chatMessages.map((msg, i) =>
               renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
             )}
-            {chatLoading && lastMsg?.role === "user" && !chatMessages.some((m) => m.role === "assistant" && m.streaming) && <LoadingBubble />}
+            {chatLoading &&
+              lastMsg?.role === "user" &&
+              !chatMessages.some(
+                (m) => m.role === "assistant" && m.streaming
+              ) && <LoadingBubble />}
             <div ref={chatEndRef} />
           </div>
           <div className="flex shrink-0 items-center gap-2 border-border/50 border-t p-2.5">
@@ -247,12 +251,12 @@ function EditorPane({
     onChatSend,
     onConsultPick,
     onConsultSkip,
+    onClearChat,
     chatInput,
   ]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col border-border border-r">
-
       <div
         className={activeTab === "editor" ? "flex min-h-0 flex-1" : "hidden"}
       >

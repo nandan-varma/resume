@@ -5,6 +5,7 @@ import type { BusyTexRunner, PdfLatex } from "texlyre-busytex";
 import type { EnginePhase } from "./types";
 
 const PACKAGES_JS = "/core/busytex/texlive-extra.js";
+const PAGE_COUNT_RE = /Output written.*?\((\d+)\s+page/;
 
 // Module-level singletons — survive navigation away from and back to /editor
 let _runner: InstanceType<typeof BusyTexRunner> | null = null;
@@ -92,8 +93,8 @@ export function useEngine() {
         });
         const log = result.log ?? "";
         setCompileLog(log);
-        const pages = log.match(/Output written.*?\((\d+)\s+page/)?.[1];
-        setPageCount(pages ? parseInt(pages) : null);
+        const pages = log.match(PAGE_COUNT_RE)?.[1];
+        setPageCount(pages ? Number.parseInt(pages, 10) : null);
         if (result.success && result.pdf) {
           if (pdfBlobUrlRef.current) {
             URL.revokeObjectURL(pdfBlobUrlRef.current);

@@ -151,8 +151,14 @@ export const analysis = pgTable(
     matchPercentage: integer("match_percentage").notNull(),
     summary: text("summary").notNull(),
     strengths: jsonb("strengths").$type<string[]>().notNull().default([]),
-    missingKeywords: jsonb("missing_keywords").$type<string[]>().notNull().default([]),
-    improvementSuggestions: jsonb("improvement_suggestions").$type<string[]>().notNull().default([]),
+    missingKeywords: jsonb("missing_keywords")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    improvementSuggestions: jsonb("improvement_suggestions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     additionalInsights: text("additional_insights"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -240,7 +246,10 @@ export const jobResumes = pgTable(
   (table) => [
     index("job_resumes_jobId_idx").on(table.jobId),
     index("job_resumes_userId_idx").on(table.userId),
-    uniqueIndex("job_resumes_jobId_userId_unique").on(table.jobId, table.userId),
+    uniqueIndex("job_resumes_jobId_userId_unique").on(
+      table.jobId,
+      table.userId
+    ),
   ]
 );
 
@@ -260,4 +269,11 @@ export const schema = {
   personalInformation,
   analysis,
   jobResumes,
+  userRelations,
+  sessionRelations,
+  accountRelations,
+  jobsRelations,
+  personalInformationRelations,
+  analysisRelations,
+  jobResumesRelations,
 };

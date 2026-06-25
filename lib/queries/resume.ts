@@ -13,7 +13,8 @@ import {
 } from "@/server/resume";
 
 export const personalInfoQueryKey = ["personal-info"] as const;
-export const jobResumeQueryKey = (jobId: number) => ["job-resume", jobId] as const;
+export const jobResumeQueryKey = (jobId: number) =>
+  ["job-resume", jobId] as const;
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
@@ -38,7 +39,9 @@ export function useSaveAiPreferences() {
   return useMutation({
     mutationFn: async (aiPreferences: string) => {
       const result = await saveAiPreferences(aiPreferences);
-      if (!result.success) throw new Error(result.message ?? "Failed to save preferences");
+      if (!result.success) {
+        throw new Error(result.message ?? "Failed to save preferences");
+      }
       return aiPreferences;
     },
     onSuccess: (aiPreferences) => {
@@ -50,7 +53,9 @@ export function useSaveAiPreferences() {
       toast.success("Preferences saved");
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to save preferences");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save preferences"
+      );
     },
   });
 }
@@ -64,7 +69,9 @@ export function useSaveEditorState(jobId: number | null) {
       const result = jobId
         ? await saveJobResumeLatex(jobId, payload.latex, payload.chatMessages)
         : await saveResumeLatex(payload.latex, payload.chatMessages);
-      if (!result.success) throw new Error(result.message ?? "Failed to save");
+      if (!result.success) {
+        throw new Error(result.message ?? "Failed to save");
+      }
       return payload;
     },
     onSuccess: ({ latex, chatMessages }) => {

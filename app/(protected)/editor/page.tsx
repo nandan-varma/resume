@@ -59,13 +59,17 @@ export default async function EditorPage({
     queryClient.setQueryData(personalInfoQueryKey, personalInfo);
   }
 
-  const initialLatex = jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
+  const initialLatex =
+    jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
   const initialChatMessages = jobId
     ? (jobResume?.chatMessages ?? [])
     : (personalInfo?.chatMessages ?? []);
 
-  const existingChat = Array.isArray(jobResume?.chatMessages) ? (jobResume.chatMessages as unknown[]) : [];
-  const isNewJobResume = !!job && !jobResume?.resumeLatex && existingChat.length === 0;
+  const existingChat = Array.isArray(jobResume?.chatMessages)
+    ? (jobResume.chatMessages as unknown[])
+    : [];
+  const isNewJobResume =
+    !!job && !jobResume?.resumeLatex && existingChat.length === 0;
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -76,7 +80,11 @@ export default async function EditorPage({
           isNewJobResume={isNewJobResume}
           job={
             job
-              ? { id: job.id, title: job.jobTitle, description: job.jobDescription }
+              ? {
+                  id: job.id,
+                  title: job.jobTitle,
+                  description: job.jobDescription,
+                }
               : null
           }
         />

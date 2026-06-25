@@ -31,14 +31,20 @@ function RawQuestionBubble({
 
   const addCustom = () => {
     const t = custom.trim();
-    if (!t) return;
-    if (!selected.includes(t)) setSelected((prev) => [...prev, t]);
+    if (!t) {
+      return;
+    }
+    if (!selected.includes(t)) {
+      setSelected((prev) => [...prev, t]);
+    }
     setCustom("");
     setShowCustom(false);
   };
 
   const submit = () => {
-    if (selected.length === 0) return;
+    if (selected.length === 0) {
+      return;
+    }
     onPick(selected.join(", "));
   };
 
@@ -129,11 +135,17 @@ interface AssistantBubbleProps {
   streaming?: boolean;
 }
 
-function RawAssistantBubble({ content, editsApplied, streaming }: AssistantBubbleProps) {
+function RawAssistantBubble({
+  content,
+  editsApplied,
+  streaming,
+}: AssistantBubbleProps) {
   const isEmpty = streaming && !content;
   return (
     <div className="flex flex-col gap-2">
-      <span className={`whitespace-pre-wrap leading-relaxed${isEmpty ? " text-muted-foreground" : ""}`}>
+      <span
+        className={`whitespace-pre-wrap leading-relaxed${isEmpty ? "text-muted-foreground" : ""}`}
+      >
         {isEmpty ? "Analyzing…" : content}
         {streaming && (
           <span className="ml-0.5 inline-block h-[0.75em] w-[2px] translate-y-[1px] animate-pulse bg-current align-middle" />

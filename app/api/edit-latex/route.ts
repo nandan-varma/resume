@@ -61,7 +61,10 @@ export async function POST(req: Request) {
   }
 
   if (!rateLimit(`edit-latex:${session.user.id}`, 30, 60_000)) {
-    return Response.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
+    return Response.json(
+      { error: "Too many requests. Please wait a minute." },
+      { status: 429 }
+    );
   }
 
   let instruction: string;
@@ -140,12 +143,15 @@ CRITICAL RULES:
   }
 
   if (pageCount) {
-    const overflow =
-      pageCount === 1
-        ? "Fits on one page."
-        : pageCount === 2
-          ? "Currently spills onto a second page — prefer tightening existing content (shorter bullets, reduced vspace) over adding new content unless the user explicitly asks to expand."
-          : `${pageCount} pages — resume is long, lean toward cutting.`;
+    let overflow: string;
+    if (pageCount === 1) {
+      overflow = "Fits on one page.";
+    } else if (pageCount === 2) {
+      overflow =
+        "Currently spills onto a second page — prefer tightening existing content (shorter bullets, reduced vspace) over adding new content unless the user explicitly asks to expand.";
+    } else {
+      overflow = `${pageCount} pages — resume is long, lean toward cutting.`;
+    }
     systemParts.push(`\nCompiled page count: ${pageCount}. ${overflow}`);
   }
 

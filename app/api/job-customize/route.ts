@@ -52,7 +52,10 @@ export async function POST(req: Request) {
   }
 
   if (!rateLimit(`job-customize:${session.user.id}`, 30, 60_000)) {
-    return Response.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
+    return Response.json(
+      { error: "Too many requests. Please wait a minute." },
+      { status: 429 }
+    );
   }
 
   let latex: string;

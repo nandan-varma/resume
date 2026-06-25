@@ -35,7 +35,6 @@ interface AnalysisState {
   saved: boolean;
 }
 
-
 function AnalyzeButton({
   control,
   isPending,

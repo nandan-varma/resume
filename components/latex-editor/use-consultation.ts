@@ -107,7 +107,7 @@ export function useConsultation(
               content: `Consultation failed — retrying (${retryCountRef.current}/${MAX_RETRIES})…`,
             },
           ]);
-          fetchNextQuestion(answers);
+          await fetchNextQuestion(answers);
           return;
         }
         toast.error("Consultation failed — use chat to customize");

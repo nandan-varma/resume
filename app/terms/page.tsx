@@ -20,10 +20,7 @@ export default function TermsPage() {
         </Link>
       </header>
 
-      <main
-        className="mx-auto w-full max-w-2xl px-5 py-12"
-        id="main-content"
-      >
+      <main className="mx-auto w-full max-w-2xl px-5 py-12" id="main-content">
         <h1 className="font-bold text-3xl text-foreground tracking-tight">
           Terms of Service
         </h1>
@@ -85,7 +82,10 @@ export default function TermsPage() {
           <section>
             <h2 className="font-semibold text-base">6. Prohibited use</h2>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-muted-foreground">
-              <li>Do not use JobMatch to submit false or misleading information to employers.</li>
+              <li>
+                Do not use JobMatch to submit false or misleading information to
+                employers.
+              </li>
               <li>Do not scrape, reverse-engineer, or overload the service.</li>
               <li>Do not upload content you do not have the right to share.</li>
               <li>Do not resell or redistribute the service.</li>

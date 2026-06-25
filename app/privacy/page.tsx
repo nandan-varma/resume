@@ -20,10 +20,7 @@ export default function PrivacyPage() {
         </Link>
       </header>
 
-      <main
-        className="mx-auto w-full max-w-2xl px-5 py-12"
-        id="main-content"
-      >
+      <main className="mx-auto w-full max-w-2xl px-5 py-12" id="main-content">
         <h1 className="font-bold text-3xl text-foreground tracking-tight">
           Privacy Policy
         </h1>
@@ -62,7 +59,10 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-semibold text-base">2. How we use it</h2>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-muted-foreground">
-              <li>To operate the service — authenticate you, store your data, return results.</li>
+              <li>
+                To operate the service — authenticate you, store your data,
+                return results.
+              </li>
               <li>
                 To power AI features — your resume and job description text are
                 sent to third-party AI providers (Google Gemini, OpenAI) solely
@@ -86,12 +86,12 @@ export default function PrivacyPage() {
                 data.
               </li>
               <li>
-                <strong>Cloudflare R2</strong> — object storage for uploaded
-                PDF resumes.
+                <strong>Cloudflare R2</strong> — object storage for uploaded PDF
+                resumes.
               </li>
               <li>
-                <strong>Google Gemini / OpenAI / Mistral</strong> — AI
-                inference for resume analysis and editing.
+                <strong>Google Gemini / OpenAI / Mistral</strong> — AI inference
+                for resume analysis and editing.
               </li>
               <li>
                 <strong>Resend</strong> — transactional email delivery.
@@ -116,9 +116,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-semibold text-base">5. Security</h2>
             <p className="mt-3 text-muted-foreground">
-              All data is transmitted over HTTPS. Passwords are hashed and
-              never stored in plaintext. We restrict database access to
-              application credentials only.
+              All data is transmitted over HTTPS. Passwords are hashed and never
+              stored in plaintext. We restrict database access to application
+              credentials only.
             </p>
           </section>
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertCircle, Check, Copy, Lightbulb, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Copy,
+  Download,
+  Lightbulb,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 import type { AnalysisResult } from "@/app/api/analyze/route";
 import { CountUp } from "@/components/count-up";
@@ -15,8 +22,8 @@ interface AnalysisResultsProps {
 export function AnalysisResults({ result }: AnalysisResultsProps) {
   const [copied, setCopied] = useState(false);
 
-  const copyResults = async () => {
-    const text = [
+  function buildText() {
+    return [
       `Match Score: ${result.match_percentage}%`,
       "",
       `Summary: ${result.summary}`,
@@ -33,9 +40,11 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
         ? ["", `Additional Insights: ${result.additional_insights}`]
         : []),
     ].join("\n");
+  }
 
+  const copyResults = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(buildText());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -43,33 +52,33 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
     }
   };
 
-  const scoreColor = (s: number) => {
-    if (s >= 80) {
-      return "text-success";
-    }
-    if (s >= 60) {
-      return "text-warning";
-    }
-    return "text-destructive";
+  const downloadResults = () => {
+    const blob = new Blob([buildText()], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "resume-analysis.txt";
+    a.click();
+    URL.revokeObjectURL(url);
   };
-  const scoreBg = (s: number) => {
-    if (s >= 80) {
-      return "bg-success/8 border-success/20";
-    }
-    if (s >= 60) {
-      return "bg-warning/8 border-warning/20";
-    }
-    return "bg-destructive/8 border-destructive/20";
-  };
-  const scoreLabel = (s: number) => {
-    if (s >= 80) {
-      return "Strong match";
-    }
-    if (s >= 60) {
-      return "Partial match";
-    }
-    return "Weak match";
-  };
+
+  const pct = result.match_percentage;
+  let scoreColor: string;
+  let scoreBg: string;
+  let scoreLabel: string;
+  if (pct >= 80) {
+    scoreColor = "text-success";
+    scoreBg = "bg-success/8 border-success/20";
+    scoreLabel = "Strong match";
+  } else if (pct >= 60) {
+    scoreColor = "text-warning";
+    scoreBg = "bg-warning/8 border-warning/20";
+    scoreLabel = "Partial match";
+  } else {
+    scoreColor = "text-destructive";
+    scoreBg = "bg-destructive/8 border-destructive/20";
+    scoreLabel = "Weak match";
+  }
 
   return (
     <div className="space-y-5">
@@ -78,30 +87,34 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
         <h2 className="font-semibold text-foreground text-lg">
           Analysis Results
         </h2>
-        <Button onClick={copyResults} size="sm" variant="outline">
-          {copied ? (
-            <>
-              <Check className="mr-1.5 size-3.5" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="mr-1.5 size-3.5" />
-              Copy
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={downloadResults} size="sm" variant="outline">
+            <Download className="mr-1.5 size-3.5" />
+            Download
+          </Button>
+          <Button onClick={copyResults} size="sm" variant="outline">
+            {copied ? (
+              <>
+                <Check className="mr-1.5 size-3.5" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="mr-1.5 size-3.5" />
+                Copy
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Score card — centrepiece */}
-      <Card
-        className={`animate-enter-blur p-5 ${scoreBg(result.match_percentage)}`}
-      >
+      <Card className={`animate-enter-blur p-5 ${scoreBg}`}>
         <div className="flex items-center gap-6">
           {/* Animated ring + number */}
           <div className="relative shrink-0">
             <ScoreRing
-              colorClass={scoreColor(result.match_percentage)}
+              colorClass={scoreColor}
               score={result.match_percentage}
               size={84}
               strokeWidth={3}
@@ -109,12 +122,12 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
             {/* Number overlay — rotated back since the SVG itself is rotated -90° */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span
-                className={`font-bold text-lg tabular-nums leading-none ${scoreColor(result.match_percentage)}`}
+                className={`font-bold text-lg tabular-nums leading-none ${scoreColor}`}
               >
                 <CountUp duration={1200} to={result.match_percentage} />
               </span>
               <span
-                className={`mt-0.5 font-medium text-[10px] leading-none ${scoreColor(result.match_percentage)} opacity-70`}
+                className={`mt-0.5 font-medium text-[10px] leading-none ${scoreColor} opacity-70`}
               >
                 %
               </span>
@@ -124,9 +137,9 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
           {/* Summary text */}
           <div className="min-w-0 flex-1">
             <p
-              className={`mb-1 font-semibold text-xs uppercase tracking-widest ${scoreColor(result.match_percentage)} opacity-70`}
+              className={`mb-1 font-semibold text-xs uppercase tracking-widest ${scoreColor} opacity-70`}
             >
-              {scoreLabel(result.match_percentage)}
+              {scoreLabel}
             </p>
             <p className="text-foreground text-sm leading-relaxed">
               {result.summary}

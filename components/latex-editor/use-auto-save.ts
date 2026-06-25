@@ -10,7 +10,9 @@ export function useAutoSave(
   chatMessages: ChatMsg[],
   job: EditorJob | null
 ) {
-  const { mutateAsync, isPending: saving } = useSaveEditorState(job?.id ?? null);
+  const { mutateAsync, isPending: saving } = useSaveEditorState(
+    job?.id ?? null
+  );
 
   const [dirty, setDirty] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -23,7 +25,10 @@ export function useAutoSave(
 
   const handleSave = useCallback(async () => {
     try {
-      await mutateAsync({ latex: getLatex(), chatMessages: chatMessagesRef.current });
+      await mutateAsync({
+        latex: getLatex(),
+        chatMessages: chatMessagesRef.current,
+      });
       setDirty(false);
       setAutoSaving(false);
       toast.success(job ? "Job resume saved" : "LaTeX saved");
@@ -35,16 +40,30 @@ export function useAutoSave(
   const markDirty = useCallback(() => setDirty(true), []);
 
   useEffect(() => {
-    if (!dirty || saving || incognito) return;
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (!dirty || saving || incognito) {
+      return;
+    }
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     autoSaveTimerRef.current = setTimeout(() => {
       setAutoSaving(true);
       handleSave();
     }, 5000);
     return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
     };
   }, [dirty, saving, incognito, handleSave]);
 
-  return { saving, dirty, autoSaving, incognito, toggleIncognito, handleSave, markDirty };
+  return {
+    saving,
+    dirty,
+    autoSaving,
+    incognito,
+    toggleIncognito,
+    handleSave,
+    markDirty,
+  };
 }

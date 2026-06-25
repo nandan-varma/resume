@@ -1,13 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
+function requireEnv(name: string): string {
+  const val = process.env[name];
+  if (!val) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return val;
+}
+
 const r2Client = new S3Client({
   region: process.env.R2_REGION ?? "auto",
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
+    accessKeyId: requireEnv("R2_ACCESS_KEY_ID"),
+    secretAccessKey: requireEnv("R2_SECRET_ACCESS_KEY"),
   },
-  endpoint: process.env.R2_ENDPOINT ?? "",
+  endpoint: requireEnv("R2_ENDPOINT"),
 });
 
 function sanitizeFileName(name: string): string {

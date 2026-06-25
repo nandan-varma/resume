@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 
 const NetworkBackground = dynamic(
-  () => import("@/components/network-background").then((m) => m.NetworkBackground),
+  () =>
+    import("@/components/network-background").then((m) => m.NetworkBackground),
   { ssr: false }
 );
+
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { getQueryClient } from "./get-query-client";

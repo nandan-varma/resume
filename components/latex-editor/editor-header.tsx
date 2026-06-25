@@ -87,7 +87,7 @@ function EditorHeader({
           </span>
         )}
         {incognito && (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
             <EyeOff className="size-3" />
             <span className="hidden sm:inline">Saves paused</span>
           </span>
@@ -95,7 +95,9 @@ function EditorHeader({
         {!incognito && dirty && (
           <span className="inline-flex items-center gap-1 text-xs text-yellow-500 dark:text-yellow-400">
             {autoSaving && <Loader2 className="size-3 animate-spin" />}
-            <span className="hidden sm:inline">{autoSaving ? "Saving…" : "Unsaved changes"}</span>
+            <span className="hidden sm:inline">
+              {autoSaving ? "Saving…" : "Unsaved changes"}
+            </span>
           </span>
         )}
       </div>
@@ -161,14 +163,26 @@ function EditorHeader({
           </span>
         )}
         <button
-          className={`rounded p-1 transition-colors ${incognito ? "text-foreground bg-muted" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+          className={`rounded p-1 transition-colors ${incognito ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
           onClick={onToggleIncognito}
-          title={incognito ? "Resume saving (incognito off)" : "Pause saving (incognito)"}
+          title={
+            incognito
+              ? "Resume saving (incognito off)"
+              : "Pause saving (incognito)"
+          }
           type="button"
         >
-          {incognito ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+          {incognito ? (
+            <EyeOff className="size-3.5" />
+          ) : (
+            <Eye className="size-3.5" />
+          )}
         </button>
-        <Button disabled={saving || !dirty || incognito} onClick={onSave} size="sm">
+        <Button
+          disabled={saving || !dirty || incognito}
+          onClick={onSave}
+          size="sm"
+        >
           {saving ? (
             <Loader2 className="size-3.5 animate-spin sm:mr-1.5" />
           ) : (

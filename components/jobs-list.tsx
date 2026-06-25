@@ -9,6 +9,7 @@ import {
   FileText,
   Loader2,
   Plus,
+  RefreshCw,
   Target,
   Trash2,
   X,
@@ -45,9 +46,11 @@ import {
   useCreateJob,
   useDeleteJob,
   useJobs,
+  useReanalyzeJob,
   useUpdateJobStatus,
 } from "@/lib/queries/jobs";
 import { STATUS_CONFIG } from "@/lib/status";
+import { useModelId } from "@/lib/use-model-id";
 
 const addJobSchema = z.object({
   jobTitle: z.string().min(1, "Required"),
@@ -174,10 +177,22 @@ export function JobsList() {
   );
 }
 
+function matchColor(pct: number) {
+  if (pct >= 80) {
+    return "text-success";
+  }
+  if (pct >= 60) {
+    return "text-warning";
+  }
+  return "text-destructive";
+}
+
 function WrappedJobsList() {
   const { data: jobs } = useJobs();
   const deleteJob = useDeleteJob();
   const updateStatus = useUpdateJobStatus();
+  const reanalyze = useReanalyzeJob();
+  const [modelId] = useModelId();
   const [filterStatus, setFilterStatus] = useState<JobStatus | null>(null);
 
   const statusCounts = Object.fromEntries(
@@ -189,10 +204,30 @@ function WrappedJobsList() {
     : jobs;
 
   const stats = [
-    { label: "Applications", value: jobs.length, Icon: Briefcase, color: "text-primary" },
-    { label: "Interviews", value: statusCounts.interview ?? 0, Icon: BarChart3, color: "text-info" },
-    { label: "Offers", value: statusCounts.offer ?? 0, Icon: Target, color: "text-success" },
-    { label: "Accepted", value: statusCounts.accepted ?? 0, Icon: CheckCircle2, color: "text-success" },
+    {
+      label: "Applications",
+      value: jobs.length,
+      Icon: Briefcase,
+      color: "text-primary",
+    },
+    {
+      label: "Interviews",
+      value: statusCounts.interview ?? 0,
+      Icon: BarChart3,
+      color: "text-info",
+    },
+    {
+      label: "Offers",
+      value: statusCounts.offer ?? 0,
+      Icon: Target,
+      color: "text-success",
+    },
+    {
+      label: "Accepted",
+      value: statusCounts.accepted ?? 0,
+      Icon: CheckCircle2,
+      color: "text-success",
+    },
   ] as const;
 
   return (
@@ -201,8 +236,13 @@ function WrappedJobsList() {
         {stats.map(({ label, value, Icon, color }) => (
           <Card className="p-4" key={label}>
             <div className="flex items-center justify-between">
-              <p className="truncate text-muted-foreground text-xs uppercase tracking-wide">{label}</p>
-              <Icon aria-hidden="true" className={`size-4 ${color} opacity-70`} />
+              <p className="truncate text-muted-foreground text-xs uppercase tracking-wide">
+                {label}
+              </p>
+              <Icon
+                aria-hidden="true"
+                className={`size-4 ${color} opacity-70`}
+              />
             </div>
             <p className="mt-1.5 font-bold text-2xl tabular-nums">
               <CountUp to={value} />
@@ -312,9 +352,18 @@ function WrappedJobsList() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="min-w-0 font-semibold text-foreground leading-snug">
-                          {job.jobTitle}
-                        </h3>
+                        <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                          <h3 className="min-w-0 font-semibold text-foreground leading-snug">
+                            {job.jobTitle}
+                          </h3>
+                          {job.matchPercentage !== null && (
+                            <span
+                              className={`shrink-0 font-semibold text-xs tabular-nums ${matchColor(job.matchPercentage)}`}
+                            >
+                              {job.matchPercentage}%
+                            </span>
+                          )}
+                        </div>
                         <Button
                           aria-label={`Delete ${job.jobTitle}`}
                           className="-mt-1 -mr-1 shrink-0 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive"
@@ -387,12 +436,31 @@ function WrappedJobsList() {
                       </SelectContent>
                     </Select>
 
-                    <Button asChild size="sm">
-                      <Link href={`/editor?jobId=${job.id}`}>
-                        <FileText className="size-3.5" />
-                        <span className="hidden sm:inline">Edit resume</span>
-                      </Link>
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        aria-label="Re-analyze match score"
+                        disabled={reanalyze.isPending}
+                        onClick={() =>
+                          reanalyze.mutate({
+                            jobId: job.id,
+                            jobDescription: job.jobDescription,
+                            modelId,
+                          })
+                        }
+                        size="sm"
+                        variant="ghost"
+                      >
+                        <RefreshCw
+                          className={`size-3.5 ${reanalyze.isPending && reanalyze.variables?.jobId === job.id ? "animate-spin" : ""}`}
+                        />
+                      </Button>
+                      <Button asChild size="sm">
+                        <Link href={`/editor?jobId=${job.id}`}>
+                          <FileText className="size-3.5" />
+                          <span className="hidden sm:inline">Edit resume</span>
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>

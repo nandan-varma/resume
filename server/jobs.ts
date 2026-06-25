@@ -18,7 +18,6 @@ const updateJobStatusSchema = z.object({
   status: z.enum(jobStatus),
 });
 
-
 export const createJob = async (
   jobTitle: string,
   jobDescription: string,
@@ -69,11 +68,16 @@ export const getJobs = async () => {
     if (!session?.user.id) {
       return [];
     }
-    return await db.query.jobs.findMany({
+    const rows = await db.query.jobs.findMany({
       where: eq(jobs.userId, session.user.id),
       orderBy: [desc(jobs.createdAt)],
       limit: 200, // ponytail: 200 cap; add cursor pagination when users hit this
+      with: { analysis: true },
     });
+    return rows.map((j) => ({
+      ...j,
+      matchPercentage: j.analysis[0]?.matchPercentage ?? null,
+    }));
   } catch {
     return [];
   }
@@ -114,7 +118,9 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
 
 export const getJobById = async (jobId: number) => {
   try {
-    if (!Number.isInteger(jobId) || jobId < 1) return null;
+    if (!Number.isInteger(jobId) || jobId < 1) {
+      return null;
+    }
 
     const session = await getSession();
     if (!session?.user.id) {

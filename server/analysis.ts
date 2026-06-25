@@ -93,7 +93,9 @@ export const getAnalysisByJobId = async (jobId: number) => {
       ),
     });
 
-    if (!result) return null;
+    if (!result) {
+      return null;
+    }
 
     return result;
   } catch {

@@ -64,7 +64,9 @@ const resumeCache = new Map<string, { b64: string; exp: number }>();
 
 async function fetchResumeBase64(userId: string): Promise<string> {
   const hit = resumeCache.get(userId);
-  if (hit && hit.exp > Date.now()) return hit.b64;
+  if (hit && hit.exp > Date.now()) {
+    return hit.b64;
+  }
 
   const info = await db.query.personalInformation.findFirst({
     where: eq(personalInformation.userId, userId),
@@ -95,7 +97,10 @@ export async function POST(req: Request) {
   }
 
   if (!rateLimit(`analyze:${session.user.id}`, 10, 60_000)) {
-    return Response.json({ error: "Too many requests. Please wait a minute." }, { status: 429 });
+    return Response.json(
+      { error: "Too many requests. Please wait a minute." },
+      { status: 429 }
+    );
   }
 
   let body: unknown;

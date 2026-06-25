@@ -1,134 +1,296 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<style>
-  /* Design tokens — app dark theme (app/globals.css .dark, oklch → hex) */
-  :root {
-    --bg:    #0a0a0a;              /* oklch(0.09 0 0) */
-    --bg2:   #1c1c1c;              /* oklch(0.18 0 0) */
-    --fg:    #f5f5f5;              /* oklch(0.97 0 0) */
-    --fg2:   #a3a3a3;              /* oklch(0.6 0 0)  */
-    --bd:    rgba(255,255,255,.1); /* oklch(1 0 0 / 10%) */
-    --ac:    #6366f1;              /* indigo-500 */
-    --ac-fg: #ffffff;
-    --ok:    #4ade80;              /* oklch(0.68 0.16 150) */
-    --r:     0px;                  /* app --radius */
-  }
+  <head>
+    <meta charset="utf-8">
+    <style>
+    /* Design tokens — app dark theme (app/globals.css .dark, oklch → hex) */
+    :root {
+      --bg: #0a0a0a; /* oklch(0.09 0 0) */
+      --bg2: #1c1c1c; /* oklch(0.18 0 0) */
+      --fg: #f5f5f5; /* oklch(0.97 0 0) */
+      --fg2: #a3a3a3; /* oklch(0.6 0 0)  */
+      --bd: rgba(255, 255, 255, 0.1); /* oklch(1 0 0 / 10%) */
+      --ac: #6366f1; /* indigo-500 */
+      --ac-fg: #ffffff;
+      --ok: #4ade80; /* oklch(0.68 0.16 150) */
+      --r: 0px; /* app --radius */
+    }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    width: 260px;
-    font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg);
-    color: var(--fg);
-    font-size: 13px;
-  }
+    * {
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
+    body {
+      width: 260px;
+      font-family:
+        -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: var(--fg);
+      background: var(--bg);
+    }
 
-  .section { padding: 12px 16px; border-bottom: 1px solid var(--bd); }
-  .section:last-child { border-bottom: none; }
+    .section {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--bd);
+    }
+    .section:last-child {
+      border-bottom: none;
+    }
 
-  /* Header */
-  .logo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+    /* Header */
+    .logo {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
 
-  /* Auth */
-  .user-row { display: flex; align-items: center; gap: 10px; }
-  .avatar {
-    width: 30px; height: 30px; border-radius: var(--r);
-    background: var(--ac); color: var(--ac-fg);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; flex-shrink: 0;
-  }
-  .user-name  { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .user-email { font-size: 11px; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .status-row { display: flex; align-items: center; gap: 6px; color: var(--fg2); font-size: 12px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .dot.on { background: var(--ok); } .dot.off { background: var(--fg2); }
+    /* Auth */
+    .user-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .avatar {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ac-fg);
+      background: var(--ac);
+      border-radius: var(--r);
+    }
+    .user-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .user-email {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 11px;
+      color: var(--fg2);
+      white-space: nowrap;
+    }
+    .status-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--fg2);
+    }
+    .dot {
+      flex-shrink: 0;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .dot.on {
+      background: var(--ok);
+    }
+    .dot.off {
+      background: var(--fg2);
+    }
 
-  /* Settings */
-  .slabel { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--fg2); margin-bottom: 8px; }
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .toggle-row:last-of-type { margin-bottom: 0; }
-  .tname { font-size: 12px; color: var(--fg); }
-  .tdesc { font-size: 11px; color: var(--fg2); margin-top: 2px; }
-  .toggle { position: relative; width: 34px; height: 20px; flex-shrink: 0; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; inset: 0; background: var(--bg2); border: 1px solid var(--bd); border-radius: 10px; cursor: pointer; transition: background .15s; }
-  .slider:before { content: ""; position: absolute; height: 14px; width: 14px; left: 2px; top: 2px; background: var(--fg2); border-radius: 50%; transition: transform .15s, background .15s; }
-  input:checked + .slider { background: var(--ac); border-color: var(--ac); }
-  input:checked + .slider:before { transform: translateX(14px); background: #fff; }
-  select {
-    width: 100%; background: var(--bg2); color: var(--fg);
-    border: 1px solid var(--bd); border-radius: var(--r);
-    padding: 6px 8px; font-size: 12px; margin-top: 4px;
-  }
+    /* Settings */
+    .slabel {
+      margin-bottom: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--fg2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .toggle-row:last-of-type {
+      margin-bottom: 0;
+    }
+    .tname {
+      font-size: 12px;
+      color: var(--fg);
+    }
+    .tdesc {
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--fg2);
+    }
+    .toggle {
+      position: relative;
+      flex-shrink: 0;
+      width: 34px;
+      height: 20px;
+    }
+    .toggle input {
+      width: 0;
+      height: 0;
+      opacity: 0;
+    }
+    .slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background: var(--bg2);
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      transition: background 0.15s;
+    }
+    .slider:before {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      content: "";
+      background: var(--fg2);
+      border-radius: 50%;
+      transition:
+        transform 0.15s,
+        background 0.15s;
+    }
+    input:checked + .slider {
+      background: var(--ac);
+      border-color: var(--ac);
+    }
+    input:checked + .slider:before {
+      background: #fff;
+      transform: translateX(14px);
+    }
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--fg);
+      background: var(--bg2);
+      border: 1px solid var(--bd);
+      border-radius: var(--r);
+    }
 
-  /* Buttons */
-  .actions { display: flex; flex-direction: column; gap: 6px; }
-  .btn {
-    display: block; text-align: center; padding: 8px 12px;
-    border-radius: var(--r); font-size: 12px; font-weight: 600;
-    text-decoration: none; border: none; cursor: pointer; width: 100%;
-  }
-  .btn-p { background: var(--ac); color: var(--ac-fg); }
-  .btn-o { background: transparent; color: var(--fg2); border: 1px solid var(--bd); }
+    /* Buttons */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      border-radius: var(--r);
+    }
+    .btn-p {
+      color: var(--ac-fg);
+      background: var(--ac);
+    }
+    .btn-o {
+      color: var(--fg2);
+      background: transparent;
+      border: 1px solid var(--bd);
+    }
 
-  .hidden { display: none; }
-</style>
-</head>
-<body>
-  <div class="section">
-    <div class="logo"><span style="font-size:20px;">🎯</span> JobMatch</div>
-  </div>
+    .hidden {
+      display: none;
+    }
+    </style>
+  </head>
+  <body>
+    <div class="section">
+      <div class="logo"><span style="font-size:20px;">🎯</span> JobMatch</div>
+    </div>
 
-  <div class="section" id="auth-section">
-    <div id="auth-loading" class="status-row"><div class="dot off"></div> Loading…</div>
-    <div id="auth-user" class="user-row hidden">
-      <div class="avatar" id="avatar">?</div>
-      <div style="min-width:0;">
-        <div class="user-name" id="user-name">—</div>
-        <div class="user-email" id="user-email">—</div>
+    <div class="section" id="auth-section">
+      <div id="auth-loading" class="status-row">
+        <div class="dot off"></div>
+        Loading…
+      </div>
+      <div id="auth-user" class="user-row hidden">
+        <div class="avatar" id="avatar">?</div>
+        <div style="min-width:0;">
+          <div class="user-name" id="user-name">—</div>
+          <div class="user-email" id="user-email">—</div>
+        </div>
+      </div>
+      <div id="auth-anon" class="status-row hidden">
+        <div class="dot off"></div>
+        Not logged in
       </div>
     </div>
-    <div id="auth-anon" class="status-row hidden"><div class="dot off"></div> Not logged in</div>
-  </div>
 
-  <div class="section hidden" id="settings-section">
-    <div class="slabel">Settings</div>
-    <div class="toggle-row">
-      <div><div class="tname">Auto-analyze</div><div class="tdesc">Run on every LinkedIn job</div></div>
-      <label class="toggle"><input type="checkbox" id="autoAnalyze"><span class="slider"></span></label>
+    <div class="section hidden" id="settings-section">
+      <div class="slabel">Settings</div>
+      <div class="toggle-row">
+        <div>
+          <div class="tname">Auto-analyze</div>
+          <div class="tdesc">Run on every LinkedIn job</div>
+        </div>
+        <label class="toggle"
+          ><input type="checkbox" id="autoAnalyze">
+          <span class="slider"></span></label
+        >
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="tname">Auto-save job</div>
+          <div class="tdesc">Save + cache analysis instantly</div>
+        </div>
+        <label class="toggle"
+          ><input type="checkbox" id="autoSave">
+          <span class="slider"></span></label
+        >
+      </div>
+      <div>
+        <div class="tname" style="margin-bottom:2px;">AI Model</div>
+        <select id="modelId">
+          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+          <option value="gemini-2.5-flash-lite-preview-09-2025">
+            Gemini 2.5 Flash Lite Preview (09-2025)
+          </option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-2.5-flash-preview-09-2025">
+            Gemini 2.5 Flash Preview (09-2025)
+          </option>
+          <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+          <option value="gpt-5">GPT-5</option>
+          <option value="gpt-5.2-codex">GPT 5.2 Codex</option>
+          <option value="mistral-small-latest">Mistral Small</option>
+          <option value="mistral-medium-latest">Mistral Medium</option>
+          <option value="mistral-large-latest">Mistral Large</option>
+        </select>
+      </div>
     </div>
-    <div class="toggle-row">
-      <div><div class="tname">Auto-save job</div><div class="tdesc">Save + cache analysis instantly</div></div>
-      <label class="toggle"><input type="checkbox" id="autoSave"><span class="slider"></span></label>
-    </div>
-    <div>
-      <div class="tname" style="margin-bottom:2px;">AI Model</div>
-      <select id="modelId">
-        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-        <option value="gemini-2.5-flash-lite-preview-09-2025">Gemini 2.5 Flash Lite Preview (09-2025)</option>
-        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-        <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash Preview (09-2025)</option>
-        <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-        <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
-        <option value="gpt-5">GPT-5</option>
-        <option value="gpt-5.2-codex">GPT 5.2 Codex</option>
-        <option value="mistral-small-latest">Mistral Small</option>
-        <option value="mistral-medium-latest">Mistral Medium</option>
-        <option value="mistral-large-latest">Mistral Large</option>
-      </select>
-    </div>
-  </div>
 
-  <div class="section">
-    <div class="actions">
-      <a id="jobs-btn" class="btn btn-p hidden" href="#" target="_blank">Open Jobs</a>
-      <a id="login-btn"    class="btn btn-p hidden" href="#" target="_blank">Log In →</a>
-      <button id="signout-btn" class="btn btn-o hidden">Sign Out</button>
+    <div class="section">
+      <div class="actions">
+        <a id="jobs-btn" class="btn btn-p hidden" href="#" target="_blank"
+          >Open Jobs</a
+        >
+        <a id="login-btn" class="btn btn-p hidden" href="#" target="_blank"
+          >Log In →</a
+        >
+        <button id="signout-btn" class="btn btn-o hidden">Sign Out</button>
+      </div>
     </div>
-  </div>
 
-  <script src="popup.js"></script>
-</body>
+    <script src="popup.js"></script>
+  </body>
 </html>

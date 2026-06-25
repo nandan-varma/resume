@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import type React from "react";
+import { useEffect, useRef } from "react";
 import type { ChatMsg, EditorJob, EnginePhase } from "./types";
 import { buildHistory } from "./types";
 
@@ -51,7 +51,9 @@ export function useAutoFix({
 
     if (!wasAI || engine.phase !== "error" || !compileLog) {
       // Reset counter on any successful compile so future AI edits get fresh attempts.
-      if (engine.phase === "ready") autoFixCountRef.current = 0;
+      if (engine.phase === "ready") {
+        autoFixCountRef.current = 0;
+      }
       return;
     }
 
@@ -84,9 +86,15 @@ export function useAutoFix({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only run when chatLoading changes
   useEffect(() => {
-    if (chatLoadingRef.current || !pendingAutoFixRef.current) return;
+    if (chatLoadingRef.current || !pendingAutoFixRef.current) {
+      return;
+    }
     pendingAutoFixRef.current = false;
-    if (engine.phase === "error" && compileLog && autoFixCountRef.current < MAX_AUTO_FIX) {
+    if (
+      engine.phase === "error" &&
+      compileLog &&
+      autoFixCountRef.current < MAX_AUTO_FIX
+    ) {
       autoFixCountRef.current += 1;
       executeAIEdit(
         `The LaTeX has compilation errors. Fix them.\n\nError log:\n${compileLog.slice(0, 2000)}`,

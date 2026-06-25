@@ -21,14 +21,25 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success)
-    return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  if (!parsed.success) {
+    return Response.json(
+      { error: parsed.error.issues[0].message },
+      { status: 400 }
+    );
+  }
 
-  const { jobTitle, jobDescription, link, analysis: analysisData } = parsed.data;
+  const {
+    jobTitle,
+    jobDescription,
+    link,
+    analysis: analysisData,
+  } = parsed.data;
   const userId = session.user.id;
 
   const job = await db.transaction(async (tx) => {
@@ -49,7 +60,9 @@ export async function POST(req: Request) {
         additionalInsights: analysisData.additional_insights ?? null,
       });
       // Placeholder row so the first autosave can upsert instead of insert
-      await tx.insert(jobResumes).values({ jobId: job.id, userId, resumeLatex: "" });
+      await tx
+        .insert(jobResumes)
+        .values({ jobId: job.id, userId, resumeLatex: "" });
     }
 
     return job;

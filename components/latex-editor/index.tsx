@@ -1,8 +1,8 @@
 "use client";
 
+import { ErrorBoundary } from "@/lib/error-boundary";
 import EditorHeader from "./editor-header";
 import EditorPane from "./editor-pane";
-import { ErrorBoundary } from "@/lib/error-boundary";
 import PdfPreview from "./pdf-preview";
 import { ResizablePanel } from "./resizable-panel";
 import type { EditorJob } from "./types";

@@ -1,8 +1,8 @@
 "use client";
 
 import { parsePartialJson } from "ai";
-import { useCallback, useRef, useState } from "react";
 import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ModelId } from "@/lib/models";
 import type { ChatMsg, EditorJob } from "./types";
@@ -18,10 +18,6 @@ function userMsg(content: string): ChatMsg {
   return { id: createMsgId(), role: "user", content };
 }
 
-function assistantMsg(content: string, editsApplied?: number): ChatMsg {
-  return { id: createMsgId(), role: "assistant", content, editsApplied };
-}
-
 // ponytail: collapse consecutive blank lines, track original indices for splice-back
 function collapseBlankLines(lines: string[]): { out: string[]; idx: number[] } {
   const out: string[] = [];
@@ -29,7 +25,9 @@ function collapseBlankLines(lines: string[]): { out: string[]; idx: number[] } {
   let prevBlank = false;
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
-    if (t === "" && prevBlank) continue;
+    if (t === "" && prevBlank) {
+      continue;
+    }
     out.push(t);
     idx.push(i);
     prevBlank = t === "";
@@ -60,7 +58,12 @@ function applyEdits(
     const findTrimmed = findLines.map((l) => l.trim()).join("\n");
     let matched = false;
     for (let i = 0; i <= srcLines.length - findLines.length; i++) {
-      if (srcLines.slice(i, i + findLines.length).map((l) => l.trim()).join("\n") === findTrimmed) {
+      if (
+        srcLines
+          .slice(i, i + findLines.length)
+          .map((l) => l.trim())
+          .join("\n") === findTrimmed
+      ) {
         srcLines.splice(i, findLines.length, ...replace.split("\n"));
         next = srcLines.join("\n");
         applied++;
@@ -68,7 +71,9 @@ function applyEdits(
         break;
       }
     }
-    if (matched) continue;
+    if (matched) {
+      continue;
+    }
 
     // Pass 3: trim + collapse consecutive blank lines (handles models that normalize blank line counts)
     const { out: fNorm } = collapseBlankLines(findLines);
@@ -78,7 +83,11 @@ function applyEdits(
       if (sNorm.slice(i, i + fNorm.length).join("\n") === fJoined) {
         const origStart = sIdx[i];
         const origEnd = sIdx[i + fNorm.length - 1];
-        srcLines.splice(origStart, origEnd - origStart + 1, ...replace.split("\n"));
+        srcLines.splice(
+          origStart,
+          origEnd - origStart + 1,
+          ...replace.split("\n")
+        );
         next = srcLines.join("\n");
         applied++;
         break;
@@ -98,7 +107,6 @@ export function useAiChat(
   setChatMessages: (
     updater: ChatMsg[] | ((prev: ChatMsg[]) => ChatMsg[])
   ) => void,
-  chatLoading: boolean,
   chatLoadingRef: React.MutableRefObject<boolean>,
   setChatLoading: (v: boolean) => void
 ) {
@@ -106,6 +114,15 @@ export function useAiChat(
 
   const undoStackRef = useRef<string[]>([]);
   const redoStackRef = useRef<string[]>([]);
+  const abortCtrlRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight stream when the component unmounts
+  useEffect(
+    () => () => {
+      abortCtrlRef.current?.abort();
+    },
+    []
+  );
 
   const pushUndo = useCallback(() => {
     const current = getLatex();
@@ -149,16 +166,25 @@ export function useAiChat(
       history: { role: "user" | "assistant"; content: string }[],
       noticeMsg?: string,
       jobDescription?: string
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: streaming parse loop
     ) => {
       if (noticeMsg) {
         setChatMessages((prev) => [...prev, notice(noticeMsg)]);
       }
+      abortCtrlRef.current?.abort();
+      const ctrl = new AbortController();
+      abortCtrlRef.current = ctrl;
       setChatLoading(true);
 
       const streamMsgId = createMsgId();
       setChatMessages((prev) => [
         ...prev,
-        { id: streamMsgId, role: "assistant" as const, content: "", streaming: true },
+        {
+          id: streamMsgId,
+          role: "assistant" as const,
+          content: "",
+          streaming: true,
+        },
       ]);
 
       try {
@@ -171,24 +197,32 @@ export function useAiChat(
             modelId,
             history,
             ...(jobDescription ? { jobDescription } : {}),
-            ...(pageCount !== null ? { pageCount } : {}),
+            ...(pageCount === null ? {} : { pageCount }),
           }),
+          signal: ctrl.signal,
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error ?? "Request failed");
         }
+        if (!res.body) {
+          throw new Error("Streaming not supported");
+        }
 
-        const reader = res.body!.getReader();
+        const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let text = "";
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
           text += decoder.decode(value, { stream: true });
 
           const { value: partial } = await parsePartialJson(text);
-          const partialExplanation = (partial as Record<string, unknown> | undefined)?.explanation;
+          const partialExplanation = (
+            partial as Record<string, unknown> | undefined
+          )?.explanation;
           if (typeof partialExplanation === "string") {
             setChatMessages((prev) =>
               prev.map((m) =>
@@ -216,18 +250,34 @@ export function useAiChat(
         setChatMessages((prev) =>
           prev.map((m) =>
             m.id === streamMsgId
-              ? { ...m, content: explanation, streaming: false, editsApplied: applied || undefined }
+              ? {
+                  ...m,
+                  content: explanation,
+                  streaming: false,
+                  editsApplied: applied || undefined,
+                }
               : m
           )
         );
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         setChatMessages((prev) => prev.filter((m) => m.id !== streamMsgId));
         toast.error(err instanceof Error ? err.message : "AI request failed");
       } finally {
         setChatLoading(false);
       }
     },
-    [modelId, getLatex, setLatex, pushUndo, setChatMessages, setChatLoading, pageCount]
+    [
+      modelId,
+      getLatex,
+      setLatex,
+      pushUndo,
+      setChatMessages,
+      setChatLoading,
+      pageCount,
+    ]
   );
 
   const handleChatSend = useCallback(async () => {

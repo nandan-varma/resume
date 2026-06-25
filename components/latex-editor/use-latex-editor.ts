@@ -33,7 +33,9 @@ export function useLatexEditor(
   }, []);
 
   const [zoom, setZoom] = useState(100);
-  const [activeTab, setActiveTab] = useState<"editor" | "chat" | "preview">("chat");
+  const [activeTab, setActiveTab] = useState<"editor" | "chat" | "preview">(
+    "chat"
+  );
 
   const [modelId] = useModelId();
 
@@ -47,14 +49,25 @@ export function useLatexEditor(
     _setChatLoading(v);
   }, []);
 
-  const { engine, pageCount, pdfUrl, compileLog, showLog, setShowLog, compile } =
-    useEngine();
+  const {
+    engine,
+    pageCount,
+    pdfUrl,
+    compileLog,
+    showLog,
+    setShowLog,
+    compile,
+  } = useEngine();
 
-  const { saving, dirty, autoSaving, incognito, toggleIncognito, handleSave, markDirty } = useAutoSave(
-    getLatex,
-    chatMessages,
-    job
-  );
+  const {
+    saving,
+    dirty,
+    autoSaving,
+    incognito,
+    toggleIncognito,
+    handleSave,
+    markDirty,
+  } = useAutoSave(getLatex, chatMessages, job);
 
   const clearChat = useCallback(() => {
     setChatMessages([]);
@@ -79,7 +92,6 @@ export function useLatexEditor(
       pageCount,
       chatMessages,
       setChatMessages,
-      chatLoading,
       chatLoadingRef,
       setChatLoading
     );
