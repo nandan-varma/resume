@@ -87,6 +87,12 @@ export const models = [
     modelId: "gpt-5.2-codex",
   },
   {
+    id: "gpt-5.6-luna",
+    name: "GPT 5.6 Luna",
+    provider: "openai",
+    modelId: "gpt-5.6-luna",
+  },
+  {
     id: "mistral-small-latest",
     name: "Mistral Small",
     provider: "mistral",
@@ -126,7 +132,7 @@ export function getModelInstanceById(id: ModelId) {
   return openai(model.modelId as OpenAIChatModelId);
 }
 
-export const DEFAULT_MODEL_ID: ModelId = "gemini-3-flash-preview";
+export const DEFAULT_MODEL_ID: ModelId = "gpt-5.6-luna";
 export const MODEL_STORAGE_KEY = "job-match-ai-model";
 
 export function resolveModel(id: string) {
