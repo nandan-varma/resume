@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PROTECTED = ["/jobs", "/settings", "/editor"];
+const PROTECTED = ["/jobs", "/settings", "/editor", "/analyze"];
 const AUTH_ONLY = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
@@ -34,6 +34,7 @@ export const config = {
     "/jobs/:path*",
     "/settings/:path*",
     "/editor/:path*",
+    "/analyze/:path*",
     "/login",
     "/signup",
     "/forgot-password",

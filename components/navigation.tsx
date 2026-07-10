@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, FileText, Menu, Settings, X } from "lucide-react";
+import { Briefcase, FileText, Menu, Search, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -9,7 +9,7 @@ import { ModeSwitcher } from "@/components/mode-switcher";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
-export type Tab = "jobs" | "editor" | "settings";
+export type Tab = "jobs" | "analyze" | "editor" | "settings";
 
 interface NavigationProps {
   user: { name: string; email: string } | null;
@@ -25,6 +25,7 @@ const tabs: {
   }>;
 }[] = [
   { id: "jobs", label: "Jobs", to: "/jobs", Icon: Briefcase },
+  { id: "analyze", label: "Analyze", to: "/analyze", Icon: Search },
   { id: "editor", label: "Editor", to: "/editor", Icon: FileText },
   { id: "settings", label: "Settings", to: "/settings", Icon: Settings },
 ];

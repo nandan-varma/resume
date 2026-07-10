@@ -160,8 +160,8 @@ export function JobAnalyzer() {
       <div
         className={
           result
-            ? "grid gap-5 xl:grid-cols-[2fr_3fr] xl:items-start xl:gap-8"
-            : "mx-auto max-w-3xl"
+            ? "grid gap-5 lg:grid-cols-[2fr_3fr] lg:items-start lg:gap-8"
+            : "mx-auto max-w-2xl"
         }
       >
         <Card className="space-y-4 p-5 sm:p-6">
@@ -174,7 +174,7 @@ export function JobAnalyzer() {
                 </span>
               </Label>
               <Textarea
-                className={`resize-y transition-all duration-300 ${result ? "min-h-[100px]" : "min-h-[200px]"}`}
+                className={`resize-y transition-all duration-300 ${result ? "min-h-[120px]" : "min-h-[240px]"}`}
                 id="jobDescription"
                 placeholder="Paste the full job description here…"
                 {...form.register("jobDescription")}

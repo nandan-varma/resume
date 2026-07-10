@@ -1,9 +1,11 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
-import { AnalyzeDialog } from "@/components/analyze-dialog";
 import { JobsList } from "@/components/jobs-list";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { jobsQueryKey } from "@/lib/queries/jobs";
 import { personalInfoQueryKey } from "@/lib/queries/resume";
@@ -58,7 +60,12 @@ export default function JobsPage() {
                 Track applications and analyze job fits
               </p>
             </div>
-            <AnalyzeDialog />
+            <Button asChild size="sm" variant="outline">
+              <Link href="/analyze">
+                <Sparkles className="mr-2 size-4" />
+                Analyze Job
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

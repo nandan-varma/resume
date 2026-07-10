@@ -18,7 +18,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { AnalyzeDialog } from "@/components/analyze-dialog";
 import { CountUp } from "@/components/count-up";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -304,16 +303,12 @@ function WrappedJobsList() {
           </h3>
           <p className="mb-5 text-muted-foreground text-sm">
             Track your first application or{" "}
-            <AnalyzeDialog
-              trigger={
-                <button
-                  className="text-primary underline underline-offset-3 hover:no-underline"
-                  type="button"
-                >
-                  analyze a job
-                </button>
-              }
-            />{" "}
+            <Link
+              className="text-primary underline underline-offset-3 hover:no-underline"
+              href="/analyze"
+            >
+              analyze a job
+            </Link>{" "}
             to get started.
           </p>
         </Card>
