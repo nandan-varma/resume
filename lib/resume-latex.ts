@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
+import { logVendorTiming } from "@/lib/dev-log";
 import { getModelInstanceById } from "@/lib/models";
 
 const MARKDOWN_FENCE_START = /^```(?:latex)?\s*/i;
@@ -46,6 +47,10 @@ export async function generateLatexFromPdf(
   try {
     const base64 = pdfBuffer.toString("base64");
 
+    console.log(
+      "[resume-latex] using gemini-2.5-flash (fixed, not user-selected)"
+    );
+    const startedAt = performance.now();
     const { text } = await generateText({
       model: getModelInstanceById("gemini-2.5-flash"),
       messages: [
@@ -63,6 +68,7 @@ export async function generateLatexFromPdf(
         },
       ],
     });
+    logVendorTiming("[resume-latex] gemini-2.5-flash", startedAt);
 
     // Strip any accidental markdown fences the model might add
     const latex = text

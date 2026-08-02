@@ -1,6 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { logApiError, logVendorTiming } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -91,6 +92,7 @@ export async function POST(req: Request) {
   const truncatedJobDesc = jobDescription.slice(0, MAX_JOB_DESC_CHARS);
 
   try {
+    const startedAt = performance.now();
     const { output } = await generateText({
       model: resolveModel(modelId),
       output: Output.object({
@@ -110,6 +112,7 @@ Rules:
 - Ask at most one question per turn.`,
       prompt: `Resume:\n\`\`\`latex\n${truncatedLatex}\`\`\`\n\nJob Description:\n${truncatedJobDesc}${answersSection}\n\nDo you need one concrete fact to write an accurate, ATS-optimized edit? If yes, ask it. If no, proceed.`,
     });
+    logVendorTiming(`[job-customize] ${modelId}`, startedAt);
 
     return Response.json(output);
   } catch (err) {
@@ -121,7 +124,7 @@ Rules:
       (err as { statusCode?: number }).statusCode === 429;
 
     if (isQuota) {
-      console.error("[job-customize] rate limit:", err);
+      logApiError("[job-customize] rate limit:", err);
       return Response.json(
         {
           error:
@@ -132,7 +135,7 @@ Rules:
       );
     }
 
-    console.error("[job-customize]", err);
+    logApiError("[job-customize]", err);
     const errorMessage =
       err instanceof Error ? err.message : "Consultation failed";
     return Response.json({ error: errorMessage }, { status: 500 });

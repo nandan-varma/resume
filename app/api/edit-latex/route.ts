@@ -1,9 +1,10 @@
-import { streamObject } from "ai";
+import { streamText, tool } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { logApiError } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -26,33 +27,35 @@ interface HistoryMessage {
   role: "user" | "assistant";
 }
 
-// Partial-edit schema — model only outputs the changed sections, not the full document.
-// This cuts output tokens by ~10-20x compared to regenerating the full LaTeX.
-const editSchema = z.object({
-  explanation: z
-    .string()
-    .describe("1-2 sentences explaining what was changed and why"),
-  edits: z
-    .array(
-      z.object({
-        find: z
-          .string()
-          .describe(
-            "Exact verbatim substring from the current LaTeX to replace. Include at least 2-3 full lines of surrounding context (with their newlines) so this string is unique in the document. Copy character-for-character — do not paraphrase."
-          ),
-        replace: z
-          .string()
-          .describe(
-            "New text to substitute in place of 'find'. Preserve indentation and LaTeX formatting style."
-          ),
-      })
-    )
-    .describe(
-      "Targeted find-and-replace edits applied in order. Only include lines that actually change. Empty array if no LaTeX edits are needed (e.g. a purely informational answer)."
-    ),
+// Client-side tool: the model calls this to make edits, but we apply them
+// in the browser (against the live editor buffer) rather than executing here.
+// Only outputs the changed sections, not the full document — cuts output
+// tokens by ~10-20x compared to regenerating the full LaTeX.
+const editResumeTool = tool({
+  description:
+    "Apply targeted find-and-replace edits to the LaTeX resume. Call this only when the user wants an actual change made to the document. For questions, plans, advice, or analysis, just answer in your normal text response and do not call this tool.",
+  inputSchema: z.object({
+    edits: z
+      .array(
+        z.object({
+          find: z
+            .string()
+            .describe(
+              "Exact verbatim substring from the current LaTeX to replace. Include at least 2-3 full lines of surrounding context (with their newlines) so this string is unique in the document. Copy character-for-character — do not paraphrase."
+            ),
+          replace: z
+            .string()
+            .describe(
+              "New text to substitute in place of 'find'. Preserve indentation and LaTeX formatting style."
+            ),
+        })
+      )
+      .min(1)
+      .describe(
+        "Targeted find-and-replace edits applied in order. Only include lines that actually change."
+      ),
+  }),
 });
-
-export type EditResult = z.infer<typeof editSchema>;
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
@@ -105,9 +108,7 @@ export async function POST(req: Request) {
   const systemParts = [
     "You are an expert LaTeX resume editor who specializes in ATS optimization and making resumes compelling for both automated screening systems and human reviewers.",
     "",
-    "When making edits:",
-    "1. Briefly explain what changed and why it improves ATS scoring or human reviewer impact (1-2 sentences).",
-    "2. Return ONLY the changed portions as find-and-replace edits — never the full document.",
+    "Respond in plain conversational text. When the user wants an actual change made to the document, call the editResume tool with targeted find-and-replace edits and briefly note what changed and why (1-2 sentences) in your text response. When the user asks a question or wants a plan, advice, or analysis instead, just answer fully in text — do not call editResume.",
     "",
     "ATS EDITING PRINCIPLES — apply whenever relevant to the instruction:",
     "- Use exact keywords and phrases from the job description; ATS matches on precise strings, not synonyms",
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
     "- In Skills sections, list technologies exactly as named in the job description",
     "- Keep bullet points concise: one accomplishment per bullet, metric first or at the end",
     "",
-    "Each 'find' must be an exact verbatim copy from the current LaTeX:",
+    "When calling editResume, each 'find' must be an exact verbatim copy from the current LaTeX:",
     "- Include at least 2-3 full lines of context around the changed text to guarantee uniqueness",
     "- Include the surrounding newlines so the replacement preserves document structure",
     "- Never paraphrase — copy character-for-character including indentation",
@@ -158,17 +159,35 @@ CRITICAL RULES:
   // LaTeX in system prompt for provider-level prefix caching
   systemParts.push(`\nCurrent LaTeX resume:\n\`\`\`latex\n${latex}\n\`\`\``);
 
+  const startedAt = performance.now();
+  let firstChunkAt: number | null = null;
+
   try {
-    const result = streamObject({
+    const result = streamText({
       model: modelInstance,
-      schema: editSchema,
       system: systemParts.join("\n"),
       messages: [...history, { role: "user", content: instruction.trim() }],
+      tools: { editResume: editResumeTool },
+      onChunk: () => {
+        firstChunkAt ??= performance.now();
+      },
+      onFinish: () => {
+        const total = Math.round(performance.now() - startedAt);
+        const ttft = Math.round(
+          (firstChunkAt ?? performance.now()) - startedAt
+        );
+        console.log(
+          `[edit-latex] ${modelId} first token ${ttft}ms, total ${total}ms`
+        );
+      },
+      onError: (event) => {
+        logApiError("[edit-latex]", event.error);
+      },
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (err) {
-    console.error("[edit-latex]", err);
+    logApiError("[edit-latex]", err);
     const errorMessage =
       err instanceof Error ? err.message : "Edit failed. Please try again.";
     return Response.json({ error: errorMessage }, { status: 500 });

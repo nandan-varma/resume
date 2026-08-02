@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { logApiError, logVendorTiming } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
 import { rateLimit } from "@/lib/rate-limit";
 import { getAnalysisByJobId } from "@/server/analysis";
@@ -143,6 +144,7 @@ export async function POST(req: Request) {
   try {
     const resumeBase64 = await fetchResumeBase64(session.user.id);
 
+    const startedAt = performance.now();
     const { output } = await generateText({
       model: resolveModel(modelId),
       output: Output.object({ schema: analysisSchema }),
@@ -174,10 +176,11 @@ ANALYSIS GUIDELINES:
         },
       ],
     });
+    logVendorTiming(`[analyze] ${modelId}`, startedAt);
 
     return Response.json({ result: output });
   } catch (error) {
-    console.error("[analyze]", error);
+    logApiError("[analyze]", error);
     const errorMessage =
       error instanceof Error
         ? error.message

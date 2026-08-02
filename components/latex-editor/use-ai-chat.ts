@@ -1,6 +1,10 @@
 "use client";
 
-import { parsePartialJson } from "ai";
+import {
+  parseJsonEventStream,
+  readUIMessageStream,
+  uiMessageChunkSchema,
+} from "ai";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -209,33 +213,51 @@ export function useAiChat(
           throw new Error("Streaming not supported");
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let text = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          text += decoder.decode(value, { stream: true });
+        // Real token-by-token streaming: the route returns the AI SDK's UI
+        // message stream (text deltas + tool calls), not one JSON blob to
+        // parse at the end.
+        const chunkStream = parseJsonEventStream({
+          stream: res.body,
+          schema: uiMessageChunkSchema,
+        }).pipeThrough(
+          new TransformStream({
+            transform(chunk, controller) {
+              if (!chunk.success) {
+                throw chunk.error;
+              }
+              controller.enqueue(chunk.value);
+            },
+          })
+        );
 
-          const { value: partial } = await parsePartialJson(text);
-          const partialExplanation = (
-            partial as Record<string, unknown> | undefined
-          )?.explanation;
-          if (typeof partialExplanation === "string") {
-            setChatMessages((prev) =>
-              prev.map((m) =>
-                m.id === streamMsgId ? { ...m, content: partialExplanation } : m
-              )
-            );
+        let content = "";
+        let edits: { find: string; replace: string }[] = [];
+
+        for await (const message of readUIMessageStream({
+          stream: chunkStream,
+        })) {
+          content = message.parts
+            .filter((p) => p.type === "text")
+            .map((p) => p.text)
+            .join("");
+
+          const toolPart = message.parts.find(
+            (p) => p.type === "tool-editResume" && "input" in p && p.input
+          );
+          if (toolPart && "input" in toolPart) {
+            const input = toolPart.input as
+              | { edits?: { find: string; replace: string }[] }
+              | undefined;
+            if (Array.isArray(input?.edits)) {
+              edits = input.edits;
+            }
           }
+
+          setChatMessages((prev) =>
+            prev.map((m) => (m.id === streamMsgId ? { ...m, content } : m))
+          );
         }
 
-        const { explanation, edits } = JSON.parse(text) as {
-          explanation: string;
-          edits: { find: string; replace: string }[];
-        };
         const { next, applied } = applyEdits(getLatex(), edits);
 
         if (applied > 0) {
@@ -252,7 +274,7 @@ export function useAiChat(
             m.id === streamMsgId
               ? {
                   ...m,
-                  content: explanation,
+                  content,
                   streaming: false,
                   editsApplied: applied || undefined,
                 }

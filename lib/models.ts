@@ -3,6 +3,7 @@ import type { GoogleGenerativeAIModelId } from "@ai-sdk/google/internal";
 import { mistral } from "@ai-sdk/mistral";
 import { openai } from "@ai-sdk/openai";
 import type { OpenAIChatModelId } from "@ai-sdk/openai/internal";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
 type MistralChatModelId =
   | "ministral-3b-latest"
@@ -38,7 +39,8 @@ export type Model =
       name: string;
       provider: "mistral";
       modelId: MistralChatModelId;
-    };
+    }
+  | { id: string; name: string; provider: "openrouter"; modelId: string };
 
 export type Provider = Model["provider"];
 
@@ -110,6 +112,12 @@ export const models = [
     provider: "mistral",
     modelId: "mistral-large-latest",
   },
+  {
+    id: "nemotron-3-ultra-550b",
+    name: "Nemotron 3 Ultra 550B (free)",
+    provider: "openrouter",
+    modelId: "nvidia/nemotron-3-ultra-550b-a55b:free",
+  },
 ] as const;
 
 export type ModelId = (typeof models)[number]["id"];
@@ -117,6 +125,10 @@ export type ModelId = (typeof models)[number]["id"];
 export function isValidModelId(id: string): id is ModelId {
   return models.some((m) => m.id === id);
 }
+
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 export function getModelInstanceById(id: ModelId) {
   const model = models.find((m) => m.id === id);
@@ -129,6 +141,9 @@ export function getModelInstanceById(id: ModelId) {
   if (model.provider === "mistral") {
     return mistral(model.modelId as MistralChatModelId);
   }
+  if (model.provider === "openrouter") {
+    return openrouter.chat(model.modelId);
+  }
   return openai(model.modelId as OpenAIChatModelId);
 }
 
@@ -136,7 +151,11 @@ export const DEFAULT_MODEL_ID: ModelId = "gpt-5.6-luna";
 export const MODEL_STORAGE_KEY = "job-match-ai-model";
 
 export function resolveModel(id: string) {
-  return isValidModelId(id)
-    ? getModelInstanceById(id)
-    : getModelInstanceById(DEFAULT_MODEL_ID);
+  const resolvedId = isValidModelId(id) ? id : DEFAULT_MODEL_ID;
+  console.log(
+    resolvedId === id
+      ? `[models] using ${resolvedId}`
+      : `[models] unknown modelId "${id}", falling back to ${resolvedId}`
+  );
+  return getModelInstanceById(resolvedId);
 }

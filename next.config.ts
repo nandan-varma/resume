@@ -19,6 +19,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // Server function logging dumps full argument values (e.g. entire LaTeX
+  // documents) to the terminal — off since it's unreadable at this size.
+  logging: {
+    serverFunctions: false,
+  },
+
   // Prevent Node.js-only packages from being bundled into the client
   serverExternalPackages: [
     "ws",
