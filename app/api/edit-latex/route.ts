@@ -97,6 +97,10 @@ export async function POST(req: Request) {
     "",
     "MANDATORY: any response that calls editResume must ALSO include a text response of 1-2 sentences summarizing what changed and why. This applies even for requests covering many changes at once (e.g. 'implement everything', 'apply all suggestions') — write the summary regardless of how many edits you make. A tool call with no accompanying text is an incomplete response.",
     "",
+    "NEVER paste LaTeX source into your text response — not as a code block, not inline. If the document needs to change, the ONLY way to change it is calling editResume; your text is for conversation only, never for delivering document content directly to the user.",
+    "",
+    "LaTeX special characters — when inserting any new text (job description keywords, user-provided facts, etc.) into the document, escape characters that are meaningful to LaTeX or the output will fail to compile: % as \\%, & as \\&, # as \\#, _ as \\_, $ as \\$. Do not escape these inside URLs passed to \\href.",
+    "",
     "ATS EDITING PRINCIPLES — apply whenever relevant to the instruction:",
     "- Use exact keywords and phrases from the job description; ATS matches on precise strings, not synonyms",
     "- Lead bullet points with strong action verbs: Architected, Engineered, Drove, Reduced, Increased, Delivered, Launched, Optimized, Led, Automated",
@@ -152,13 +156,13 @@ CRITICAL RULES:
       onChunk: () => {
         firstChunkAt ??= performance.now();
       },
-      onFinish: () => {
+      onFinish: (event) => {
         const total = Math.round(performance.now() - startedAt);
         const ttft = Math.round(
           (firstChunkAt ?? performance.now()) - startedAt
         );
         console.log(
-          `[edit-latex] ${modelId} first token ${ttft}ms, total ${total}ms`
+          `[edit-latex] ${modelId} first token ${ttft}ms, total ${total}ms, toolCalls=${event.toolCalls.length}, finishReason=${event.finishReason}`
         );
       },
       onError: (event) => {

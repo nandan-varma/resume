@@ -7,6 +7,7 @@ import { getModelInstanceById } from "@/lib/models";
 
 const MARKDOWN_FENCE_START = /^```(?:latex)?\s*/i;
 const MARKDOWN_FENCE_END = /\s*```\s*$/;
+const TIER_COMMENT_RE = /^%\s*tier=(\S+)\s+bullets=(\d+)\s+entries=(\d+)\s*$/im;
 
 /**
  * System prompt for converting PDF resumes to LaTeX.
@@ -18,7 +19,7 @@ STEP 1 — before writing anything, estimate content volume with TWO counts:
 1. Total bullet points across Experience + Projects.
 2. Total entries — every Education entry, every Experience role, every Project, every Leadership/Activities line, each counted once. (Entry headers, date \\hfill lines, and tech-stack/link lines each cost vertical space regardless of how many bullets follow, so a resume with many short entries can be just as tight as one with few long ones — weigh entry count at least as heavily as bullet count.)
 
-Pick exactly ONE density tier below and use its preamble character-for-character (never mix values from different tiers, never invent your own margins/font size):
+Pick exactly ONE density tier below and use its preamble character-for-character (never mix values from different tiers, never invent your own margins/font size). If your counts land near a boundary, ALWAYS pick the denser tier — a slightly tight one-page resume looks fine; an overflowing second page actively hurts ATS parsing and is a much worse failure than a few points of extra whitespace.
 
 SPARSE tier — 10 or fewer total bullets AND 4 or fewer total entries. A short resume still needs to read as a full page, so use bigger type, wider margins, and looser spacing:
 \`\`\`latex
@@ -159,7 +160,10 @@ DO NOT omit or paraphrase any content — reproduce all text from the original r
 DO NOT add sections, bullet points, contact details, dates, or metrics not present in the original.
 DO NOT fabricate any fact not found in the source PDF.
 
-Output ONLY the raw LaTeX source, starting with \\documentclass and ending with \\end{document}. No markdown fences, no commentary.`;
+OUTPUT FORMAT — exactly two things, nothing else:
+1. One line, first, before anything else: \`% tier=TIER bullets=N entries=M\` — TIER is SPARSE/STANDARD/DENSE, N and M are the counts from STEP 1. This is a LaTeX comment purely for our internal logging of which tier you picked; it is invisible in the compiled PDF either way, but keep it to exactly this line so we can parse it.
+2. The raw LaTeX source immediately after, starting with \\documentclass and ending with \\end{document}.
+No markdown fences, no commentary, no counting/reasoning text anywhere in the output — do that thinking silently before you write these two things.`;
 
 export async function generateLatexFromPdf(
   userId: string,
@@ -192,10 +196,24 @@ export async function generateLatexFromPdf(
     logVendorTiming("[resume-latex] gemini-3.6-flash", startedAt);
 
     // Strip any accidental markdown fences the model might add
-    const latex = text
+    const stripped = text
       .replace(MARKDOWN_FENCE_START, "")
       .replace(MARKDOWN_FENCE_END, "")
       .trim();
+
+    // The model self-reports which density tier it picked as a leading LaTeX
+    // comment (see OUTPUT FORMAT in the prompt) — log it so tier drift on a
+    // given model/provider is visible in server logs, then drop the comment
+    // from the saved document since it's a logging aid, not resume content.
+    const tierMatch = stripped.match(TIER_COMMENT_RE);
+    if (tierMatch) {
+      console.log(
+        `[resume-latex] tier=${tierMatch[1]} bullets=${tierMatch[2]} entries=${tierMatch[3]}`
+      );
+    } else {
+      console.log("[resume-latex] tier comment missing from model output");
+    }
+    const latex = stripped.replace(TIER_COMMENT_RE, "").trim();
 
     // Global resume doc (jobId null) may not exist yet for a first-time upload.
     await db
