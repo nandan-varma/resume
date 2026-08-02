@@ -1,5 +1,5 @@
 import { after, type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireApiSession } from "@/lib/api-guards";
 import { generateLatexFromPdf } from "@/lib/resume-latex";
 import { uploadResume } from "@/server/resume";
 
@@ -7,10 +7,11 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46]); // %PDF
 
 export async function POST(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiSession(req);
+  if (!auth.ok) {
+    return auth.response;
   }
+  const { session } = auth.data;
 
   let formData: FormData;
   try {

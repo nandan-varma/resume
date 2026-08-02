@@ -3,10 +3,13 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import {
+  checkRateLimit,
+  parseJsonBody,
+  requireApiSession,
+} from "@/lib/api-guards";
 import { logApiError, logVendorTiming } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
-import { rateLimit } from "@/lib/rate-limit";
 import { getAnalysisByJobId } from "@/server/analysis";
 
 const analysisSchema = z.object({
@@ -92,35 +95,21 @@ async function fetchResumeBase64(userId: string): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiSession(req);
+  if (!auth.ok) {
+    return auth.response;
+  }
+  const { session } = auth.data;
+
+  const limited = checkRateLimit(`analyze:${session.user.id}`, 10, 60_000);
+  if (limited) {
+    return limited;
   }
 
-  if (!rateLimit(`analyze:${session.user.id}`, 10, 60_000)) {
-    return Response.json(
-      { error: "Too many requests. Please wait a minute." },
-      { status: 429 }
-    );
+  const parsed = await parseJsonBody(req, requestSchema);
+  if (!parsed.ok) {
+    return parsed.response;
   }
-
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const parsed = requestSchema.safeParse(body);
-  if (!parsed.success) {
-    return Response.json(
-      {
-        error: `Invalid request: ${parsed.error.issues.map((e) => e.message).join(", ")}`,
-      },
-      { status: 400 }
-    );
-  }
-
   const { jobDescription, modelId, jobId } = parsed.data;
 
   // Return cached analysis if one exists for the given job

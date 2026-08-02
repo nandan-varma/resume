@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { analysis, jobResumes, jobs } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { parseJsonBody, requireApiSession } from "@/lib/api-guards";
 
 const analysisSchema = z.object({
   match_percentage: z.number().min(0).max(100),
@@ -20,18 +20,15 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiSession(req);
+  if (!auth.ok) {
+    return auth.response;
   }
+  const { session } = auth.data;
 
-  const body = await req.json().catch(() => null);
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    return Response.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 }
-    );
+  const parsed = await parseJsonBody(req, schema);
+  if (!parsed.ok) {
+    return parsed.response;
   }
 
   const {

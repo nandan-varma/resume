@@ -1,9 +1,12 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import {
+  checkRateLimit,
+  parseJsonBody,
+  requireApiSession,
+} from "@/lib/api-guards";
 import { logApiError, logVendorTiming } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
-import { rateLimit } from "@/lib/rate-limit";
 
 const MAX_LATEX_CHARS = 4000;
 const MAX_JOB_DESC_CHARS = 3000;
@@ -47,41 +50,26 @@ const responseSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiSession(req);
+  if (!auth.ok) {
+    return auth.response;
+  }
+  const { session } = auth.data;
+
+  const limited = checkRateLimit(
+    `job-customize:${session.user.id}`,
+    30,
+    60_000
+  );
+  if (limited) {
+    return limited;
   }
 
-  if (!rateLimit(`job-customize:${session.user.id}`, 30, 60_000)) {
-    return Response.json(
-      { error: "Too many requests. Please wait a minute." },
-      { status: 429 }
-    );
+  const parsed = await parseJsonBody(req, requestSchema);
+  if (!parsed.ok) {
+    return parsed.response;
   }
-
-  let latex: string;
-  let jobDescription: string;
-  let modelId: string;
-  let answers: { key: string; question: string; answer: string }[];
-
-  try {
-    const body = await req.json();
-    const parsed = requestSchema.parse(body);
-    latex = parsed.latex;
-    jobDescription = parsed.jobDescription;
-    modelId = parsed.modelId;
-    answers = parsed.answers;
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return Response.json(
-        {
-          error: `Invalid request: ${err.issues.map((e) => e.message).join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-    return Response.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const { latex, jobDescription, modelId, answers } = parsed.data;
 
   const answersSection =
     answers.length > 0

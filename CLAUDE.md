@@ -4,6 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always use ponytail skill
 
+## Project overview
+
+JobMatch: AI-powered resume analyzer and job application tracker (Next.js 16 App Router). Paste a job description → get an AI match score, missing keywords, and improvement suggestions against an uploaded resume; track applications through a pipeline; edit resume LaTeX with an AI chat assistant. A companion Chrome extension (`extension/`) surfaces match scores directly on LinkedIn job pages.
+
 ## Commands
 
 ```bash
@@ -88,7 +92,7 @@ Key tables:
 | Route | Purpose |
 |---|---|
 | `auth/[...all]` | better-auth catch-all handler |
-| `edit-latex` | Streaming LaTeX edits — uses `streamObject` + `toTextStreamResponse()` |
+| `edit-latex` | Streaming LaTeX edits — uses `streamText` with a client-side `editResume` tool + `toUIMessageStreamResponse()` |
 | `job-customize` | Consultation questions for tailoring resume to a job |
 | `analyze` | AI resume-vs-job match scoring; returns cached analysis if `jobId` provided |
 | `fetch-job` | Scrapes job description from a URL |
@@ -101,8 +105,11 @@ Rate limiting (`lib/rate-limit.ts`) — per-instance sliding window — is appli
 
 ### AI models (`lib/models.ts`)
 
-- `resolveModel(id: string)` — use in API routes; falls back to `DEFAULT_MODEL_ID` if `id` is invalid.
-- Default model: `gemini-3-flash-preview`. Model selection is persisted to localStorage via `useModelId()` (`MODEL_STORAGE_KEY`).
+- `resolveModel(id: string)` — use in API routes; falls back to `DEFAULT_MODEL_ID` if `id` is invalid, and logs the resolved model id (and any fallback) to the console for every call — useful for confirming which model an API route actually used.
+- Providers: Google, OpenAI, Mistral, and OpenRouter (`@openrouter/ai-sdk-provider`, reads `OPENROUTER_API_KEY`) — add new models to the `models` array with the matching `provider`.
+- Default model: `gpt-5.6-luna` (`DEFAULT_MODEL_ID`). Model selection is persisted to localStorage via `useModelId()` (`MODEL_STORAGE_KEY`).
+  - `useModelId()`'s same-tab change notification uses a private `model-id-change` custom event, not a synthetic `storage` event — dispatching on `storage` collides with other code (e.g. TanStack Query Devtools) that listens globally on that event and can `removeItem` the key right after it's written.
+- `lib/dev-log.ts` — `logApiError` (logs `err.message` only; raw AI SDK errors carry the full request/response body — e.g. base64 PDFs — as enumerable properties, so `console.error(err)` directly floods the console) and `logVendorTiming` (logs elapsed ms since a `performance.now()` start). Used across the AI API routes for consistent, non-huge logs.
 
 ### LaTeX editor (`/editor`)
 
@@ -114,9 +121,15 @@ Chat messages are intentionally isolated: when `jobId` is present, `initialChatM
 
 The editor uses `texlyre-busytex` — a WASM LaTeX compiler. Do not import it statically — it is lazy-loaded and cached via refs. `busytex.wasm`, `busytex.js`, and `texlive-extra.data` are all redirected in `next.config.ts`.
 
-**Streaming edits**: `edit-latex` uses `streamObject` server-side. The client (`use-ai-chat.ts`) reads the body stream chunk-by-chunk, calls `parsePartialJson` on each chunk, and updates the chat bubble in real time.
+**Streaming edits**: `edit-latex` uses `streamText` (not `streamObject`) with a client-side `editResume` tool (no `execute` — the model calls it, the client applies the edits) instead of a rigid `{explanation, edits}` object schema. This matters: plain conversational text streams as real token deltas and can be any length, whereas structured/tool-call JSON output is frequently *not* streamed incrementally by providers (often arrives as one buffered blob), and a schema description like "1-2 sentences" caps informational answers even when the user asked a question rather than requesting an edit. The model is instructed to just answer in text for questions/plans, and only call `editResume` when the user wants an actual document change.
 
-**Auto-save**: `useAutoSave` uses `useSaveEditorState` (TanStack Query mutation) with a 5-second debounce. On success the mutation updates the query cache so the data is fresh for the next navigation without a re-fetch.
+The client (`use-ai-chat.ts`) consumes the response with the AI SDK's UI Message Stream primitives — `parseJsonEventStream` (schema: `uiMessageChunkSchema`) piped into `readUIMessageStream` — not `useChat`, since the app's chat state (undo/redo, "notice"/"question" message roles for the consultation flow, DB-persisted history) is custom. It renders each yielded message's accumulating `text` parts for live streaming and reads the `tool-editResume` part's `input.edits` once available, applying them via `applyEdits` (a multi-pass fuzzy find-and-replace: exact match → trimmed-line match → blank-line-collapsed match).
+
+**Markdown**: assistant chat bubbles render through `react-markdown` (`components/latex-editor/chat-bubbles.tsx`) with tight custom spacing overrides — not raw HTML (`dangerouslySetInnerHTML`), since chat content can be influenced by scraped, untrusted job descriptions.
+
+**Auto-save**: `useAutoSave` uses `useSaveEditorState` (TanStack Query mutation) with a 5-second debounce, gated on `chatLoading` — the debounce timer does not schedule while a message is actively streaming, only once it finishes. Without this, a slow generation (routinely 10s+) gets caught mid-stream and persists a message stuck at `streaming: true` / partial content, since `dirty` is only set from chat-array *length* changes (on message add/remove) and nothing marks it dirty again for in-place content updates during streaming — the completed message would otherwise never get saved. On success the mutation updates the query cache so the data is fresh for the next navigation without a re-fetch.
+
+**Abort handling**: `executeAIEdit` removes its streaming placeholder message on *any* catch path, including `AbortError` — leaving it in state (even to show a partial response) risks it being autosaved and permanently stuck at `streaming: true` on reload.
 
 ### Chrome Extension (`extension/`)
 
@@ -150,4 +163,8 @@ PDF resumes are stored in **Cloudflare R2** via `lib/r2.ts`. After upload, `gene
 
 ### Environment variables
 
-See `env.example` for all required variables. Key groups: `DATABASE_URL`, Resend (`RESEND_API_KEY`, `EMAIL_SENDER_*`), R2 (`R2_*`), better-auth (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`), Google AI (`GOOGLE_GENERATIVE_AI_API_KEY`), OpenAI (`OPENAI_API_KEY`), Mistral (`MISTRAL_API_KEY`).
+See `env.example` for all required variables. Key groups: `DATABASE_URL`, Resend (`RESEND_API_KEY`, `EMAIL_SENDER_*`), R2 (`R2_*`), better-auth (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`), Google AI (`GOOGLE_GENERATIVE_AI_API_KEY`), OpenAI (`OPENAI_API_KEY`), Mistral (`MISTRAL_API_KEY`), OpenRouter (`OPENROUTER_API_KEY`).
+
+### Dev server logging (`next.config.ts`)
+
+`logging.serverFunctions` is set to `false` — Next's default server-function dev logging dumps full argument values (e.g. an entire LaTeX document passed to a save action) to the terminal on every call, which is unreadable at this size.

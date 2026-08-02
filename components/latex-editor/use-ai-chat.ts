@@ -282,10 +282,13 @@ export function useAiChat(
           )
         );
       } catch (err) {
+        // Drop the placeholder either way — a half-streamed message left with
+        // streaming:true would otherwise linger in state and could get
+        // autosaved, showing a permanently stuck "Analyzing…" bubble on reload.
+        setChatMessages((prev) => prev.filter((m) => m.id !== streamMsgId));
         if (err instanceof Error && err.name === "AbortError") {
           return;
         }
-        setChatMessages((prev) => prev.filter((m) => m.id !== streamMsgId));
         toast.error(err instanceof Error ? err.message : "AI request failed");
       } finally {
         setChatLoading(false);

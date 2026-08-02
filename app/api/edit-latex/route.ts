@@ -3,10 +3,13 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import {
+  checkRateLimit,
+  parseJsonBody,
+  requireApiSession,
+} from "@/lib/api-guards";
 import { logApiError } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
-import { rateLimit } from "@/lib/rate-limit";
 
 const historyMessageSchema = z.object({
   content: z.string(),
@@ -21,11 +24,6 @@ const requestSchema = z.object({
   jobDescription: z.string().optional(),
   pageCount: z.number().int().positive().optional(),
 });
-
-interface HistoryMessage {
-  content: string;
-  role: "user" | "assistant";
-}
 
 // Client-side tool: the model calls this to make edits, but we apply them
 // in the browser (against the live editor buffer) rather than executing here.
@@ -58,45 +56,23 @@ const editResumeTool = tool({
 });
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiSession(req);
+  if (!auth.ok) {
+    return auth.response;
+  }
+  const { session } = auth.data;
+
+  const limited = checkRateLimit(`edit-latex:${session.user.id}`, 30, 60_000);
+  if (limited) {
+    return limited;
   }
 
-  if (!rateLimit(`edit-latex:${session.user.id}`, 30, 60_000)) {
-    return Response.json(
-      { error: "Too many requests. Please wait a minute." },
-      { status: 429 }
-    );
+  const parsed = await parseJsonBody(req, requestSchema);
+  if (!parsed.ok) {
+    return parsed.response;
   }
-
-  let instruction: string;
-  let latex: string;
-  let modelId: string;
-  let history: HistoryMessage[];
-  let jobDescription: string | undefined;
-  let pageCount: number | undefined;
-
-  try {
-    const body = await req.json();
-    const parsed = requestSchema.parse(body);
-    instruction = parsed.instruction;
-    latex = parsed.latex;
-    modelId = parsed.modelId;
-    history = parsed.history;
-    jobDescription = parsed.jobDescription;
-    pageCount = parsed.pageCount;
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return Response.json(
-        {
-          error: `Invalid request: ${err.issues.map((e) => e.message).join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-    return Response.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const { instruction, latex, modelId, history, jobDescription, pageCount } =
+    parsed.data;
 
   const personalInfo = await db.query.personalInformation.findFirst({
     where: eq(personalInformation.userId, session.user.id),

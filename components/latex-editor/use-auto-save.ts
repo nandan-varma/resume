@@ -8,7 +8,8 @@ import type { ChatMsg, EditorJob } from "./types";
 export function useAutoSave(
   getLatex: () => string,
   chatMessages: ChatMsg[],
-  job: EditorJob | null
+  job: EditorJob | null,
+  chatLoading: boolean
 ) {
   const { mutateAsync, isPending: saving } = useSaveEditorState(
     job?.id ?? null
@@ -39,8 +40,14 @@ export function useAutoSave(
 
   const markDirty = useCallback(() => setDirty(true), []);
 
+  // Wait for the AI response to finish streaming before scheduling a save —
+  // otherwise a slow generation (can take 10s+) gets caught mid-stream and
+  // persists a message stuck at streaming:true / partial content. `dirty`
+  // stays true across the whole stream (set once when the placeholder is
+  // added), so as soon as chatLoading clears this fires and saves the
+  // finished message.
   useEffect(() => {
-    if (!dirty || saving || incognito) {
+    if (!dirty || saving || incognito || chatLoading) {
       return;
     }
     if (autoSaveTimerRef.current) {
@@ -55,7 +62,7 @@ export function useAutoSave(
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [dirty, saving, incognito, handleSave]);
+  }, [dirty, saving, incognito, chatLoading, handleSave]);
 
   return {
     saving,

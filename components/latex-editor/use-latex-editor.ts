@@ -67,7 +67,7 @@ export function useLatexEditor(
     toggleIncognito,
     handleSave,
     markDirty,
-  } = useAutoSave(getLatex, chatMessages, job);
+  } = useAutoSave(getLatex, chatMessages, job, chatLoading);
 
   const clearChat = useCallback(() => {
     setChatMessages([]);

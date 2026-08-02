@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { parseJsonBody, requireApiSession } from "@/lib/api-guards";
 
 const requestSchema = z.object({
   url: z.string().url("Must be a valid URL"),
@@ -52,31 +52,15 @@ function extractText(html: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiSession(req);
+  if (!auth.ok) {
+    return auth.response;
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
-    );
+  const parsed = await parseJsonBody(req, requestSchema);
+  if (!parsed.ok) {
+    return parsed.response;
   }
-
-  const parsed = requestSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: `Invalid request: ${parsed.error.issues.map((e) => e.message).join(", ")}`,
-      },
-      { status: 400 }
-    );
-  }
-
   const { url } = parsed.data;
 
   if (!isSafeUrl(url)) {
