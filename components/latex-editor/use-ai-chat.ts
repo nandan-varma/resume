@@ -23,7 +23,10 @@ function userMsg(content: string): ChatMsg {
 }
 
 // ponytail: collapse consecutive blank lines, track original indices for splice-back
-function collapseBlankLines(lines: string[]): { out: string[]; idx: number[] } {
+export function collapseBlankLines(lines: string[]): {
+  out: string[];
+  idx: number[];
+} {
   const out: string[] = [];
   const idx: number[] = [];
   let prevBlank = false;
@@ -39,7 +42,7 @@ function collapseBlankLines(lines: string[]): { out: string[]; idx: number[] } {
   return { out, idx };
 }
 
-function applyEdits(
+export function applyEdits(
   source: string,
   edits: { find: string; replace: string }[]
 ): { next: string; applied: number } {

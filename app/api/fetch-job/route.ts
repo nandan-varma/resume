@@ -9,6 +9,9 @@ const requestSchema = z.object({
 const MAX_DESCRIPTION_LENGTH = 8000;
 const FETCH_TIMEOUT_MS = 8000;
 
+// URL#hostname wraps IPv6 literals in brackets (e.g. "[::1]", not "::1") —
+// the IPv6 patterns below must match that bracketed form or they silently
+// never match, letting IPv6 loopback/ULA addresses bypass this SSRF guard.
 const BLOCKED_HOSTS = [
   /^localhost$/i,
   /^127\./,
@@ -17,13 +20,16 @@ const BLOCKED_HOSTS = [
   /^192\.168\./,
   /^172\.(1[6-9]|2[0-9]|3[01])\./,
   /^169\.254\./,
-  /^fd[0-9a-f]{2}:/i,
-  /^::1$/,
+  /^\[fd[0-9a-f]{2}:/i,
+  /^\[::1\]$/,
+  /^\[::\]$/,
+  /^\[::ffff:/i,
+  /^\[fe80:/i,
   /\.local$/i,
   /^metadata\.google\.internal$/i,
 ];
 
-function isSafeUrl(raw: string): boolean {
+export function isSafeUrl(raw: string): boolean {
   let url: URL;
   try {
     url = new URL(raw);
@@ -36,7 +42,7 @@ function isSafeUrl(raw: string): boolean {
   return !BLOCKED_HOSTS.some((p) => p.test(url.hostname));
 }
 
-function extractText(html: string): string {
+export function extractText(html: string): string {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
