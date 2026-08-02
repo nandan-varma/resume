@@ -2,6 +2,37 @@
 
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { memo, useState } from "react";
+import type { Components } from "react-markdown";
+import Markdown from "react-markdown";
+
+// Tight spacing to fit the chat bubble — default markdown block margins are too loose.
+const markdownComponents: Components = {
+  p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+  ul: ({ children }) => (
+    <ul className="mb-1.5 list-disc space-y-0.5 pl-4 last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-1.5 list-decimal space-y-0.5 pl-4 last:mb-0">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  code: ({ children }) => (
+    <code className="rounded bg-foreground/10 px-1 py-0.5 font-mono text-[0.85em]">
+      {children}
+    </code>
+  ),
+  a: ({ children, href }) => (
+    <a
+      className="underline underline-offset-2"
+      href={href}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {children}
+    </a>
+  ),
+};
 
 interface QuestionBubbleProps {
   answered?: string;
@@ -143,14 +174,18 @@ function RawAssistantBubble({
   const isEmpty = streaming && !content;
   return (
     <div className="flex flex-col gap-2">
-      <span
-        className={`whitespace-pre-wrap leading-relaxed${isEmpty ? "text-muted-foreground" : ""}`}
+      <div
+        className={`leading-relaxed ${isEmpty ? "text-muted-foreground" : ""}`}
       >
-        {isEmpty ? "Analyzing…" : content}
+        {isEmpty ? (
+          "Analyzing…"
+        ) : (
+          <Markdown components={markdownComponents}>{content}</Markdown>
+        )}
         {streaming && (
           <span className="ml-0.5 inline-block h-[0.75em] w-[2px] translate-y-[1px] animate-pulse bg-current align-middle" />
         )}
-      </span>
+      </div>
       {!streaming && !!editsApplied && (
         <span className="inline-flex items-center gap-1 font-medium text-green-600 text-xs dark:text-green-400">
           <CheckCircle2 className="size-3 shrink-0" />
