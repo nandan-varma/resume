@@ -9,18 +9,11 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ModelId } from "@/lib/models";
+import { useAppendTurn } from "@/lib/queries/resume";
 import type { ChatMsg, EditorJob } from "./types";
 import { buildHistory, createMsgId } from "./types";
 
 const MAX_UNDO = 50;
-
-function notice(content: string): ChatMsg {
-  return { id: createMsgId(), role: "notice", content };
-}
-
-function userMsg(content: string): ChatMsg {
-  return { id: createMsgId(), role: "user", content };
-}
 
 // ponytail: collapse consecutive blank lines, track original indices for splice-back
 export function collapseBlankLines(lines: string[]): {
@@ -111,14 +104,19 @@ export function useAiChat(
   job: EditorJob | null,
   pageCount: number | null,
   chatMessages: ChatMsg[],
-  setChatMessages: (
-    updater: ChatMsg[] | ((prev: ChatMsg[]) => ChatMsg[])
-  ) => void,
+  setStreamingMessage: (msg: ChatMsg | null) => void,
   chatLoadingRef: React.MutableRefObject<boolean>,
-  setChatLoading: (v: boolean) => void
+  setChatLoading: (v: boolean) => void,
+  onConflict: () => void
 ) {
   const [chatInput, setChatInput] = useState("");
+  const { mutateAsync: appendTurn } = useAppendTurn(job?.id ?? null, {
+    onConflict,
+  });
 
+  // Fast, session-local undo for the last few AI edits — separate from the
+  // durable per-message restore (server-backed, survives reload). Lost on
+  // reload same as before this refactor; not a regression.
   const undoStackRef = useRef<string[]>([]);
   const redoStackRef = useRef<string[]>([]);
   const abortCtrlRef = useRef<AbortController | null>(null);
@@ -176,7 +174,13 @@ export function useAiChat(
       // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: streaming parse loop
     ) => {
       if (noticeMsg) {
-        setChatMessages((prev) => [...prev, notice(noticeMsg)]);
+        try {
+          await appendTurn({
+            messages: [{ role: "notice", content: noticeMsg }],
+          });
+        } catch {
+          // toasted by the mutation's onError; keep going, the edit itself still matters
+        }
       }
       abortCtrlRef.current?.abort();
       const ctrl = new AbortController();
@@ -184,15 +188,12 @@ export function useAiChat(
       setChatLoading(true);
 
       const streamMsgId = createMsgId();
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: streamMsgId,
-          role: "assistant" as const,
-          content: "",
-          streaming: true,
-        },
-      ]);
+      setStreamingMessage({
+        id: streamMsgId,
+        role: "assistant",
+        content: "",
+        streaming: true,
+      });
 
       try {
         const res = await fetch("/api/edit-latex", {
@@ -256,9 +257,12 @@ export function useAiChat(
             }
           }
 
-          setChatMessages((prev) =>
-            prev.map((m) => (m.id === streamMsgId ? { ...m, content } : m))
-          );
+          setStreamingMessage({
+            id: streamMsgId,
+            role: "assistant",
+            content,
+            streaming: true,
+          });
         }
 
         const { next, applied } = applyEdits(getLatex(), edits);
@@ -267,28 +271,34 @@ export function useAiChat(
           pushUndo();
           setLatex(next, true);
         } else if (edits.length > 0) {
-          setChatMessages((prev) => [
-            ...prev,
-            notice("Could not apply edits — try rephrasing."),
-          ]);
+          await appendTurn({
+            messages: [
+              {
+                role: "notice",
+                content: "Could not apply edits — try rephrasing.",
+              },
+            ],
+          }).catch(() => {
+            // toasted by the mutation's onError
+          });
         }
-        setChatMessages((prev) =>
-          prev.map((m) =>
-            m.id === streamMsgId
-              ? {
-                  ...m,
-                  content,
-                  streaming: false,
-                  editsApplied: applied || undefined,
-                }
-              : m
-          )
-        );
+
+        await appendTurn({
+          messages: [
+            {
+              role: "assistant",
+              content,
+              editsApplied: applied || undefined,
+            },
+          ],
+          ...(applied > 0 ? { latex: next } : {}),
+        });
+        setStreamingMessage(null);
       } catch (err) {
-        // Drop the placeholder either way — a half-streamed message left with
-        // streaming:true would otherwise linger in state and could get
-        // autosaved, showing a permanently stuck "Analyzing…" bubble on reload.
-        setChatMessages((prev) => prev.filter((m) => m.id !== streamMsgId));
+        // Drop the placeholder either way — a half-streamed message left in
+        // state (even to show a partial response) risks confusing the user
+        // with a bubble that never got saved.
+        setStreamingMessage(null);
         if (err instanceof Error && err.name === "AbortError") {
           return;
         }
@@ -302,9 +312,10 @@ export function useAiChat(
       getLatex,
       setLatex,
       pushUndo,
-      setChatMessages,
+      setStreamingMessage,
       setChatLoading,
       pageCount,
+      appendTurn,
     ]
   );
 
@@ -315,21 +326,19 @@ export function useAiChat(
     }
 
     setChatInput("");
-    setChatMessages((prev) => [...prev, userMsg(msg)]);
+    try {
+      await appendTurn({ messages: [{ role: "user", content: msg }] });
+    } catch {
+      return; // toasted by the mutation's onError
+    }
+
     await executeAIEdit(
       msg,
       buildHistory(chatMessages),
       undefined,
       job?.description
     );
-  }, [
-    chatInput,
-    chatLoadingRef,
-    chatMessages,
-    executeAIEdit,
-    job,
-    setChatMessages,
-  ]);
+  }, [chatInput, chatLoadingRef, chatMessages, executeAIEdit, job, appendTurn]);
 
   return {
     chatInput,

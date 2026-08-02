@@ -6,8 +6,12 @@ import { DangerZone } from "@/components/danger-zone";
 import { ResumeClient } from "@/components/resume-client";
 import { SettingsClient } from "@/components/settings-client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { personalInfoQueryKey } from "@/lib/queries/resume";
+import {
+  personalInfoQueryKey,
+  resumeDocumentQueryKey,
+} from "@/lib/queries/resume";
 import { getPersonalInformation } from "@/server/resume";
+import { getResumeDocument } from "@/server/resume-editor";
 import { getSession } from "@/server/session";
 
 export const metadata: Metadata = {
@@ -36,16 +40,6 @@ function ResumeContentSkeleton() {
   );
 }
 
-async function ResumeSection() {
-  const info = await getPersonalInformation();
-  return (
-    <ResumeClient
-      initialLatex={info?.resumeLatex ?? null}
-      initialResumeUrl={info?.resumeUrl ?? null}
-    />
-  );
-}
-
 export default async function SettingsPage() {
   const queryClient = getQueryClient();
   const [session] = await Promise.all([
@@ -53,6 +47,10 @@ export default async function SettingsPage() {
     queryClient.prefetchQuery({
       queryKey: personalInfoQueryKey,
       queryFn: getPersonalInformation,
+    }),
+    queryClient.prefetchQuery({
+      queryKey: resumeDocumentQueryKey(null),
+      queryFn: () => getResumeDocument(null),
     }),
   ]);
 
@@ -69,28 +67,28 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <div className="py-6 md:py-8">
-        <HydrationBoundary state={dehydrate(queryClient)}>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <div className="py-6 md:py-8">
           <Suspense fallback={<SettingsContentSkeleton />}>
             <SettingsClient
               userEmail={session?.user.email ?? ""}
               userName={session?.user.name ?? ""}
             />
           </Suspense>
-        </HydrationBoundary>
-      </div>
-
-      <div className="border-border/40 border-t py-6 md:py-8">
-        <div className="mx-auto max-w-5xl px-4 pb-4 md:px-6">
-          <h2 className="font-semibold text-foreground text-xl">Resume</h2>
-          <p className="mt-0.5 text-muted-foreground text-sm">
-            Upload your PDF or manage the LaTeX source used for AI analysis
-          </p>
         </div>
-        <Suspense fallback={<ResumeContentSkeleton />}>
-          <ResumeSection />
-        </Suspense>
-      </div>
+
+        <div className="border-border/40 border-t py-6 md:py-8">
+          <div className="mx-auto max-w-5xl px-4 pb-4 md:px-6">
+            <h2 className="font-semibold text-foreground text-xl">Resume</h2>
+            <p className="mt-0.5 text-muted-foreground text-sm">
+              Upload your PDF or manage the LaTeX source used for AI analysis
+            </p>
+          </div>
+          <Suspense fallback={<ResumeContentSkeleton />}>
+            <ResumeClient />
+          </Suspense>
+        </div>
+      </HydrationBoundary>
 
       <div className="border-border/40 border-t py-6 md:py-8">
         <div className="mx-auto max-w-2xl px-4 md:px-6">

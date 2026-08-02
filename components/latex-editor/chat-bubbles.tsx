@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, History, Loader2 } from "lucide-react";
 import { memo, useState } from "react";
 import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
@@ -163,12 +163,18 @@ function RawQuestionBubble({
 interface AssistantBubbleProps {
   content: string;
   editsApplied?: number;
+  onRestore?: () => void;
+  restoring?: boolean;
+  revisionId?: number;
   streaming?: boolean;
 }
 
 function RawAssistantBubble({
   content,
   editsApplied,
+  revisionId,
+  onRestore,
+  restoring,
   streaming,
 }: AssistantBubbleProps) {
   const isEmpty = streaming && !content;
@@ -187,11 +193,25 @@ function RawAssistantBubble({
         )}
       </div>
       {!streaming && !!editsApplied && (
-        <span className="inline-flex items-center gap-1 font-medium text-green-600 text-xs dark:text-green-400">
-          <CheckCircle2 className="size-3 shrink-0" />
-          Applied {editsApplied} {editsApplied === 1 ? "change" : "changes"} to
-          editor
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1 font-medium text-green-600 text-xs dark:text-green-400">
+            <CheckCircle2 className="size-3 shrink-0" />
+            Applied {editsApplied} {editsApplied === 1 ? "change" : "changes"}{" "}
+            to editor
+          </span>
+          {revisionId !== undefined && onRestore && (
+            <button
+              className="inline-flex shrink-0 items-center gap-1 text-muted-foreground text-xs underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-50"
+              disabled={restoring}
+              onClick={onRestore}
+              title="Restore resume to this point"
+              type="button"
+            >
+              <History className="size-3" />
+              Restore
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

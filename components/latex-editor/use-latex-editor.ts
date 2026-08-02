@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  resumeDocumentQueryKey,
+  useClearMessages,
+  useRestoreRevision,
+  useResumeDocument,
+} from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
+import { getResumeDocument } from "@/server/resume-editor";
 import type { ChatMsg, EditorJob } from "./types";
+import { fromDocumentMessage } from "./types";
 import { useAiChat } from "./use-ai-chat";
 import { useAutoFix } from "./use-auto-fix";
 import { useAutoSave } from "./use-auto-save";
@@ -11,13 +20,18 @@ import { useEngine } from "./use-engine";
 
 const DEBOUNCE_MS = 2500;
 
-export function useLatexEditor(
-  initialLatex: string,
-  job: EditorJob | null,
-  isNewJobResume: boolean,
-  initialChatMessages?: unknown
-) {
-  const [latex, setLatexState] = useState(initialLatex);
+export function useLatexEditor(job: EditorJob | null, isNewJobResume: boolean) {
+  const jobId = job?.id ?? null;
+  const queryClient = useQueryClient();
+
+  const { data: doc } = useResumeDocument(jobId);
+  // A brand-new job-scoped editor starts from the global resume text, same
+  // as before this refactor — same query key when jobId is null, so this
+  // never costs an extra fetch for the global editor itself.
+  const { data: globalDoc } = useResumeDocument(null);
+  const initialLatexSource = doc?.resumeLatex || globalDoc?.resumeLatex || "";
+
+  const [latex, setLatexState] = useState(() => initialLatexSource);
   const latexRef = useRef(latex);
   const aiAppliedRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,9 +53,24 @@ export function useLatexEditor(
 
   const [modelId] = useModelId();
 
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>(
-    Array.isArray(initialChatMessages) ? (initialChatMessages as ChatMsg[]) : []
+  const [streamingMessage, setStreamingMessage] = useState<ChatMsg | null>(
+    null
   );
+  const [outOfSync, setOutOfSync] = useState(false);
+  const onConflict = useCallback(() => setOutOfSync(true), []);
+
+  const persistedMessages = useMemo(
+    () => (doc?.messages ?? []).map(fromDocumentMessage),
+    [doc?.messages]
+  );
+  const chatMessages = useMemo(
+    () =>
+      streamingMessage
+        ? [...persistedMessages, streamingMessage]
+        : persistedMessages,
+    [persistedMessages, streamingMessage]
+  );
+
   const [chatLoading, _setChatLoading] = useState(false);
   const chatLoadingRef = useRef(false);
   const setChatLoading = useCallback((v: boolean) => {
@@ -67,21 +96,27 @@ export function useLatexEditor(
     toggleIncognito,
     handleSave,
     markDirty,
-  } = useAutoSave(getLatex, chatMessages, job, chatLoading);
+  } = useAutoSave(getLatex, jobId, chatLoading, onConflict);
 
+  const clearMessagesMutation = useClearMessages(jobId);
   const clearChat = useCallback(() => {
-    setChatMessages([]);
-    markDirty();
-  }, [markDirty]);
+    clearMessagesMutation.mutate();
+  }, [clearMessagesMutation]);
 
-  // ponytail: persist consultation progress so revisits don't restart from scratch
-  const prevChatCountRef = useRef(chatMessages.length);
-  useEffect(() => {
-    if (chatMessages.length !== prevChatCountRef.current) {
-      prevChatCountRef.current = chatMessages.length;
-      markDirty();
-    }
-  }, [chatMessages.length, markDirty]);
+  const restoreRevisionMutation = useRestoreRevision(jobId, { onConflict });
+  const handleRestore = useCallback(
+    (revisionId: number) => {
+      restoreRevisionMutation.mutate(revisionId, {
+        onSuccess: ({ document }) => {
+          setLatex(document.resumeLatex, false);
+        },
+      });
+    },
+    [restoreRevisionMutation, setLatex]
+  );
+  const restoringRevisionId = restoreRevisionMutation.isPending
+    ? (restoreRevisionMutation.variables ?? null)
+    : null;
 
   const { chatInput, setChatInput, handleChatSend, executeAIEdit, undo, redo } =
     useAiChat(
@@ -90,10 +125,11 @@ export function useLatexEditor(
       modelId,
       job,
       pageCount,
-      chatMessages,
-      setChatMessages,
+      persistedMessages,
+      setStreamingMessage,
       chatLoadingRef,
-      setChatLoading
+      setChatLoading,
+      onConflict
     );
 
   const { pendingQuestion, handleConsultPick, handleConsultSkip } =
@@ -103,10 +139,10 @@ export function useLatexEditor(
       modelId,
       job,
       isNewJobResume,
-      initialLatex,
-      chatMessages,
-      setChatMessages,
-      setChatLoading
+      initialLatexSource,
+      persistedMessages,
+      setChatLoading,
+      onConflict
     );
 
   useAutoFix({
@@ -114,11 +150,11 @@ export function useLatexEditor(
     compileLog,
     chatLoading,
     chatLoadingRef,
-    chatMessages,
+    chatMessages: persistedMessages,
     aiAppliedRef,
     executeAIEdit,
     job,
-    setChatMessages,
+    onConflict,
   });
 
   // ── Compilation debounce ──────────────────────────────────────────────
@@ -160,6 +196,17 @@ export function useLatexEditor(
     await compile(latexRef.current);
   }, [compile]);
 
+  // ── Out-of-sync recovery ───────────────────────────────────────────────
+
+  const reloadFromServer = useCallback(async () => {
+    const fresh = await queryClient.fetchQuery({
+      queryKey: resumeDocumentQueryKey(jobId),
+      queryFn: () => getResumeDocument(jobId),
+    });
+    setLatex(fresh?.resumeLatex ?? "", false);
+    setOutOfSync(false);
+  }, [queryClient, jobId, setLatex]);
+
   const isEmpty = !latex.trim();
 
   return {
@@ -173,6 +220,8 @@ export function useLatexEditor(
     showLog,
     saving,
     dirty,
+    outOfSync,
+    reloadFromServer,
     zoom,
     activeTab,
     chatMessages,
@@ -191,6 +240,8 @@ export function useLatexEditor(
     handleConsultSkip,
     handleForceRecompile,
     clearChat,
+    handleRestore,
+    restoringRevisionId,
     undo,
     redo,
   };

@@ -3,20 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ModelId } from "@/lib/models";
+import { useAnswerQuestion, useAppendTurn } from "@/lib/queries/resume";
 import type { ChatMsg, ConsultAnswer, EditorJob } from "./types";
-import { createMsgId } from "./types";
-
-function questionMsg(
-  key: string,
-  question: string,
-  options: string[]
-): ChatMsg {
-  return { id: createMsgId(), role: "question", key, question, options };
-}
-
-function userMsg(content: string): ChatMsg {
-  return { id: createMsgId(), role: "user", content };
-}
 
 const MAX_RETRIES = 2;
 
@@ -33,11 +21,13 @@ export function useConsultation(
   isNewJobResume: boolean,
   initialLatex: string,
   chatMessages: ChatMsg[],
-  setChatMessages: (
-    updater: ChatMsg[] | ((prev: ChatMsg[]) => ChatMsg[])
-  ) => void,
-  setChatLoading: (v: boolean) => void
+  setChatLoading: (v: boolean) => void,
+  onConflict: () => void
 ) {
+  const jobId = job?.id ?? null;
+  const { mutateAsync: appendTurn } = useAppendTurn(jobId, { onConflict });
+  const { mutateAsync: answerQuestion } = useAnswerQuestion(jobId);
+
   const [consultAnswers, setConsultAnswers] = useState<ConsultAnswer[]>([]);
   const [consultDone, setConsultDone] = useState(
     () => !(job && isNewJobResume)
@@ -45,15 +35,20 @@ export function useConsultation(
   const retryCountRef = useRef(0);
 
   const doConsultEdit = useCallback(
-    (answers: ConsultAnswer[]) => {
+    async (answers: ConsultAnswer[]) => {
       const ctx =
         answers.length > 0
           ? `\nContext you asked for:\n${answers.map((a) => `- ${a.question}: ${a.answer}`).join("\n")}`
           : "";
-      setChatMessages((prev) => [
-        ...prev,
-        userMsg("Tailor my resume for this job"),
-      ]);
+      try {
+        await appendTurn({
+          messages: [
+            { role: "user", content: "Tailor my resume for this job" },
+          ],
+        });
+      } catch {
+        return; // toasted by the mutation's onError
+      }
       executeAIEdit(
         `Tailor this resume for the target job: insert required keywords naturally, strengthen bullets with metrics where possible, and mirror the job description's terminology. Do not fabricate any facts.${ctx}`,
         [],
@@ -61,7 +56,7 @@ export function useConsultation(
         job?.description
       );
     },
-    [executeAIEdit, job, setChatMessages]
+    [executeAIEdit, job, appendTurn]
   );
 
   const fetchNextQuestion = useCallback(
@@ -87,26 +82,34 @@ export function useConsultation(
           throw new Error(data.error ?? "Consultation failed");
         } else if (data.type === "question") {
           retryCountRef.current = 0;
-          setChatMessages((prev) => [
-            ...prev,
-            questionMsg(data.key, data.question, data.options),
-          ]);
+          await appendTurn({
+            messages: [
+              {
+                role: "question",
+                content: data.question,
+                questionKey: data.key,
+                questionOptions: data.options,
+              },
+            ],
+          });
         } else {
           chain = true;
           setConsultDone(true);
-          doConsultEdit(answers);
+          await doConsultEdit(answers);
         }
       } catch {
         if (retryCountRef.current < MAX_RETRIES) {
           retryCountRef.current += 1;
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              id: createMsgId(),
-              role: "notice",
-              content: `Consultation failed — retrying (${retryCountRef.current}/${MAX_RETRIES})…`,
-            },
-          ]);
+          await appendTurn({
+            messages: [
+              {
+                role: "notice",
+                content: `Consultation failed — retrying (${retryCountRef.current}/${MAX_RETRIES})…`,
+              },
+            ],
+          }).catch(() => {
+            // toasted by the mutation's onError
+          });
           await fetchNextQuestion(answers);
           return;
         }
@@ -118,22 +121,22 @@ export function useConsultation(
         }
       }
     },
-    [job, modelId, doConsultEdit, getLatex, setChatMessages, setChatLoading]
+    [job, modelId, doConsultEdit, getLatex, appendTurn, setChatLoading]
   );
 
   const handleConsultPick = useCallback(
-    (idx: number, key: string, question: string, answer: string) => {
+    (messageId: number, key: string, question: string, answer: string) => {
       const next: ConsultAnswer[] = [
         ...consultAnswers,
         { key, question, answer },
       ];
       setConsultAnswers(next);
-      setChatMessages((prev) =>
-        prev.map((m, i) => (i === idx ? { ...m, answered: answer } : m))
-      );
+      answerQuestion({ messageId, answer }).catch(() => {
+        // toasted by the mutation's onError
+      });
       fetchNextQuestion(next);
     },
-    [consultAnswers, fetchNextQuestion, setChatMessages]
+    [consultAnswers, fetchNextQuestion, answerQuestion]
   );
 
   const handleConsultSkip = useCallback(() => {

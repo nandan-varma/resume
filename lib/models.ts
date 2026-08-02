@@ -148,7 +148,6 @@ export function getModelInstanceById(id: ModelId) {
 }
 
 export const DEFAULT_MODEL_ID: ModelId = "nemotron-3-ultra-550b";
-export const MODEL_STORAGE_KEY = "job-match-ai-model";
 
 export function resolveModel(id: string) {
   const resolvedId = isValidModelId(id) ? id : DEFAULT_MODEL_ID;

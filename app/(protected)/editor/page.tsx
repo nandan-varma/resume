@@ -3,10 +3,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
 import { LatexEditor } from "@/components/latex-editor";
-import { jobResumeQueryKey, personalInfoQueryKey } from "@/lib/queries/resume";
+import {
+  personalInfoQueryKey,
+  resumeDocumentQueryKey,
+} from "@/lib/queries/resume";
 import { getAnalysisByJobId } from "@/server/analysis";
 import { getJobById } from "@/server/jobs";
-import { getJobResume, getPersonalInformation } from "@/server/resume";
+import { getPersonalInformation } from "@/server/resume";
+import { getResumeDocument } from "@/server/resume-editor";
 
 export const metadata: Metadata = {
   title: "LaTeX Editor",
@@ -45,38 +49,27 @@ export default async function EditorPage({
 
   const queryClient = getQueryClient();
 
-  const [personalInfo, job, jobResume] = await Promise.all([
+  const [personalInfo, job, globalDoc, jobDoc] = await Promise.all([
     getPersonalInformation(),
     jobId ? getJobById(jobId) : Promise.resolve(null),
-    jobId ? getJobResume(jobId) : Promise.resolve(null),
+    getResumeDocument(null),
+    jobId ? getResumeDocument(jobId) : Promise.resolve(null),
     jobId ? getAnalysisByJobId(jobId) : Promise.resolve(null),
   ]);
 
-  if (jobId && jobResume !== undefined) {
-    queryClient.setQueryData(jobResumeQueryKey(jobId), jobResume);
-  }
-  if (personalInfo !== undefined) {
-    queryClient.setQueryData(personalInfoQueryKey, personalInfo);
+  queryClient.setQueryData(personalInfoQueryKey, personalInfo);
+  queryClient.setQueryData(resumeDocumentQueryKey(null), globalDoc);
+  if (jobId) {
+    queryClient.setQueryData(resumeDocumentQueryKey(jobId), jobDoc);
   }
 
-  const initialLatex =
-    jobResume?.resumeLatex || personalInfo?.resumeLatex || "";
-  const initialChatMessages = jobId
-    ? (jobResume?.chatMessages ?? [])
-    : (personalInfo?.chatMessages ?? []);
-
-  const existingChat = Array.isArray(jobResume?.chatMessages)
-    ? (jobResume.chatMessages as unknown[])
-    : [];
   const isNewJobResume =
-    !!job && !jobResume?.resumeLatex && existingChat.length === 0;
+    !!job && !jobDoc?.resumeLatex && (jobDoc?.messages.length ?? 0) === 0;
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <Suspense fallback={<EditorSkeleton />}>
         <LatexEditor
-          initialChatMessages={initialChatMessages}
-          initialLatex={initialLatex}
           isNewJobResume={isNewJobResume}
           job={
             job

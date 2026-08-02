@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useEffect, useRef } from "react";
+import { useAppendTurn } from "@/lib/queries/resume";
 import type { ChatMsg, EditorJob, EnginePhase } from "./types";
 import { buildHistory } from "./types";
 
@@ -21,9 +22,7 @@ interface AutoFixOptions {
     jobDescription?: string
   ) => Promise<void>;
   job: EditorJob | null;
-  setChatMessages: (
-    updater: ChatMsg[] | ((prev: ChatMsg[]) => ChatMsg[])
-  ) => void;
+  onConflict: () => void;
 }
 
 export function useAutoFix({
@@ -35,8 +34,11 @@ export function useAutoFix({
   aiAppliedRef,
   executeAIEdit,
   job,
-  setChatMessages,
+  onConflict,
 }: AutoFixOptions) {
+  const { mutate: appendTurn } = useAppendTurn(job?.id ?? null, {
+    onConflict,
+  });
   const autoFixCountRef = useRef(0);
   const pendingAutoFixRef = useRef(false);
 
@@ -58,15 +60,15 @@ export function useAutoFix({
     }
 
     if (autoFixCountRef.current >= MAX_AUTO_FIX) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `notice-${Date.now()}`,
-          role: "notice",
-          content:
-            "Could not auto-fix — edit manually or try a different instruction.",
-        },
-      ]);
+      appendTurn({
+        messages: [
+          {
+            role: "notice",
+            content:
+              "Could not auto-fix — edit manually or try a different instruction.",
+          },
+        ],
+      });
       return;
     }
 

@@ -1,3 +1,5 @@
+import type { ResumeDocumentMessage } from "@/lib/queries/resume";
+
 export type EnginePhase =
   | { phase: "idle" }
   | { phase: "loading"; label: string }
@@ -22,6 +24,7 @@ export type ChatMsg =
       role: "assistant";
       content: string;
       editsApplied?: number;
+      revisionId?: number;
       streaming?: boolean;
     }
   | {
@@ -36,6 +39,7 @@ export type ChatMsg =
       id: string;
       role: "notice";
       content: string;
+      revisionId?: number;
     };
 
 export interface EditorJob {
@@ -49,6 +53,41 @@ let msgCounter = 0;
 export function createMsgId(): string {
   msgCounter++;
   return `msg-${msgCounter}-${Date.now()}`;
+}
+
+// Maps a persisted DB row to the client's chat bubble shape.
+export function fromDocumentMessage(m: ResumeDocumentMessage): ChatMsg {
+  const id = String(m.id);
+  switch (m.role) {
+    case "user":
+      return { id, role: "user", content: m.content };
+    case "assistant":
+      return {
+        id,
+        role: "assistant",
+        content: m.content,
+        editsApplied: m.editsApplied ?? undefined,
+        revisionId: m.revisionId ?? undefined,
+      };
+    case "notice":
+      return {
+        id,
+        role: "notice",
+        content: m.content,
+        revisionId: m.revisionId ?? undefined,
+      };
+    case "question":
+      return {
+        id,
+        role: "question",
+        key: m.questionKey ?? "",
+        question: m.content,
+        options: m.questionOptions ?? [],
+        answered: m.questionAnswered ?? undefined,
+      };
+    default:
+      return { id, role: "notice", content: m.content };
+  }
 }
 
 export function buildHistory(

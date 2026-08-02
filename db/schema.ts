@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -64,9 +64,8 @@ export const personalInformation = pgTable(
   {
     id: serial("id").primaryKey(),
     resumeUrl: text("resume_url"),
-    resumeLatex: text("resume_latex"),
     aiPreferences: text("ai_preferences"),
-    chatMessages: jsonb("chat_messages").notNull().default([]),
+    preferredModelId: text("preferred_model_id"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -179,6 +178,7 @@ export const userRelations = relations(user, ({ many }) => ({
   jobs: many(jobs),
   personalInformation: many(personalInformation),
   analysis: many(analysis),
+  resumeDocuments: many(resumeDocuments),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -201,7 +201,7 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     references: [user.id],
   }),
   analysis: many(analysis),
-  jobResumes: many(jobResumes),
+  resumeDocuments: many(resumeDocuments),
 }));
 
 export const personalInformationRelations = relations(
@@ -225,18 +225,21 @@ export const analysisRelations = relations(analysis, ({ one }) => ({
   }),
 }));
 
-export const jobResumes = pgTable(
-  "job_resumes",
+// jobId null = the user's global resume; non-null = a per-job variant.
+// Partial unique indexes give "one global doc per user" and "one doc per
+// (user, job)" without a discriminator column.
+export const resumeDocuments = pgTable(
+  "resume_documents",
   {
     id: serial("id").primaryKey(),
-    jobId: integer("job_id")
-      .notNull()
-      .references(() => jobs.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    jobId: integer("job_id").references(() => jobs.id, {
+      onDelete: "cascade",
+    }),
     resumeLatex: text("resume_latex").notNull().default(""),
-    chatMessages: jsonb("chat_messages").notNull().default([]),
+    version: integer("version").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -244,18 +247,92 @@ export const jobResumes = pgTable(
       .notNull(),
   },
   (table) => [
-    index("job_resumes_jobId_idx").on(table.jobId),
-    index("job_resumes_userId_idx").on(table.userId),
-    uniqueIndex("job_resumes_jobId_userId_unique").on(
-      table.jobId,
-      table.userId
-    ),
+    index("resume_documents_userId_idx").on(table.userId),
+    uniqueIndex("resume_documents_global_unique")
+      .on(table.userId)
+      .where(sql`${table.jobId} IS NULL`),
+    uniqueIndex("resume_documents_job_unique")
+      .on(table.userId, table.jobId)
+      .where(sql`${table.jobId} IS NOT NULL`),
   ]
 );
 
-export const jobResumesRelations = relations(jobResumes, ({ one }) => ({
-  user: one(user, { fields: [jobResumes.userId], references: [user.id] }),
-  job: one(jobs, { fields: [jobResumes.jobId], references: [jobs.id] }),
+// One row per AI-applied edit or restore — never per keystroke. Manual typing
+// autosaves straight to resumeDocuments.resumeLatex with no revision row.
+export const resumeRevisions = pgTable(
+  "resume_revisions",
+  {
+    id: serial("id").primaryKey(),
+    documentId: integer("document_id")
+      .notNull()
+      .references(() => resumeDocuments.id, { onDelete: "cascade" }),
+    resumeLatex: text("resume_latex").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("resume_revisions_documentId_idx").on(table.documentId)]
+);
+
+export const resumeMessageRole = [
+  "user",
+  "assistant",
+  "notice",
+  "question",
+] as const;
+
+export type ResumeMessageRole = (typeof resumeMessageRole)[number];
+
+export const resumeMessages = pgTable(
+  "resume_messages",
+  {
+    id: serial("id").primaryKey(),
+    documentId: integer("document_id")
+      .notNull()
+      .references(() => resumeDocuments.id, { onDelete: "cascade" }),
+    role: text("role").$type<ResumeMessageRole>().notNull(),
+    content: text("content").notNull().default(""),
+    editsApplied: integer("edits_applied"),
+    questionKey: text("question_key"),
+    questionOptions: jsonb("question_options").$type<string[]>(),
+    questionAnswered: text("question_answered"),
+    revisionId: integer("revision_id").references(() => resumeRevisions.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("resume_messages_documentId_idx").on(table.documentId)]
+);
+
+export const resumeDocumentsRelations = relations(
+  resumeDocuments,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [resumeDocuments.userId],
+      references: [user.id],
+    }),
+    job: one(jobs, { fields: [resumeDocuments.jobId], references: [jobs.id] }),
+    messages: many(resumeMessages),
+    revisions: many(resumeRevisions),
+  })
+);
+
+export const resumeRevisionsRelations = relations(
+  resumeRevisions,
+  ({ one, many }) => ({
+    document: one(resumeDocuments, {
+      fields: [resumeRevisions.documentId],
+      references: [resumeDocuments.id],
+    }),
+    messages: many(resumeMessages),
+  })
+);
+
+export const resumeMessagesRelations = relations(resumeMessages, ({ one }) => ({
+  document: one(resumeDocuments, {
+    fields: [resumeMessages.documentId],
+    references: [resumeDocuments.id],
+  }),
+  revision: one(resumeRevisions, {
+    fields: [resumeMessages.revisionId],
+    references: [resumeRevisions.id],
+  }),
 }));
 
 export type Job = typeof jobs.$inferSelect;
@@ -268,12 +345,16 @@ export const schema = {
   jobs,
   personalInformation,
   analysis,
-  jobResumes,
+  resumeDocuments,
+  resumeRevisions,
+  resumeMessages,
   userRelations,
   sessionRelations,
   accountRelations,
   jobsRelations,
   personalInformationRelations,
   analysisRelations,
-  jobResumesRelations,
+  resumeDocumentsRelations,
+  resumeRevisionsRelations,
+  resumeMessagesRelations,
 };

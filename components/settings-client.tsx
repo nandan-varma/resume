@@ -129,8 +129,7 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
         <div className="mb-4">
           <h2 className="font-semibold text-base text-foreground">AI Model</h2>
           <p className="mt-0.5 text-muted-foreground text-xs">
-            Used for resume analysis, editing, and job customization. Saved
-            locally.
+            Used for resume analysis, editing, and job customization.
           </p>
         </div>
         <Select

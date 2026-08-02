@@ -4,9 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ErrorBoundary } from "@/lib/error-boundary";
 import {
-  personalInfoQueryKey,
+  resumeDocumentQueryKey,
   usePersonalInfo,
   useRegenerateLatex,
+  useResumeDocument,
 } from "@/lib/queries/resume";
 import EditorHeader from "./editor-header";
 import EditorPane from "./editor-pane";
@@ -20,19 +21,16 @@ const RESUME_POLL_MS = 4000;
 const RESUME_POLL_TIMEOUT_MS = 30_000;
 
 interface LatexEditorProps {
-  initialChatMessages?: unknown;
-  initialLatex: string;
   isNewJobResume?: boolean;
   job?: EditorJob | null;
 }
 
 export function LatexEditor({
-  initialChatMessages,
-  initialLatex,
   job = null,
   isNewJobResume = false,
 }: LatexEditorProps) {
   const { data: personalInfo } = usePersonalInfo();
+  const { data: globalDoc } = useResumeDocument(null);
   const queryClient = useQueryClient();
   const regenerate = useRegenerateLatex();
   const [skipResumeOnboarding, setSkipResumeOnboarding] = useState(false);
@@ -49,6 +47,8 @@ export function LatexEditor({
     showLog,
     saving,
     dirty,
+    outOfSync,
+    reloadFromServer,
     zoom,
     activeTab,
     chatMessages,
@@ -67,16 +67,18 @@ export function LatexEditor({
     handleConsultSkip,
     handleForceRecompile,
     clearChat,
+    handleRestore,
+    restoringRevisionId,
     undo,
     redo,
-  } = useLatexEditor(initialLatex, job, isNewJobResume, initialChatMessages);
+  } = useLatexEditor(job, isNewJobResume);
 
   // Untouched editor: empty and no chat activity yet (consultation only ever
   // starts when there's already a base resume to work from, so this is a
   // reliable "nothing here yet" signal regardless of job scope).
   const pristine = isEmpty && chatMessages.length === 0;
   const hasResume = !!personalInfo?.resumeUrl;
-  const hasLatex = !!personalInfo?.resumeLatex;
+  const hasLatex = !!globalDoc?.resumeLatex;
   // resumeUrl set but resumeLatex isn't yet — either still converting, or an
   // old upload whose conversion never completed/failed silently.
   const pendingGeneration = hasResume && !hasLatex;
@@ -85,10 +87,10 @@ export function LatexEditor({
   // Adopt the AI-generated LaTeX the moment background conversion finishes,
   // but only while the editor is still pristine — never clobber real edits.
   useEffect(() => {
-    if (pristine && personalInfo?.resumeLatex) {
-      handleLatexChange(personalInfo.resumeLatex);
+    if (pristine && globalDoc?.resumeLatex) {
+      handleLatexChange(globalDoc.resumeLatex);
     }
-  }, [pristine, personalInfo?.resumeLatex, handleLatexChange]);
+  }, [pristine, globalDoc?.resumeLatex, handleLatexChange]);
 
   // No push channel for the background PDF->LaTeX task — poll while waiting.
   // Bounded: the conversion can fail silently server-side (e.g. a transient
@@ -101,7 +103,7 @@ export function LatexEditor({
       return;
     }
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: personalInfoQueryKey });
+      queryClient.invalidateQueries({ queryKey: resumeDocumentQueryKey(null) });
     }, RESUME_POLL_MS);
     const timeout = setTimeout(
       () => setPollTimedOut(true),
@@ -129,10 +131,12 @@ export function LatexEditor({
           isEngineReady={isEngineReady}
           job={job}
           onRecompile={handleForceRecompile}
+          onReload={reloadFromServer}
           onSave={handleSave}
           onTabChange={setActiveTab}
           onToggleIncognito={toggleIncognito}
           onZoomChange={setZoom}
+          outOfSync={outOfSync}
           pdfUrl={pdfUrl}
           saving={saving}
           zoom={zoom}
@@ -178,9 +182,11 @@ export function LatexEditor({
                   onLatexChange={handleLatexChange}
                   onRecompile={handleForceRecompile}
                   onRedo={redo}
+                  onRestore={handleRestore}
                   onSave={handleSave}
                   onUndo={undo}
                   pendingQuestion={pendingQuestion}
+                  restoringRevisionId={restoringRevisionId}
                 />
               )}
             </div>
@@ -206,9 +212,11 @@ export function LatexEditor({
                     onLatexChange={handleLatexChange}
                     onRecompile={handleForceRecompile}
                     onRedo={redo}
+                    onRestore={handleRestore}
                     onSave={handleSave}
                     onUndo={undo}
                     pendingQuestion={pendingQuestion}
+                    restoringRevisionId={restoringRevisionId}
                   />
                 }
                 right={

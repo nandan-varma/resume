@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, Loader2, Send, Sparkles, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  History,
+  Loader2,
+  Send,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { AssistantBubble, LoadingBubble, QuestionBubble } from "./chat-bubbles";
@@ -19,7 +26,7 @@ interface EditorPaneProps {
   onChatSend: () => void;
   onClearChat: () => void;
   onConsultPick: (
-    idx: number,
+    messageId: number,
     key: string,
     question: string,
     answer: string
@@ -28,19 +35,23 @@ interface EditorPaneProps {
   onLatexChange: (latex: string) => void;
   onRecompile: () => void;
   onRedo: () => void;
+  onRestore: (revisionId: number) => void;
   onSave: () => void;
   onUndo: () => void;
   pendingQuestion: boolean;
+  restoringRevisionId: number | null;
 }
 
 function renderMessage(
   msg: ChatMsg,
-  idx: number,
   chatLoading: boolean,
   onConsultPick: EditorPaneProps["onConsultPick"],
-  onConsultSkip: () => void
+  onConsultSkip: () => void,
+  onRestore: (revisionId: number) => void,
+  restoringRevisionId: number | null
 ) {
   if (msg.role === "notice") {
+    const canRestore = msg.revisionId !== undefined;
     return (
       <div
         className="flex items-center justify-center gap-1.5 py-1 text-muted-foreground text-xs"
@@ -48,6 +59,18 @@ function renderMessage(
       >
         <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
         {msg.content}
+        {canRestore && (
+          <button
+            className="inline-flex items-center gap-1 underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-50"
+            disabled={restoringRevisionId !== null}
+            onClick={() => onRestore(msg.revisionId as number)}
+            title="Restore resume to this point"
+            type="button"
+          >
+            <History className="size-3" />
+            Restore
+          </button>
+        )}
       </div>
     );
   }
@@ -57,7 +80,9 @@ function renderMessage(
         <QuestionBubble
           answered={msg.answered}
           loading={chatLoading}
-          onPick={(a) => onConsultPick(idx, msg.key, msg.question, a)}
+          onPick={(a) =>
+            onConsultPick(Number(msg.id), msg.key, msg.question, a)
+          }
           onSkip={onConsultSkip}
           options={msg.options}
           question={msg.question}
@@ -77,6 +102,13 @@ function renderMessage(
           <AssistantBubble
             content={msg.content}
             editsApplied={msg.editsApplied}
+            onRestore={
+              msg.revisionId === undefined
+                ? undefined
+                : () => onRestore(msg.revisionId as number)
+            }
+            restoring={restoringRevisionId !== null}
+            revisionId={msg.revisionId}
             streaming={msg.streaming}
           />
         ) : (
@@ -104,6 +136,8 @@ function EditorPane({
   onRecompile,
   onUndo,
   onRedo,
+  onRestore,
+  restoringRevisionId,
   job,
 }: EditorPaneProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -128,8 +162,15 @@ function EditorPane({
       return (
         <>
           <div className="flex-1 space-y-3 overflow-y-auto p-3">
-            {chatMessages.map((msg, i) =>
-              renderMessage(msg, i, chatLoading, onConsultPick, onConsultSkip)
+            {chatMessages.map((msg) =>
+              renderMessage(
+                msg,
+                chatLoading,
+                onConsultPick,
+                onConsultSkip,
+                onRestore,
+                restoringRevisionId
+              )
             )}
             {chatLoading &&
               lastMsg?.role === "user" &&
@@ -252,6 +293,8 @@ function EditorPane({
     onConsultPick,
     onConsultSkip,
     onClearChat,
+    onRestore,
+    restoringRevisionId,
     chatInput,
   ]);
 

@@ -1,7 +1,7 @@
 import { generateText } from "ai";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { personalInformation } from "@/db/schema";
+import { resumeDocuments } from "@/db/schema";
 import { logApiError, logVendorTiming } from "@/lib/dev-log";
 import { getModelInstanceById } from "@/lib/models";
 
@@ -132,10 +132,18 @@ export async function generateLatexFromPdf(
       .replace(MARKDOWN_FENCE_END, "")
       .trim();
 
+    // Global resume doc (jobId null) may not exist yet for a first-time upload.
     await db
-      .update(personalInformation)
-      .set({ resumeLatex: latex })
-      .where(eq(personalInformation.userId, userId));
+      .insert(resumeDocuments)
+      .values({ userId, jobId: null, resumeLatex: latex })
+      .onConflictDoUpdate({
+        target: resumeDocuments.userId,
+        targetWhere: sql`${resumeDocuments.jobId} IS NULL`,
+        set: {
+          resumeLatex: latex,
+          version: sql`${resumeDocuments.version} + 1`,
+        },
+      });
     return latex;
   } catch (error) {
     logApiError("[resume-latex]", error);

@@ -12,58 +12,57 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { ResumeUploadZone } from "@/components/resume-upload-zone";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorBoundary } from "@/lib/error-boundary";
-import { useRegenerateLatex } from "@/lib/queries/resume";
-import { saveResumeLatex } from "@/server/resume";
+import {
+  usePersonalInfo,
+  useRegenerateLatex,
+  useResumeDocument,
+  useSaveLatex,
+} from "@/lib/queries/resume";
 
-interface ResumeClientProps {
-  initialLatex: string | null;
-  initialResumeUrl: string | null;
-}
-
-export function ResumeClient(props: ResumeClientProps) {
+export function ResumeClient() {
   return (
     <ErrorBoundary>
-      <ResumeClientInner {...props} />
+      <ResumeClientInner />
     </ErrorBoundary>
   );
 }
 
-function ResumeClientInner({
-  initialResumeUrl,
-  initialLatex,
-}: ResumeClientProps) {
-  const [resumeUrl, setResumeUrl] = useState(initialResumeUrl);
-  const [latexContent, setLatexContent] = useState(initialLatex ?? "");
-  const [savingLatex, setSavingLatex] = useState(false);
+function ResumeClientInner() {
+  const { data: personalInfo } = usePersonalInfo();
+  const { data: doc } = useResumeDocument(null);
+  const [resumeUrl, setResumeUrl] = useState(personalInfo?.resumeUrl ?? null);
+  const [latexContent, setLatexContent] = useState(doc?.resumeLatex ?? "");
   const [latexDirty, setLatexDirty] = useState(false);
+  const [outOfSync, setOutOfSync] = useState(false);
+  const saveLatex = useSaveLatex(null, {
+    onConflict: () => setOutOfSync(true),
+  });
   const regenerate = useRegenerateLatex();
 
   const uploadLabel = resumeUrl ? "Replace resume" : "Upload your resume";
   const pendingGeneration = !!resumeUrl && !latexContent;
 
   let latexStatusLabel = "";
-  if (latexDirty) {
+  if (outOfSync) {
+    latexStatusLabel = "Edited elsewhere — reload to continue";
+  } else if (latexDirty) {
     latexStatusLabel = "Unsaved changes";
   } else if (latexContent) {
     latexStatusLabel = "Saved";
   }
 
   const handleSaveLatex = async () => {
-    setSavingLatex(true);
-    const result = await saveResumeLatex(latexContent);
-    setSavingLatex(false);
-    if (result.success) {
+    try {
+      await saveLatex.mutateAsync(latexContent);
       setLatexDirty(false);
-      toast.success("LaTeX saved");
-    } else {
-      toast.error(result.message || "Failed to save");
+    } catch {
+      // toasted by the mutation's onError (including conflict)
     }
   };
 
@@ -219,11 +218,11 @@ function ResumeClientInner({
                 </Button>
               )}
               <Button
-                disabled={savingLatex || !latexDirty}
+                disabled={saveLatex.isPending || !latexDirty || outOfSync}
                 onClick={handleSaveLatex}
                 size="sm"
               >
-                {savingLatex ? (
+                {saveLatex.isPending ? (
                   <>
                     <Loader2 className="mr-2 size-3.5 animate-spin" />
                     Saving…

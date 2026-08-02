@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db/drizzle";
-import { analysis, jobResumes, jobs } from "@/db/schema";
+import { analysis, jobs, resumeDocuments } from "@/db/schema";
 import { parseJsonBody, requireApiSession } from "@/lib/api-guards";
 
 const analysisSchema = z.object({
@@ -56,10 +56,9 @@ export async function POST(req: Request) {
         improvementSuggestions: analysisData.improvement_suggestions,
         additionalInsights: analysisData.additional_insights ?? null,
       });
-      // Placeholder row so the first autosave can upsert instead of insert
-      await tx
-        .insert(jobResumes)
-        .values({ jobId: job.id, userId, resumeLatex: "" });
+      // Placeholder row so isNewJobResume is false on first /editor open
+      // (extension-saved jobs already have an analysis, skip consultation)
+      await tx.insert(resumeDocuments).values({ jobId: job.id, userId });
     }
 
     return job;

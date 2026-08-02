@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   Briefcase,
   Code2,
   Download,
@@ -27,10 +28,12 @@ interface EditorHeaderProps {
   isEngineReady: boolean;
   job: EditorJob | null;
   onRecompile: () => void;
+  onReload: () => void;
   onSave: () => void;
   onTabChange: (tab: "editor" | "chat" | "preview") => void;
   onToggleIncognito: () => void;
   onZoomChange: (zoom: number) => void;
+  outOfSync: boolean;
   pdfUrl: string | null;
   saving: boolean;
   zoom: number;
@@ -42,6 +45,8 @@ function EditorHeader({
   dirty,
   incognito,
   job,
+  outOfSync,
+  onReload,
   pdfUrl,
   saving,
   zoom,
@@ -92,13 +97,26 @@ function EditorHeader({
             <span className="hidden sm:inline">Saves paused</span>
           </span>
         )}
-        {!incognito && dirty && (
-          <span className="inline-flex items-center gap-1 text-xs text-yellow-500 dark:text-yellow-400">
-            {autoSaving && <Loader2 className="size-3 animate-spin" />}
-            <span className="hidden sm:inline">
-              {autoSaving ? "Saving…" : "Unsaved changes"}
+        {outOfSync ? (
+          <button
+            className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-destructive text-xs hover:bg-destructive/20"
+            onClick={onReload}
+            title="This resume was edited elsewhere — click to reload the latest version"
+            type="button"
+          >
+            <AlertTriangle className="size-3" />
+            <span className="hidden sm:inline">Out of sync — reload</span>
+          </button>
+        ) : (
+          !incognito &&
+          dirty && (
+            <span className="inline-flex items-center gap-1 text-xs text-yellow-500 dark:text-yellow-400">
+              {autoSaving && <Loader2 className="size-3 animate-spin" />}
+              <span className="hidden sm:inline">
+                {autoSaving ? "Saving…" : "Unsaved changes"}
+              </span>
             </span>
-          </span>
+          )
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -179,7 +197,7 @@ function EditorHeader({
           )}
         </button>
         <Button
-          disabled={saving || !dirty || incognito}
+          disabled={saving || !dirty || incognito || outOfSync}
           onClick={onSave}
           size="sm"
         >
