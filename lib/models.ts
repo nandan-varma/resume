@@ -32,61 +32,50 @@ export type Model =
       name: string;
       provider: "google";
       modelId: GoogleGenerativeAIModelId;
+      disabled?: boolean;
     }
-  | { id: string; name: string; provider: "openai"; modelId: OpenAIChatModelId }
+  | {
+      id: string;
+      name: string;
+      provider: "openai";
+      modelId: OpenAIChatModelId;
+      disabled?: boolean;
+    }
   | {
       id: string;
       name: string;
       provider: "mistral";
       modelId: MistralChatModelId;
+      disabled?: boolean;
     }
-  | { id: string; name: string; provider: "openrouter"; modelId: string };
+  | {
+      id: string;
+      name: string;
+      provider: "openrouter";
+      modelId: string;
+      disabled?: boolean;
+    };
 
 export type Provider = Model["provider"];
 
 export const models = [
   {
-    id: "gemini-3-flash-preview",
-    name: "Gemini 3 Flash Preview",
+    id: "gemini-3.6-flash",
+    name: "Gemini 3.6 Flash",
     provider: "google",
-    modelId: "gemini-3-flash-preview",
+    modelId: "gemini-3.6-flash",
   },
   {
-    id: "gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
+    id: "gemini-3.1-flash-lite",
+    name: "Gemini 3.1 Flash Lite",
     provider: "google",
-    modelId: "gemini-2.5-flash",
+    modelId: "gemini-3.1-flash-lite",
   },
   {
-    id: "gemini-2.5-flash-preview-09-2025",
-    name: "Gemini 2.5 Flash Preview (09-2025)",
+    id: "gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
     provider: "google",
-    modelId: "gemini-2.5-flash-preview-09-2025",
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    name: "Gemini 2.5 Flash Lite",
-    provider: "google",
-    modelId: "gemini-2.5-flash-lite",
-  },
-  {
-    id: "gemini-2.5-flash-lite-preview-09-2025",
-    name: "Gemini 2.5 Flash Lite Preview (09-2025)",
-    provider: "google",
-    modelId: "gemini-2.5-flash-lite-preview-09-2025",
-  },
-  {
-    id: "gemini-2.0-flash-lite",
-    name: "Gemini 2.0 Flash Lite",
-    provider: "google",
-    modelId: "gemini-2.0-flash-lite",
-  },
-  { id: "gpt-5", name: "GPT-5", provider: "openai", modelId: "gpt-5" },
-  {
-    id: "gpt-5.2-codex",
-    name: "GPT 5.2 Codex",
-    provider: "openai",
-    modelId: "gpt-5.2-codex",
+    modelId: "gemini-2.5-pro",
   },
   {
     id: "gpt-5.6-luna",
@@ -99,24 +88,45 @@ export const models = [
     name: "Mistral Small",
     provider: "mistral",
     modelId: "mistral-small-latest",
+    disabled: true,
   },
   {
     id: "mistral-medium-latest",
     name: "Mistral Medium",
     provider: "mistral",
     modelId: "mistral-medium-latest",
+    disabled: true,
   },
   {
     id: "mistral-large-latest",
     name: "Mistral Large",
     provider: "mistral",
     modelId: "mistral-large-latest",
+    disabled: true,
+  },
+  {
+    id: "ling-3.0-flash",
+    name: "Ling 3.0 Flash (free)",
+    provider: "openrouter",
+    modelId: "inclusionai/ling-3.0-flash:free",
+  },
+  {
+    id: "laguna-s-2.1",
+    name: "Poolside Laguna S 2.1 (free)",
+    provider: "openrouter",
+    modelId: "poolside/laguna-s-2.1:free",
   },
   {
     id: "nemotron-3-ultra-550b",
     name: "Nemotron 3 Ultra 550B (free)",
     provider: "openrouter",
     modelId: "nvidia/nemotron-3-ultra-550b-a55b:free",
+  },
+  {
+    id: "north-mini-code",
+    name: "Cohere North Mini Code (free)",
+    provider: "openrouter",
+    modelId: "cohere/north-mini-code:free",
   },
 ] as const;
 

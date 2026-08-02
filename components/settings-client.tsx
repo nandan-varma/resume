@@ -146,16 +146,18 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                <div className="flex flex-col">
-                  <span>{model.name}</span>
-                  <span className="text-muted-foreground text-xs uppercase">
-                    {model.provider}
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
+            {models
+              .filter((model) => !("disabled" in model && model.disabled))
+              .map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  <div className="flex flex-col">
+                    <span>{model.name}</span>
+                    <span className="text-muted-foreground text-xs uppercase">
+                      {model.provider}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </Card>
