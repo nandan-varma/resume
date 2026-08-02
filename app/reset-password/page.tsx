@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ResetPasswordForm } from "@/components/forms/reset-password-form";
 import { Logo } from "@/components/logo";
+
+// This URL carries a one-time reset token in its query string — must never
+// be indexed or cached, even if a reset email link ends up crawled somewhere.
+export const metadata: Metadata = {
+  title: "Reset Password",
+  robots: { index: false, follow: false },
+};
 
 export default function ResetPasswordPage() {
   return (

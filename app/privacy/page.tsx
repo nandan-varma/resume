@@ -5,6 +5,9 @@ import { Logo } from "@/components/logo";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How JobMatch collects, uses, and protects your data.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {

@@ -5,6 +5,9 @@ import { Logo } from "@/components/logo";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The rules for using JobMatch.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsPage() {

@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "@/components/forms/login-form";
 import { Logo } from "@/components/logo";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  description:
+    "Sign in to JobMatch to track applications and match your resume against job descriptions.",
+  alternates: {
+    canonical: "/login",
+  },
+};
 
 export default function LoginPage() {
   return (

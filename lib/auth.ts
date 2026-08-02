@@ -42,5 +42,10 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
   plugins: [lastLoginMethod(), nextCookies()],
 });

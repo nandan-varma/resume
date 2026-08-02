@@ -2,7 +2,7 @@ import { generateText } from "ai";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { personalInformation } from "@/db/schema";
-import { logVendorTiming } from "@/lib/dev-log";
+import { logApiError, logVendorTiming } from "@/lib/dev-log";
 import { getModelInstanceById } from "@/lib/models";
 
 const MARKDOWN_FENCE_START = /^```(?:latex)?\s*/i;
@@ -99,7 +99,7 @@ Output ONLY the raw LaTeX source, starting with \\documentclass and ending with 
 export async function generateLatexFromPdf(
   userId: string,
   pdfBuffer: Buffer
-): Promise<void> {
+): Promise<string | null> {
   try {
     const base64 = pdfBuffer.toString("base64");
 
@@ -136,7 +136,9 @@ export async function generateLatexFromPdf(
       .update(personalInformation)
       .set({ resumeLatex: latex })
       .where(eq(personalInformation.userId, userId));
-  } catch {
-    // Background task — fail silently
+    return latex;
+  } catch (error) {
+    logApiError("[resume-latex]", error);
+    return null;
   }
 }

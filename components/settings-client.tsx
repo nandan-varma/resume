@@ -2,11 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { SecuritySettings } from "@/components/security-settings";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,12 +19,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { authClient } from "@/lib/auth-client";
 import { ErrorBoundary } from "@/lib/error-boundary";
 import { isValidModelId, type ModelId, models } from "@/lib/models";
 import { usePersonalInfo, useSaveAiPreferences } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
 
-const schema = z.object({
+const profileSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+});
+
+const preferencesSchema = z.object({
   aiPreferences: z.string().max(5000),
 });
 
@@ -37,6 +46,64 @@ export function SettingsClient(props: SettingsClientProps) {
   );
 }
 
+function ProfileCard({ userEmail, userName }: SettingsClientProps) {
+  const router = useRouter();
+  const form = useForm({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { name: userName },
+  });
+
+  const onSubmit = form.handleSubmit(async ({ name }) => {
+    const { error } = await authClient.updateUser({ name });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Name updated");
+    form.reset({ name });
+    router.refresh();
+  });
+
+  return (
+    <Card className="mb-5 animate-enter-up p-6 [animation-delay:80ms]">
+      <h2 className="mb-4 font-semibold text-base text-foreground">Profile</h2>
+      <div className="flex items-center gap-4">
+        <div
+          aria-hidden="true"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground font-bold text-background text-lg"
+        >
+          {(form.watch("name") || userEmail).charAt(0).toUpperCase()}
+        </div>
+        <form className="flex flex-1 items-end gap-2" onSubmit={onSubmit}>
+          <div className="flex-1">
+            <Label className="text-xs" htmlFor="name">
+              Name
+            </Label>
+            <Input className="mt-1" id="name" {...form.register("name")} />
+            {form.formState.errors.name && (
+              <p className="mt-1 text-destructive text-xs">
+                {form.formState.errors.name.message}
+              </p>
+            )}
+          </div>
+          <Button
+            disabled={form.formState.isSubmitting || !form.formState.isDirty}
+            size="sm"
+            type="submit"
+          >
+            {form.formState.isSubmitting ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </form>
+      </div>
+      <p className="mt-3 text-muted-foreground text-sm">{userEmail}</p>
+    </Card>
+  );
+}
+
 function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
   const { data: personalInfo } = usePersonalInfo();
   const savePrefs = useSaveAiPreferences();
@@ -44,7 +111,7 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
 
   // "values" re-syncs with TQ cache on every render — isDirty becomes false after a successful save
   const form = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(preferencesSchema),
     values: { aiPreferences: personalInfo?.aiPreferences ?? "" },
   });
 
@@ -54,23 +121,9 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-10 md:px-6">
-      <Card className="mb-5 animate-enter-up p-6 [animation-delay:80ms]">
-        <h2 className="mb-4 font-semibold text-base text-foreground">
-          Profile
-        </h2>
-        <div className="flex items-center gap-4">
-          <div
-            aria-hidden="true"
-            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground font-bold text-background text-lg"
-          >
-            {(userName || userEmail).charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <p className="font-medium text-foreground">{userName}</p>
-            <p className="mt-0.5 text-muted-foreground text-sm">{userEmail}</p>
-          </div>
-        </div>
-      </Card>
+      <ProfileCard userEmail={userEmail} userName={userName} />
+
+      <SecuritySettings />
 
       <Card className="mb-5 animate-enter-up p-6 [animation-delay:120ms]">
         <div className="mb-4">

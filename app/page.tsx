@@ -1,13 +1,43 @@
 import { Briefcase, Sparkles, Target } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { ModeSwitcher } from "@/components/mode-switcher";
 import { SpotlightCard } from "@/components/spotlight-card";
 import { Button } from "@/components/ui/button";
 
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
+};
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "JobMatch",
+  url: APP_URL,
+  description:
+    "AI-powered resume analyzer that scores your resume against any job description, surfaces missing keywords, and tracks applications.",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+};
+
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
+      <script
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: static JSON-LD, no user input
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        type="application/ld+json"
+      />
       <header className="flex h-12 animate-enter items-center justify-between border-border border-b px-4 sm:px-6">
         <Link
           aria-label="JobMatch — home"
@@ -61,9 +91,9 @@ export default function Home() {
           <div className="grid border border-border sm:grid-cols-3">
             <SpotlightCard className="border-0 p-6 text-left sm:border-r">
               <Sparkles className="mb-4 size-4 text-muted-foreground" />
-              <h3 className="font-medium text-foreground text-sm">
+              <h2 className="font-medium text-foreground text-sm">
                 Match Score
-              </h3>
+              </h2>
               <p className="mt-1.5 text-muted-foreground text-sm leading-relaxed">
                 See exactly how well your resume fits a role — and what's
                 missing.
@@ -71,18 +101,18 @@ export default function Home() {
             </SpotlightCard>
             <SpotlightCard className="border-0 border-t p-6 text-left sm:border-t-0 sm:border-r">
               <Target className="mb-4 size-4 text-muted-foreground" />
-              <h3 className="font-medium text-foreground text-sm">
+              <h2 className="font-medium text-foreground text-sm">
                 Keyword Gaps
-              </h3>
+              </h2>
               <p className="mt-1.5 text-muted-foreground text-sm leading-relaxed">
                 Identify the exact terms recruiters and ATS scanners look for.
               </p>
             </SpotlightCard>
             <SpotlightCard className="border-0 border-t p-6 text-left sm:border-t-0">
               <Briefcase className="mb-4 size-4 text-muted-foreground" />
-              <h3 className="font-medium text-foreground text-sm">
+              <h2 className="font-medium text-foreground text-sm">
                 Application Tracker
-              </h3>
+              </h2>
               <p className="mt-1.5 text-muted-foreground text-sm leading-relaxed">
                 Track every application from submission to offer in one place.
               </p>

@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ForgotPasswordForm } from "@/components/forms/forgot-password-form";
 import { Logo } from "@/components/logo";
+
+export const metadata: Metadata = {
+  title: "Forgot Password",
+  robots: { index: false, follow: false },
+};
 
 export default function ForgotPasswordPage() {
   return (

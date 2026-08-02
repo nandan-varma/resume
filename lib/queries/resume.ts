@@ -63,6 +63,31 @@ export function useUploadResume() {
   });
 }
 
+export function useRegenerateLatex() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/regenerate-latex", { method: "POST" });
+      const data = await res.json();
+      if (!(res.ok && data.success)) {
+        throw new Error(data.error ?? "Generation failed");
+      }
+      return data.resumeLatex as string;
+    },
+    onSuccess: (resumeLatex) => {
+      queryClient.setQueryData(
+        personalInfoQueryKey,
+        (old: Awaited<ReturnType<typeof getPersonalInformation>>) =>
+          old ? { ...old, resumeLatex } : old
+      );
+      toast.success("Resume regenerated");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Generation failed");
+    },
+  });
+}
+
 export function useSaveAiPreferences() {
   const queryClient = useQueryClient();
   return useMutation({

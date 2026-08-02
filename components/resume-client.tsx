@@ -1,14 +1,25 @@
 "use client";
 
-import { ExternalLink, FileText, Loader2, Pencil, Save } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Pencil,
+  RefreshCw,
+  Save,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ResumeUploadZone } from "@/components/resume-upload-zone";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorBoundary } from "@/lib/error-boundary";
+import { useRegenerateLatex } from "@/lib/queries/resume";
 import { saveResumeLatex } from "@/server/resume";
 
 interface ResumeClientProps {
@@ -32,8 +43,11 @@ function ResumeClientInner({
   const [latexContent, setLatexContent] = useState(initialLatex ?? "");
   const [savingLatex, setSavingLatex] = useState(false);
   const [latexDirty, setLatexDirty] = useState(false);
+  const regenerate = useRegenerateLatex();
 
   const uploadLabel = resumeUrl ? "Replace resume" : "Upload your resume";
+  const pendingGeneration = !!resumeUrl && !latexContent;
+
   let latexStatusLabel = "";
   if (latexDirty) {
     latexStatusLabel = "Unsaved changes";
@@ -50,6 +64,16 @@ function ResumeClientInner({
       toast.success("LaTeX saved");
     } else {
       toast.error(result.message || "Failed to save");
+    }
+  };
+
+  const handleRegenerate = async () => {
+    try {
+      const newLatex = await regenerate.mutateAsync();
+      setLatexContent(newLatex);
+      setLatexDirty(false);
+    } catch {
+      // toasted by the mutation's onError
     }
   };
 
@@ -103,50 +127,115 @@ function ResumeClientInner({
           <ResumeUploadZone
             className="flex-1"
             label={uploadLabel}
-            onUploaded={setResumeUrl}
+            onUploaded={(url) => {
+              setResumeUrl(url);
+              setLatexContent("");
+              setLatexDirty(false);
+            }}
           />
         </Card>
 
         <Card className="flex animate-enter-up flex-col p-6 [animation-delay:150ms]">
-          <div className="mb-4">
-            <h2 className="font-semibold text-base text-foreground">
-              LaTeX Source
-            </h2>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Store your resume source for version control
-            </p>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-base text-foreground">
+                LaTeX Source
+              </h2>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                Store your resume source for version control
+              </p>
+            </div>
+            {latexContent && !latexDirty && (
+              <Badge
+                className="gap-1 border-success/30 text-success"
+                variant="outline"
+              >
+                <CheckCircle2 className="size-3" />
+                Synced from PDF
+              </Badge>
+            )}
+            {pendingGeneration && (
+              <Badge
+                className="gap-1 border-warning/30 text-warning"
+                variant="outline"
+              >
+                <AlertTriangle className="size-3" />
+                Not generated
+              </Badge>
+            )}
           </div>
-          <Textarea
-            aria-label="LaTeX resume source code"
-            className="mb-3 flex-1 resize-none font-mono text-sm"
-            onChange={(e) => {
-              setLatexContent(e.target.value);
-              setLatexDirty(true);
-            }}
-            placeholder="Paste your LaTeX resume source here…"
-            value={latexContent}
-          />
-          <div className="flex items-center justify-between">
+
+          {pendingGeneration ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-border border-dashed p-6 text-center">
+              <AlertTriangle className="size-6 text-muted-foreground" />
+              <p className="text-muted-foreground text-sm">
+                No LaTeX has been generated from your uploaded PDF yet.
+              </p>
+              <Button
+                disabled={regenerate.isPending}
+                onClick={handleRegenerate}
+                size="sm"
+                variant="outline"
+              >
+                {regenerate.isPending ? (
+                  <Loader2 className="mr-2 size-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 size-3.5" />
+                )}
+                Generate from PDF
+              </Button>
+            </div>
+          ) : (
+            <Textarea
+              aria-label="LaTeX resume source code"
+              className="mb-3 flex-1 resize-none font-mono text-sm"
+              onChange={(e) => {
+                setLatexContent(e.target.value);
+                setLatexDirty(true);
+              }}
+              placeholder="Paste your LaTeX resume source here…"
+              value={latexContent}
+            />
+          )}
+
+          <div className="mt-3 flex items-center justify-between">
             <span className="text-muted-foreground text-xs">
               {latexStatusLabel}
             </span>
-            <Button
-              disabled={savingLatex || !latexDirty}
-              onClick={handleSaveLatex}
-              size="sm"
-            >
-              {savingLatex ? (
-                <>
-                  <Loader2 className="mr-2 size-3.5 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 size-3.5" />
-                  Save LaTeX
-                </>
+            <div className="flex items-center gap-2">
+              {!pendingGeneration && resumeUrl && (
+                <Button
+                  disabled={regenerate.isPending}
+                  onClick={handleRegenerate}
+                  size="sm"
+                  variant="ghost"
+                >
+                  {regenerate.isPending ? (
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 size-3.5" />
+                  )}
+                  Regenerate
+                </Button>
               )}
-            </Button>
+              <Button
+                disabled={savingLatex || !latexDirty}
+                onClick={handleSaveLatex}
+                size="sm"
+              >
+                {savingLatex ? (
+                  <>
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 size-3.5" />
+                    Save LaTeX
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

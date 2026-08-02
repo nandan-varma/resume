@@ -2,6 +2,7 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getQueryClient } from "@/app/get-query-client";
+import { DangerZone } from "@/components/danger-zone";
 import { ResumeClient } from "@/components/resume-client";
 import { SettingsClient } from "@/components/settings-client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,6 +90,12 @@ export default async function SettingsPage() {
         <Suspense fallback={<ResumeContentSkeleton />}>
           <ResumeSection />
         </Suspense>
+      </div>
+
+      <div className="border-border/40 border-t py-6 md:py-8">
+        <div className="mx-auto max-w-2xl px-4 md:px-6">
+          <DangerZone />
+        </div>
       </div>
     </main>
   );
