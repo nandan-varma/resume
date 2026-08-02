@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
 import { ErrorBoundary } from "@/lib/error-boundary";
 
@@ -70,11 +70,10 @@ function SecuritySettingsInner() {
           <Label className="text-xs" htmlFor="currentPassword">
             Current password
           </Label>
-          <Input
+          <PasswordInput
             autoComplete="current-password"
             className="mt-1"
             id="currentPassword"
-            type="password"
             {...form.register("currentPassword")}
           />
           {form.formState.errors.currentPassword && (
@@ -87,11 +86,10 @@ function SecuritySettingsInner() {
           <Label className="text-xs" htmlFor="newPassword">
             New password
           </Label>
-          <Input
+          <PasswordInput
             autoComplete="new-password"
             className="mt-1"
             id="newPassword"
-            type="password"
             {...form.register("newPassword")}
           />
           {form.formState.errors.newPassword && (
@@ -104,11 +102,10 @@ function SecuritySettingsInner() {
           <Label className="text-xs" htmlFor="confirmPassword">
             Confirm new password
           </Label>
-          <Input
+          <PasswordInput
             autoComplete="new-password"
             className="mt-1"
             id="confirmPassword"
-            type="password"
             {...form.register("confirmPassword")}
           />
           {form.formState.errors.confirmPassword && (

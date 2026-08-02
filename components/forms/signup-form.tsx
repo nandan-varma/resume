@@ -25,6 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/utils";
 import { signUp } from "@/server/users";
 
@@ -115,10 +116,9 @@ export function SignupForm({
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input
+                        <PasswordInput
                           autoComplete="new-password"
                           placeholder="Min. 8 characters"
-                          type="password"
                           {...field}
                         />
                       </FormControl>
@@ -153,14 +153,14 @@ export function SignupForm({
         By creating an account, you agree to our{" "}
         <Link
           className="underline underline-offset-4 hover:text-primary"
-          href="#"
+          href="/terms"
         >
           Terms of Service
         </Link>{" "}
         and{" "}
         <Link
           className="underline underline-offset-4 hover:text-primary"
-          href="#"
+          href="/privacy"
         >
           Privacy Policy
         </Link>

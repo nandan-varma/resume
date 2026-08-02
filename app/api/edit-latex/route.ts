@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-guards";
 import { logApiError } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
+import { buildPageFillHint } from "@/lib/page-fill-hint";
 
 const historyMessageSchema = z.object({
   content: z.string(),
@@ -23,6 +24,7 @@ const requestSchema = z.object({
   history: z.array(historyMessageSchema).default([]),
   jobDescription: z.string().optional(),
   pageCount: z.number().int().positive().optional(),
+  fillRatio: z.number().min(0).optional(),
 });
 
 // Client-side tool: the model calls this to make edits, but we apply them
@@ -71,8 +73,15 @@ export async function POST(req: Request) {
   if (!parsed.ok) {
     return parsed.response;
   }
-  const { instruction, latex, modelId, history, jobDescription, pageCount } =
-    parsed.data;
+  const {
+    instruction,
+    latex,
+    modelId,
+    history,
+    jobDescription,
+    pageCount,
+    fillRatio,
+  } = parsed.data;
 
   const personalInfo = await db.query.personalInformation.findFirst({
     where: eq(personalInformation.userId, session.user.id),
@@ -123,16 +132,9 @@ CRITICAL RULES:
   }
 
   if (pageCount) {
-    let overflow: string;
-    if (pageCount === 1) {
-      overflow = "Fits on one page.";
-    } else if (pageCount === 2) {
-      overflow =
-        "Currently spills onto a second page — prefer tightening existing content (shorter bullets, reduced vspace) over adding new content unless the user explicitly asks to expand.";
-    } else {
-      overflow = `${pageCount} pages — resume is long, lean toward cutting.`;
-    }
-    systemParts.push(`\nCompiled page count: ${pageCount}. ${overflow}`);
+    systemParts.push(
+      `\nCompiled page count: ${pageCount}. ${buildPageFillHint(pageCount, fillRatio, "editing")}`
+    );
   }
 
   // LaTeX in system prompt for provider-level prefix caching

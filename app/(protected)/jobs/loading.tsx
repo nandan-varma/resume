@@ -8,10 +8,10 @@ export default function JobsLoading() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="font-bold text-3xl text-foreground tracking-tight">
-                Applications
+                Jobs
               </h1>
               <p className="mt-0.5 text-muted-foreground text-sm">
-                Track your job applications
+                Track applications and analyze job fits
               </p>
             </div>
           </div>

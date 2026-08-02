@@ -81,6 +81,7 @@ export function useLatexEditor(job: EditorJob | null, isNewJobResume: boolean) {
   const {
     engine,
     pageCount,
+    fillRatio,
     pdfUrl,
     compileLog,
     showLog,
@@ -125,6 +126,7 @@ export function useLatexEditor(job: EditorJob | null, isNewJobResume: boolean) {
       modelId,
       job,
       pageCount,
+      fillRatio,
       persistedMessages,
       setStreamingMessage,
       chatLoadingRef,
@@ -140,6 +142,8 @@ export function useLatexEditor(job: EditorJob | null, isNewJobResume: boolean) {
       job,
       isNewJobResume,
       initialLatexSource,
+      pageCount,
+      fillRatio,
       persistedMessages,
       setChatLoading,
       onConflict

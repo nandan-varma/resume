@@ -20,6 +20,8 @@ export function useConsultation(
   job: EditorJob | null,
   isNewJobResume: boolean,
   initialLatex: string,
+  pageCount: number | null,
+  fillRatio: number | null,
   chatMessages: ChatMsg[],
   setChatLoading: (v: boolean) => void,
   onConflict: () => void
@@ -72,6 +74,8 @@ export function useConsultation(
             jobDescription: job?.description,
             modelId,
             answers,
+            ...(pageCount === null ? {} : { pageCount }),
+            ...(fillRatio === null ? {} : { fillRatio }),
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -121,7 +125,16 @@ export function useConsultation(
         }
       }
     },
-    [job, modelId, doConsultEdit, getLatex, appendTurn, setChatLoading]
+    [
+      job,
+      modelId,
+      doConsultEdit,
+      getLatex,
+      appendTurn,
+      setChatLoading,
+      pageCount,
+      fillRatio,
+    ]
   );
 
   const handleConsultPick = useCallback(

@@ -14,8 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
 import { ErrorBoundary } from "@/lib/error-boundary";
 
@@ -93,14 +93,13 @@ function DangerZoneInner() {
             <Label className="text-xs" htmlFor="delete-password">
               Password
             </Label>
-            <Input
+            <PasswordInput
               autoComplete="current-password"
               autoFocus
               className="mt-1"
               id="delete-password"
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleDelete()}
-              type="password"
               value={password}
             />
           </div>

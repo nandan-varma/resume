@@ -6,6 +6,31 @@ import type { EnginePhase } from "./types";
 
 const PACKAGES_JS = "/core/busytex/texlive-extra.js";
 const PAGE_COUNT_RE = /Output written.*?\((\d+)\s+page/;
+const FILL_PROBE_RE = /JOBMATCH_FILL:([\d.]+)pt:([\d.]+)pt/;
+
+// Measuring unused space on the last page: \pagetotal (height used so far)
+// vs \textheight (fixed page content height from geometry) — read right
+// before \end{document}, while the last page is still "open". \pagegoal
+// isn't usable here since LaTeX sets it to \maxdimen on the final page under
+// \raggedbottom (the default for article), which these resumes use.
+function withFillProbe(src: string): string {
+  const idx = src.lastIndexOf("\\end{document}");
+  if (idx === -1) {
+    return src;
+  }
+  return `${src.slice(0, idx)}\\typeout{JOBMATCH_FILL:\\the\\pagetotal:\\the\\textheight}\n${src.slice(idx)}`;
+}
+
+function parseCompileLog(log: string) {
+  const pages = log.match(PAGE_COUNT_RE)?.[1];
+  const fillMatch = log.match(FILL_PROBE_RE);
+  return {
+    pageCount: pages ? Number.parseInt(pages, 10) : null,
+    fillRatio: fillMatch
+      ? Number.parseFloat(fillMatch[1]) / Number.parseFloat(fillMatch[2])
+      : null,
+  };
+}
 
 // Module-level singletons — survive navigation away from and back to /editor
 let _runner: InstanceType<typeof BusyTexRunner> | null = null;
@@ -19,6 +44,7 @@ export function useEngine() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [compileLog, setCompileLog] = useState("");
   const [pageCount, setPageCount] = useState<number | null>(null);
+  const [fillRatio, setFillRatio] = useState<number | null>(null);
   const [showLog, setShowLog] = useState(false);
 
   const pdfBlobUrlRef = useRef<string | null>(null);
@@ -87,14 +113,15 @@ export function useEngine() {
           throw new Error("Compiler not initialized");
         }
         const result = await _compiler.compile({
-          input: src,
+          input: withFillProbe(src),
           rerun: true,
           verbose: "silent",
         });
         const log = result.log ?? "";
         setCompileLog(log);
-        const pages = log.match(PAGE_COUNT_RE)?.[1];
-        setPageCount(pages ? Number.parseInt(pages, 10) : null);
+        const parsed = parseCompileLog(log);
+        setPageCount(parsed.pageCount);
+        setFillRatio(parsed.fillRatio);
         if (result.success && result.pdf) {
           if (pdfBlobUrlRef.current) {
             URL.revokeObjectURL(pdfBlobUrlRef.current);
@@ -130,6 +157,7 @@ export function useEngine() {
   return {
     engine,
     pageCount,
+    fillRatio,
     pdfUrl,
     compileLog,
     showLog,

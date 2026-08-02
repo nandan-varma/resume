@@ -103,6 +103,7 @@ export function useAiChat(
   modelId: ModelId,
   job: EditorJob | null,
   pageCount: number | null,
+  fillRatio: number | null,
   chatMessages: ChatMsg[],
   setStreamingMessage: (msg: ChatMsg | null) => void,
   chatLoadingRef: React.MutableRefObject<boolean>,
@@ -206,6 +207,7 @@ export function useAiChat(
             history,
             ...(jobDescription ? { jobDescription } : {}),
             ...(pageCount === null ? {} : { pageCount }),
+            ...(fillRatio === null ? {} : { fillRatio }),
           }),
           signal: ctrl.signal,
         });
@@ -315,6 +317,7 @@ export function useAiChat(
       setStreamingMessage,
       setChatLoading,
       pageCount,
+      fillRatio,
       appendTurn,
     ]
   );

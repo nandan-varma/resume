@@ -24,7 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -90,9 +90,9 @@ export function ResetPasswordForm({
                   <FormItem>
                     <FormLabel>New password</FormLabel>
                     <FormControl>
-                      <Input
+                      <PasswordInput
+                        autoComplete="new-password"
                         placeholder="Min. 8 characters"
-                        type="password"
                         {...field}
                       />
                     </FormControl>
@@ -107,9 +107,9 @@ export function ResetPasswordForm({
                   <FormItem>
                     <FormLabel>Confirm new password</FormLabel>
                     <FormControl>
-                      <Input
+                      <PasswordInput
+                        autoComplete="new-password"
                         placeholder="Repeat your password"
-                        type="password"
                         {...field}
                       />
                     </FormControl>
