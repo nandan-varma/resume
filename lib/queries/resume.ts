@@ -34,6 +34,35 @@ export function useJobResume(jobId: number) {
 
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
+export function useUploadResume() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("fileName", file.name);
+      const res = await fetch("/api/upload-resume", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!(res.ok && data.success)) {
+        throw new Error(data.error ?? data.message ?? "Upload failed");
+      }
+      return data.resumeUrl as string;
+    },
+    // A brand-new user has no personalInformation row yet, so there's no
+    // existing cache entry to patch — invalidate and let it refetch instead.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: personalInfoQueryKey });
+      toast.success("Resume uploaded");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    },
+  });
+}
+
 export function useSaveAiPreferences() {
   const queryClient = useQueryClient();
   return useMutation({

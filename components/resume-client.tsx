@@ -1,21 +1,14 @@
 "use client";
 
-import {
-  ExternalLink,
-  FileText,
-  Loader2,
-  Pencil,
-  Save,
-  Upload,
-} from "lucide-react";
+import { ExternalLink, FileText, Loader2, Pencil, Save } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ResumeUploadZone } from "@/components/resume-upload-zone";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorBoundary } from "@/lib/error-boundary";
-import { cn } from "@/lib/utils";
 import { saveResumeLatex } from "@/server/resume";
 
 interface ResumeClientProps {
@@ -36,7 +29,6 @@ function ResumeClientInner({
   initialLatex,
 }: ResumeClientProps) {
   const [resumeUrl, setResumeUrl] = useState(initialResumeUrl);
-  const [uploading, setUploading] = useState(false);
   const [latexContent, setLatexContent] = useState(initialLatex ?? "");
   const [savingLatex, setSavingLatex] = useState(false);
   const [latexDirty, setLatexDirty] = useState(false);
@@ -48,43 +40,6 @@ function ResumeClientInner({
   } else if (latexContent) {
     latexStatusLabel = "Saved";
   }
-
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    if (file.type !== "application/pdf") {
-      toast.error("Please upload a PDF file");
-      return;
-    }
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("fileName", file.name);
-      const response = await fetch("/api/upload-resume", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Upload failed");
-      }
-      const data = await response.json();
-      if (data.success) {
-        setResumeUrl(data.resumeUrl);
-        toast.success("Resume uploaded");
-      } else {
-        throw new Error(data.message || "Upload failed");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
-  };
 
   const handleSaveLatex = async () => {
     setSavingLatex(true);
@@ -145,34 +100,11 @@ function ResumeClientInner({
             </div>
           )}
 
-          <label
-            className={cn(
-              "flex flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-border border-dashed",
-              "transition-all hover:border-primary/40 hover:bg-primary/5",
-              uploading && "pointer-events-none opacity-60"
-            )}
-          >
-            {uploading ? (
-              <Loader2 className="size-8 animate-spin text-muted-foreground" />
-            ) : (
-              <Upload className="size-8 text-muted-foreground" />
-            )}
-            <div className="text-center">
-              <p className="font-medium text-foreground text-sm">
-                {uploading ? "Uploading…" : uploadLabel}
-              </p>
-              <p className="mt-0.5 text-muted-foreground text-xs">
-                PDF only · max 10 MB
-              </p>
-            </div>
-            <input
-              accept=".pdf"
-              className="hidden"
-              disabled={uploading}
-              onChange={handleResumeUpload}
-              type="file"
-            />
-          </label>
+          <ResumeUploadZone
+            className="flex-1"
+            label={uploadLabel}
+            onUploaded={setResumeUrl}
+          />
         </Card>
 
         <Card className="flex animate-enter-up flex-col p-6 [animation-delay:150ms]">

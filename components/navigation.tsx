@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Briefcase, FileText, Menu, Search, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ const tabs: {
 export function Navigation({ user }: NavigationProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const activeTab =
@@ -133,6 +135,11 @@ export function Navigation({ user }: NavigationProps) {
   const handleSignOut = async () => {
     try {
       await authClient.signOut();
+      // Query keys (personal-info, jobs, ...) aren't scoped by user id, and
+      // this app navigates client-side (router.push, no full reload) — without
+      // clearing here, the next account signed into this tab would see the
+      // previous user's cached resume/jobs data until staleTime expires.
+      queryClient.clear();
       setMobileOpen(false);
       router.push("/");
     } catch (err) {

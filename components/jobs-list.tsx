@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CountUp } from "@/components/count-up";
+import { OnboardingCard } from "@/components/onboarding-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -48,6 +49,7 @@ import {
   useReanalyzeJob,
   useUpdateJobStatus,
 } from "@/lib/queries/jobs";
+import { usePersonalInfo } from "@/lib/queries/resume";
 import { STATUS_CONFIG } from "@/lib/status";
 import { useModelId } from "@/lib/use-model-id";
 
@@ -187,12 +189,18 @@ function matchColor(pct: number) {
 }
 
 function WrappedJobsList() {
+  const { data: personalInfo } = usePersonalInfo();
+  const [skipOnboarding, setSkipOnboarding] = useState(false);
   const { data: jobs } = useJobs();
   const deleteJob = useDeleteJob();
   const updateStatus = useUpdateJobStatus();
   const reanalyze = useReanalyzeJob();
   const [modelId] = useModelId();
   const [filterStatus, setFilterStatus] = useState<JobStatus | null>(null);
+
+  if (!(personalInfo?.resumeUrl || skipOnboarding)) {
+    return <OnboardingCard onSkip={() => setSkipOnboarding(true)} />;
+  }
 
   const statusCounts = Object.fromEntries(
     jobStatus.map((s) => [s, jobs.filter((j) => j.status === s).length])

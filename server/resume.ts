@@ -76,9 +76,13 @@ export const getPersonalInformation = async () => {
     if (!session?.user.id) {
       return null;
     }
-    return await db.query.personalInformation.findFirst({
+    // A brand-new user has no row yet (one is only created on first
+    // upload/save) — coerce to null since useSuspenseQuery treats an
+    // undefined result as an error, not "no data yet".
+    const info = await db.query.personalInformation.findFirst({
       where: eq(personalInformation.userId, session.user.id),
     });
+    return info ?? null;
   } catch {
     return null;
   }
