@@ -19,10 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { models } from "@/lib/models";
 import { useAnalyzeMatch } from "@/lib/queries/analyze";
 import { useCreateJob, useJobs } from "@/lib/queries/jobs";
 import { usePersonalInfo } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
+import { isSubmitShortcut } from "@/lib/utils";
 import { saveAnalysis } from "@/server/analysis";
 
 interface FormValues {
@@ -176,7 +178,13 @@ export function JobAnalyzer() {
               <Textarea
                 className={`resize-y transition-all duration-300 ${result ? "min-h-[120px]" : "min-h-[240px]"}`}
                 id="jobDescription"
-                placeholder="Paste the full job description here…"
+                onKeyDown={(e) => {
+                  if (isSubmitShortcut(e)) {
+                    e.preventDefault();
+                    handleAnalyze();
+                  }
+                }}
+                placeholder="Paste the full job description here… (⌘+Enter to analyze)"
                 {...form.register("jobDescription")}
               />
             </div>
@@ -217,7 +225,8 @@ export function JobAnalyzer() {
                   isPending={analyze.isPending}
                 />
                 <p className="text-muted-foreground text-xs">
-                  Model: {modelId} ·{" "}
+                  Model: {models.find((m) => m.id === modelId)?.name ?? modelId}{" "}
+                  ·{" "}
                   <Link
                     className="underline hover:no-underline"
                     href="/settings"

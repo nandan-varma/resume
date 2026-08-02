@@ -24,6 +24,7 @@ import {
   useResumeDocument,
   useSaveLatex,
 } from "@/lib/queries/resume";
+import { isSubmitShortcut } from "@/lib/utils";
 
 export function ResumeClient() {
   return (
@@ -192,7 +193,13 @@ function ResumeClientInner() {
                 setLatexContent(e.target.value);
                 setLatexDirty(true);
               }}
-              placeholder="Paste your LaTeX resume source here…"
+              onKeyDown={(e) => {
+                if (isSubmitShortcut(e) && latexDirty) {
+                  e.preventDefault();
+                  handleSaveLatex();
+                }
+              }}
+              placeholder="Paste your LaTeX resume source here… (⌘+Enter to save)"
               value={latexContent}
             />
           )}

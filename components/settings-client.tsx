@@ -24,6 +24,7 @@ import { ErrorBoundary } from "@/lib/error-boundary";
 import { isValidModelId, type ModelId, models } from "@/lib/models";
 import { usePersonalInfo, useSaveAiPreferences } from "@/lib/queries/resume";
 import { useModelId } from "@/lib/use-model-id";
+import { isSubmitShortcut } from "@/lib/utils";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -172,7 +173,13 @@ function SettingsClientInner({ userName, userEmail }: SettingsClientProps) {
         <form onSubmit={onSubmit}>
           <Textarea
             {...form.register("aiPreferences")}
-            placeholder='e.g. "I am targeting senior backend engineering roles at startups…"'
+            onKeyDown={(e) => {
+              if (isSubmitShortcut(e)) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            placeholder='e.g. "I am targeting senior backend engineering roles at startups…" (⌘+Enter to save)'
             rows={5}
           />
           <div className="mt-4 flex items-center justify-between">

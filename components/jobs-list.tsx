@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CountUp } from "@/components/count-up";
@@ -52,6 +52,7 @@ import {
 import { usePersonalInfo } from "@/lib/queries/resume";
 import { STATUS_CONFIG } from "@/lib/status";
 import { useModelId } from "@/lib/use-model-id";
+import { isSubmitShortcut } from "@/lib/utils";
 
 const addJobSchema = z.object({
   jobTitle: z.string().min(1, "Required"),
@@ -69,8 +70,12 @@ function formatDate(date: Date) {
   }).format(new Date(date));
 }
 
-function AddJobDialog() {
-  const [open, setOpen] = useState(false);
+interface AddJobDialogProps {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}
+
+function AddJobDialog({ open, onOpenChange }: AddJobDialogProps) {
   const createJob = useCreateJob();
   const form = useForm<AddJobValues>({
     resolver: zodResolver(addJobSchema),
@@ -87,18 +92,21 @@ function AddJobDialog() {
       {
         onSuccess: () => {
           form.reset();
-          setOpen(false);
+          onOpenChange(false);
         },
       }
     );
   });
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 size-4" />
           Add Job
+          <kbd className="ml-2 hidden rounded border border-primary-foreground/30 px-1 font-mono text-[10px] opacity-70 sm:inline">
+            c
+          </kbd>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
@@ -125,7 +133,13 @@ function AddJobDialog() {
             <Textarea
               className="mt-1"
               id="jobDescription"
-              placeholder="Paste the job description here…"
+              onKeyDown={(e) => {
+                if (isSubmitShortcut(e)) {
+                  e.preventDefault();
+                  onSubmit();
+                }
+              }}
+              placeholder="Paste the job description here… (⌘+Enter to submit)"
               rows={6}
               {...form.register("jobDescription")}
             />
@@ -170,6 +184,62 @@ function AddJobDialog() {
   );
 }
 
+interface DeleteJobDialogProps {
+  jobTitle: string;
+  onConfirm: () => void;
+  pending: boolean;
+}
+
+function DeleteJobDialog({
+  jobTitle,
+  onConfirm,
+  pending,
+}: DeleteJobDialogProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogTrigger asChild>
+        <Button
+          aria-label={`Delete ${jobTitle}`}
+          className="-mt-1 -mr-1 shrink-0 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive"
+          size="icon"
+          variant="ghost"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete this application?</DialogTitle>
+        </DialogHeader>
+        <p className="text-muted-foreground text-sm">
+          This permanently removes{" "}
+          <span className="font-medium text-foreground">{jobTitle}</span> and
+          its saved analysis and resume. This cannot be undone.
+        </p>
+        <Button
+          className="w-full"
+          disabled={pending}
+          onClick={() => {
+            onConfirm();
+            setOpen(false);
+          }}
+          variant="destructive"
+        >
+          {pending ? (
+            <>
+              <Loader2 className="mr-2 size-3.5 animate-spin" />
+              Deleting…
+            </>
+          ) : (
+            "Delete application"
+          )}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function JobsList() {
   return (
     <ErrorBoundary>
@@ -188,6 +258,14 @@ function matchColor(pct: number) {
   return "text-destructive";
 }
 
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+}
+
 function WrappedJobsList() {
   const { data: personalInfo } = usePersonalInfo();
   const [skipOnboarding, setSkipOnboarding] = useState(false);
@@ -197,6 +275,25 @@ function WrappedJobsList() {
   const reanalyze = useReanalyzeJob();
   const [modelId] = useModelId();
   const [filterStatus, setFilterStatus] = useState<JobStatus | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  // "c" opens the Add Job dialog, Escape clears an active status filter —
+  // both ignored while typing so they don't fire mid-sentence.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) {
+        return;
+      }
+      if (e.key === "c" && !(e.metaKey || e.ctrlKey || e.altKey)) {
+        e.preventDefault();
+        setAddOpen(true);
+      } else if (e.key === "Escape" && filterStatus) {
+        setFilterStatus(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filterStatus]);
 
   if (!(personalInfo?.resumeUrl || skipOnboarding)) {
     return <OnboardingCard onSkip={() => setSkipOnboarding(true)} />;
@@ -264,7 +361,7 @@ function WrappedJobsList() {
             ? `${filterStatus ? `${displayed.length} of ${jobs.length}` : jobs.length} application${jobs.length === 1 ? "" : "s"}`
             : "No applications yet"}
         </p>
-        <AddJobDialog />
+        <AddJobDialog onOpenChange={setAddOpen} open={addOpen} />
       </div>
 
       {jobs.length > 0 && (
@@ -367,15 +464,14 @@ function WrappedJobsList() {
                             </span>
                           )}
                         </div>
-                        <Button
-                          aria-label={`Delete ${job.jobTitle}`}
-                          className="-mt-1 -mr-1 shrink-0 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => deleteJob.mutate(job.id)}
-                          size="icon"
-                          variant="ghost"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <DeleteJobDialog
+                          jobTitle={job.jobTitle}
+                          onConfirm={() => deleteJob.mutate(job.id)}
+                          pending={
+                            deleteJob.isPending &&
+                            deleteJob.variables === job.id
+                          }
+                        />
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 text-muted-foreground text-xs">
                         <span>{formatDate(job.createdAt)}</span>

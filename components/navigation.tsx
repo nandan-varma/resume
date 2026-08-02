@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeSwitcher } from "@/components/mode-switcher";
+import { ShortcutsDialog } from "@/components/shortcuts-dialog";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ export function Navigation({ user }: NavigationProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const activeTab =
     (tabs.find((t) => pathname === t.to || pathname.startsWith(`${t.to}/`))
@@ -79,6 +81,27 @@ export function Navigation({ user }: NavigationProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeTab, router]);
+
+  // "?" opens the shortcuts help, unless the user is typing in a field
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "?") {
+        return;
+      }
+      const target = e.target;
+      const isTyping =
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (!isTyping) {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Two-phase indicator: snap to "from" position, then animate to "to" position.
   useEffect(() => {
@@ -231,6 +254,16 @@ export function Navigation({ user }: NavigationProps) {
         <div className="flex items-center gap-2 md:gap-3">
           <ModeSwitcher />
 
+          <button
+            aria-label="Keyboard shortcuts"
+            className="hidden size-7 shrink-0 items-center justify-center rounded text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:flex"
+            onClick={() => setShortcutsOpen(true)}
+            title="Keyboard shortcuts (?)"
+            type="button"
+          >
+            ?
+          </button>
+
           {user && (
             <>
               {/* Desktop: avatar + sign-out text */}
@@ -343,6 +376,8 @@ export function Navigation({ user }: NavigationProps) {
           </div>
         </div>
       )}
+
+      <ShortcutsDialog onOpenChange={setShortcutsOpen} open={shortcutsOpen} />
     </nav>
   );
 }
