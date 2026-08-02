@@ -107,7 +107,7 @@ Rate limiting (`lib/rate-limit.ts`) — per-instance sliding window — is appli
 
 - `resolveModel(id: string)` — use in API routes; falls back to `DEFAULT_MODEL_ID` if `id` is invalid, and logs the resolved model id (and any fallback) to the console for every call — useful for confirming which model an API route actually used.
 - Providers: Google, OpenAI, Mistral, and OpenRouter (`@openrouter/ai-sdk-provider`, reads `OPENROUTER_API_KEY`) — add new models to the `models` array with the matching `provider`.
-- Default model: `gpt-5.6-luna` (`DEFAULT_MODEL_ID`). Model selection is persisted to localStorage via `useModelId()` (`MODEL_STORAGE_KEY`).
+- Default model: `nemotron-3-ultra-550b` (`DEFAULT_MODEL_ID`). Model selection is persisted to localStorage via `useModelId()` (`MODEL_STORAGE_KEY`).
   - `useModelId()`'s same-tab change notification uses a private `model-id-change` custom event, not a synthetic `storage` event — dispatching on `storage` collides with other code (e.g. TanStack Query Devtools) that listens globally on that event and can `removeItem` the key right after it's written.
 - `lib/dev-log.ts` — `logApiError` (logs `err.message` only; raw AI SDK errors carry the full request/response body — e.g. base64 PDFs — as enumerable properties, so `console.error(err)` directly floods the console) and `logVendorTiming` (logs elapsed ms since a `performance.now()` start). Used across the AI API routes for consistent, non-huge logs.
 

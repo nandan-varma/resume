@@ -147,7 +147,7 @@ export function getModelInstanceById(id: ModelId) {
   return openai(model.modelId as OpenAIChatModelId);
 }
 
-export const DEFAULT_MODEL_ID: ModelId = "gpt-5.6-luna";
+export const DEFAULT_MODEL_ID: ModelId = "nemotron-3-ultra-550b";
 export const MODEL_STORAGE_KEY = "job-match-ai-model";
 
 export function resolveModel(id: string) {
