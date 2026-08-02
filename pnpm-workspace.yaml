@@ -2,3 +2,5 @@ allowBuilds:
   bufferutil: true
   esbuild: true
   sharp: true
+minimumReleaseAgeExclude:
+  - '@nandan-varma/platex@0.1.0'
