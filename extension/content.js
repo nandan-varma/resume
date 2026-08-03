@@ -110,32 +110,31 @@ function isJobPage() {
   );
 }
 
+// LinkedIn's SPA mutates the DOM constantly (renders, ads, tracking) — react
+// once mutations settle rather than doing work on every single mutation
+// burst. Keeps the extension's footprint on the page as light as possible.
 let settleTimer = null;
-function scheduleInject() {
-  clearTimeout(settleTimer);
-  settleTimer = setTimeout(() => {
-    if (!isJobPage()) {
-      removeCard();
-      return;
-    }
-    // injectCard() handles anchor-vs-float fallback itself — always call it,
-    // otherwise a page whose anchor never appears never shows the card at all.
-    if (!getCard()) {
-      injectCard();
-    }
-  }, 800);
-}
-
-const observer = new MutationObserver(() => {
+function handleDomSettled() {
   if (location.href !== currentUrl) {
     currentUrl = location.href;
     removeCard();
   }
-  if (isJobPage() && !getCard()) {
-    scheduleInject();
-  } else {
-    tryRelocateToInline();
+  if (!isJobPage()) {
+    removeCard();
+    return;
   }
+  if (getCard()) {
+    tryRelocateToInline();
+  } else {
+    // injectCard() handles anchor-vs-float fallback itself — always call it,
+    // otherwise a page whose anchor never appears never shows the card at all.
+    injectCard();
+  }
+}
+
+const observer = new MutationObserver(() => {
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(handleDomSettled, 800);
 });
 
 chrome.runtime.sendMessage({ type: "GET_INIT" }, (res) => {
@@ -157,5 +156,5 @@ chrome.runtime.sendMessage({ type: "GET_INIT" }, (res) => {
     autoSave
   );
   observer.observe(document.body, { childList: true, subtree: true });
-  scheduleInject();
+  settleTimer = setTimeout(handleDomSettled, 800);
 });
