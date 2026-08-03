@@ -1,3 +1,6 @@
+import { logger } from "./shared/logger.js";
+import { DEFAULT_MODEL_ID, MODELS } from "./shared/models.js";
+
 function msg(payload) {
   return new Promise((res) => chrome.runtime.sendMessage(payload, res));
 }
@@ -9,8 +12,15 @@ function hide(id) {
   document.getElementById(id).classList.add("hidden");
 }
 
+function populateModels(select) {
+  select.innerHTML = MODELS.map(
+    (m) => `<option value="${m.id}">${m.name}</option>`
+  ).join("");
+}
+
 async function init() {
   const { loggedIn, user, settings, appUrl } = await msg({ type: "GET_INIT" });
+  logger.info("Popup init. loggedIn =", loggedIn);
 
   document.getElementById("jobs-btn").href = `${appUrl}/jobs`;
   document.getElementById("login-btn").href = `${appUrl}/login`;
@@ -40,9 +50,10 @@ async function init() {
   const autoAnalyze = document.getElementById("autoAnalyze");
   const autoSave = document.getElementById("autoSave");
   const modelId = document.getElementById("modelId");
+  populateModels(modelId);
   autoAnalyze.checked = settings?.autoAnalyze ?? false;
   autoSave.checked = settings?.autoSave ?? false;
-  modelId.value = settings?.modelId ?? "nemotron-3-ultra-550b";
+  modelId.value = settings?.modelId ?? DEFAULT_MODEL_ID;
 
   const save = () =>
     msg({

@@ -1,11 +1,11 @@
-import { APICallError, generateText, Output } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import {
   checkRateLimit,
   parseJsonBody,
   requireApiSession,
 } from "@/lib/api-guards";
-import { logApiError, logVendorTiming } from "@/lib/dev-log";
+import { isRateLimitError, logApiError, logVendorTiming } from "@/lib/dev-log";
 import { resolveModel } from "@/lib/models";
 import { buildPageFillHint } from "@/lib/page-fill-hint";
 
@@ -117,9 +117,7 @@ Rules:
 
     return Response.json(output);
   } catch (err) {
-    const isQuota = APICallError.isInstance(err) && err.statusCode === 429;
-
-    if (isQuota) {
+    if (isRateLimitError(err)) {
       logApiError("[job-customize] rate limit:", err);
       return Response.json(
         {

@@ -16,5 +16,18 @@
       "!lib/utils.ts",
       "!.source"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["extension/content/**", "extension/content.js"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off",
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    }
+  ]
 }

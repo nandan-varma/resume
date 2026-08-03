@@ -10,7 +10,7 @@
       --fg: #f5f5f5; /* oklch(0.97 0 0) */
       --fg2: #a3a3a3; /* oklch(0.6 0 0)  */
       --bd: rgba(255, 255, 255, 0.1); /* oklch(1 0 0 / 10%) */
-      --ac: #6366f1; /* indigo-500 */
+      --ac: #0a66c2; /* LinkedIn's UI blue — matches native buttons/links */
       --ac-fg: #ffffff;
       --ok: #4ade80; /* oklch(0.68 0.16 150) */
       --r: 0px; /* app --radius */
@@ -214,7 +214,20 @@
   </head>
   <body>
     <div class="section">
-      <div class="logo"><span style="font-size:20px;">🎯</span> JobMatch</div>
+      <div class="logo">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" stroke="var(--ac)" stroke-width="2" />
+          <circle cx="12" cy="12" r="5" stroke="var(--ac)" stroke-width="2" />
+          <circle cx="12" cy="12" r="1.5" fill="var(--ac)" />
+        </svg>
+        JobMatch
+      </div>
     </div>
 
     <div class="section" id="auth-section">
@@ -259,18 +272,7 @@
       </div>
       <div>
         <div class="tname" style="margin-bottom:2px;">AI Model</div>
-        <select id="modelId">
-          <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-          <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-          <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-          <option value="gpt-5.6-luna">GPT 5.6 Luna</option>
-          <option value="ling-3.0-flash">Ling 3.0 Flash (free)</option>
-          <option value="laguna-s-2.1">Poolside Laguna S 2.1 (free)</option>
-          <option value="nemotron-3-ultra-550b">
-            Nemotron 3 Ultra 550B (free)
-          </option>
-          <option value="north-mini-code">Cohere North Mini Code (free)</option>
-        </select>
+        <select id="modelId"></select>
       </div>
     </div>
 
@@ -288,6 +290,6 @@
       </div>
     </div>
 
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>

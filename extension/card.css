@@ -14,7 +14,7 @@
   --jm-fg: #0a0a0a; /* oklch(0.09 0 0) */
   --jm-fg2: #737373; /* oklch(0.45 0 0) */
   --jm-bd: #e5e5e5; /* oklch(0.88 0 0) */
-  --jm-ac: #6366f1; /* indigo-500 — app interactive accent */
+  --jm-ac: #0a66c2; /* LinkedIn's UI blue — matches native buttons/links */
   --jm-ac-fg: #ffffff;
   --jm-ok: #16a34a; /* oklch(0.52 0.15 150) */
   --jm-wa: #d97706; /* oklch(0.6 0.13 75) */
@@ -23,13 +23,15 @@
   padding: 14px 16px;
 
   /* inline placement */
-  margin: 0 0 16px;
+  margin: 16px 0;
 
   font-size: 14px;
   color: var(--jm-fg);
   background: var(--jm-bg);
-  border: 1.5px solid var(--jm-bd);
-  border-radius: var(--r);
+  border: none;
+  /* matches LinkedIn's .artdeco-card: shadow-as-border instead of a solid line */
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(140, 140, 140, 0.2);
 }
 
 /* ── Dark tokens (floating card, matches app .dark oklch values) ── */
@@ -87,6 +89,19 @@
 .jm-shrink {
   flex-shrink: 0;
   min-width: 130px;
+}
+
+/* ── Icons ── */
+.jm-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+.jm-icon-lg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--jm-ac);
 }
 
 /* ── Typography ── */
@@ -152,6 +167,10 @@
   border-radius: var(--r);
   transition: opacity 0.15s;
 }
+/* Inline buttons match LinkedIn's pill-shaped artdeco-button (border-radius: 999px) */
+#jm-card:not([data-mode="float"]) .jm-btn {
+  border-radius: 999px;
+}
 .jm-btn:hover {
   opacity: 0.85;
 }
@@ -178,6 +197,19 @@
   cursor: pointer;
   background: none;
   border: none;
+}
+.jm-btn-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  text-decoration: none;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.jm-btn-close:hover {
+  background: var(--jm-bg2);
 }
 .jm-full {
   display: flex;

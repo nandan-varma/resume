@@ -12,12 +12,18 @@
     "http://localhost:3000/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://www.linkedin.com/jobs/*"],
-      "js": ["content.js"],
+      "js": [
+        "content/logger.js",
+        "content/extract.js",
+        "content/card.js",
+        "content.js"
+      ],
       "css": ["card.css"],
       "run_at": "document_idle"
     }
