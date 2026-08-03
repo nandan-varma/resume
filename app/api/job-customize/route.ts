@@ -1,4 +1,4 @@
-import { generateText, Output } from "ai";
+import { APICallError, generateText, Output } from "ai";
 import { z } from "zod";
 import {
   checkRateLimit,
@@ -117,12 +117,7 @@ Rules:
 
     return Response.json(output);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "";
-    const isQuota =
-      msg.includes("quota") ||
-      msg.includes("rate") ||
-      msg.includes("429") ||
-      (err as { statusCode?: number }).statusCode === 429;
+    const isQuota = APICallError.isInstance(err) && err.statusCode === 429;
 
     if (isQuota) {
       logApiError("[job-customize] rate limit:", err);

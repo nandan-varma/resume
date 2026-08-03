@@ -170,7 +170,11 @@ CRITICAL RULES:
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({
+      // Default message is a bare "An error occurred." — surface something
+      // the client's readUIMessageStream onError can show verbatim instead.
+      onError: () => "The AI response was interrupted — please try again.",
+    });
   } catch (err) {
     logApiError("[edit-latex]", err);
     const errorMessage =

@@ -128,7 +128,7 @@ export const models = [
     provider: "openrouter",
     modelId: "cohere/north-mini-code:free",
   },
-] as const;
+] as const satisfies readonly Model[];
 
 export type ModelId = (typeof models)[number]["id"];
 
@@ -146,15 +146,15 @@ export function getModelInstanceById(id: ModelId) {
     throw new Error(`Model '${id}' not found`);
   }
   if (model.provider === "google") {
-    return google(model.modelId as GoogleGenerativeAIModelId);
+    return google(model.modelId);
   }
   if (model.provider === "mistral") {
-    return mistral(model.modelId as MistralChatModelId);
+    return mistral(model.modelId);
   }
   if (model.provider === "openrouter") {
     return openrouter.chat(model.modelId);
   }
-  return openai(model.modelId as OpenAIChatModelId);
+  return openai(model.modelId);
 }
 
 export const DEFAULT_MODEL_ID: ModelId = "nemotron-3-ultra-550b";

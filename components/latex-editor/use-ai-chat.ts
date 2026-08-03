@@ -14,6 +14,12 @@ import type { ChatMsg, EditorJob } from "./types";
 import { buildHistory, createMsgId } from "./types";
 
 const MAX_UNDO = 50;
+// Free/rate-limited models can take 10-20s+ for a first token; this only
+// guards against a genuinely stalled stream, not normal slowness.
+// ponytail: 150s ceiling — observed real completions on slow free models at
+// ~91s, which used to lose the race against a 90s timeout and silently drop
+// the turn. Raise further if a model regularly needs more.
+const REQUEST_TIMEOUT_MS = 150_000;
 
 // ponytail: collapse consecutive blank lines, track original indices for splice-back
 export function collapseBlankLines(lines: string[]): {
@@ -196,6 +202,17 @@ export function useAiChat(
         streaming: true,
       });
 
+      // Free/rate-limited models occasionally stall mid-generation with no
+      // further chunks and no error — without this the user is stuck on
+      // "Analyzing…" forever with no way out but a page refresh.
+      const timeoutId = setTimeout(() => {
+        ctrl.abort(new DOMException("AI response timed out", "TimeoutError"));
+      }, REQUEST_TIMEOUT_MS);
+
+      let content = "";
+      let edits: { find: string; replace: string }[] = [];
+      let streamError: string | null = null;
+
       try {
         const res = await fetch("/api/edit-latex", {
           method: "POST",
@@ -221,26 +238,32 @@ export function useAiChat(
 
         // Real token-by-token streaming: the route returns the AI SDK's UI
         // message stream (text deltas + tool calls), not one JSON blob to
-        // parse at the end.
+        // parse at the end. A single chunk that fails schema validation
+        // (seen with some free/flaky providers mid tool-call) is skipped
+        // rather than aborting the whole exchange — otherwise one bad frame
+        // silently discards an otherwise-complete reply.
         const chunkStream = parseJsonEventStream({
           stream: res.body,
           schema: uiMessageChunkSchema,
         }).pipeThrough(
           new TransformStream({
             transform(chunk, controller) {
-              if (!chunk.success) {
-                throw chunk.error;
+              if (chunk.success) {
+                controller.enqueue(chunk.value);
               }
-              controller.enqueue(chunk.value);
             },
           })
         );
 
-        let content = "";
-        let edits: { find: string; replace: string }[] = [];
-
         for await (const message of readUIMessageStream({
           stream: chunkStream,
+          // The protocol's own error signal (a provider/stream failure mid-
+          // response) — distinct from the model just legitimately saying
+          // nothing, so the notice below can be specific when this fires.
+          onError: (error) => {
+            streamError =
+              error instanceof Error ? error.message : String(error);
+          },
         })) {
           content = message.parts
             .filter((p) => p.type === "text")
@@ -285,27 +308,76 @@ export function useAiChat(
           });
         }
 
-        await appendTurn({
-          messages: [
-            {
-              role: "assistant",
-              content,
-              editsApplied: applied || undefined,
-            },
-          ],
-          ...(applied > 0 ? { latex: next } : {}),
-        });
+        // A stream can complete without throwing yet carry nothing (seen
+        // with slow/free models whose provider connection drops mid-response)
+        // — persisting that as a blank assistant bubble looks identical to a
+        // real "nothing to say" reply, so the user has no signal to retry.
+        if (content.trim() || edits.length > 0) {
+          await appendTurn({
+            messages: [
+              {
+                role: "assistant",
+                content,
+                editsApplied: applied || undefined,
+              },
+            ],
+            ...(applied > 0 ? { latex: next } : {}),
+          });
+        } else {
+          await appendTurn({
+            messages: [
+              {
+                role: "notice",
+                content:
+                  streamError ?? "AI returned no response — please try again.",
+              },
+            ],
+          }).catch(() => {
+            // toasted by the mutation's onError
+          });
+        }
         setStreamingMessage(null);
       } catch (err) {
-        // Drop the placeholder either way — a half-streamed message left in
-        // state (even to show a partial response) risks confusing the user
-        // with a bubble that never got saved.
         setStreamingMessage(null);
+
+        // A deliberate cancel (new message sent, component unmounted) aborts
+        // with the default reason, whose name is "AbortError" — our own
+        // timeout aborts with a distinctly-named reason (below) so it isn't
+        // mistaken for one of these silent, nothing-to-show cancellations.
         if (err instanceof Error && err.name === "AbortError") {
           return;
         }
-        toast.error(err instanceof Error ? err.message : "AI request failed");
+
+        const isTimeout = err instanceof Error && err.name === "TimeoutError";
+        let errorMessage = "AI request failed";
+        if (isTimeout) {
+          errorMessage = "The AI took too long to respond — please try again.";
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        toast.error(errorMessage);
+
+        // The model's reply was visible to the user before things went
+        // wrong (network drop, timeout, upstream error) — persist whatever
+        // text it produced instead of letting a visible reply vanish
+        // without a trace in the chat log.
+        if (content.trim()) {
+          await appendTurn({
+            messages: [{ role: "assistant", content }],
+          }).catch(() => {
+            // toasted by the mutation's onError
+          });
+        } else {
+          // Nothing to show and the toast above is ephemeral — leave a
+          // permanent trace so the user isn't left assuming a silent no-op.
+          await appendTurn({
+            messages: [{ role: "notice", content: errorMessage }],
+          }).catch(() => {
+            // toasted by the mutation's onError
+          });
+        }
       } finally {
+        clearTimeout(timeoutId);
         setChatLoading(false);
       }
     },

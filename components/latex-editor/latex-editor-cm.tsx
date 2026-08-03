@@ -1,12 +1,18 @@
 "use client";
 
-import { EditorState } from "@codemirror/state";
+import { Annotation, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { latex } from "codemirror-lang-latex";
 import { useEffect, useRef } from "react";
 
 import { cmExtensions } from "./cm-theme";
+
+// Tags the programmatic doc sync below so its transaction can be told apart
+// from real keystrokes — without this, syncing an external (e.g. AI-applied)
+// value into CodeMirror re-fires onChange and looks indistinguishable from
+// the user having typed it.
+const externalSync = Annotation.define<boolean>();
 
 interface LatexEditorCmProps {
   className?: string;
@@ -45,7 +51,10 @@ export function LatexEditorCm({
     const valueRef = { current: value };
 
     const updateListener = EditorView.updateListener.of((update) => {
-      if (update.docChanged) {
+      const isExternalSync = update.transactions.some((tr) =>
+        tr.annotation(externalSync)
+      );
+      if (update.docChanged && !isExternalSync) {
         onChangeRef.current(update.state.doc.toString());
       }
     });
@@ -129,6 +138,7 @@ export function LatexEditorCm({
     if (current !== value) {
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
+        annotations: externalSync.of(true),
       });
     }
   }, [value]);

@@ -157,8 +157,10 @@ export function useLatexEditor(job: EditorJob | null, isNewJobResume: boolean) {
     chatMessages: persistedMessages,
     aiAppliedRef,
     executeAIEdit,
+    fillRatio,
     job,
     onConflict,
+    pageCount,
   });
 
   // ── Compilation debounce ──────────────────────────────────────────────
