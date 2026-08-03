@@ -90,6 +90,22 @@ describe("buildHistory", () => {
   it("returns an empty array for an empty input", () => {
     expect(buildHistory([])).toEqual([]);
   });
+
+  it("drops the abandoned branch after a restore to an earlier revision", () => {
+    const msgs: ChatMsg[] = [
+      { id: "1", role: "user", content: "add a skill" },
+      { id: "2", role: "assistant", content: "added", revisionId: 1 },
+      { id: "3", role: "user", content: "add another skill" },
+      { id: "4", role: "assistant", content: "added another", revisionId: 2 },
+      { id: "5", role: "notice", content: "Restored", revisionId: 1 },
+      { id: "6", role: "user", content: "now fix the summary" },
+    ];
+    expect(buildHistory(msgs)).toEqual([
+      { role: "user", content: "add a skill" },
+      { role: "assistant", content: "added" },
+      { role: "user", content: "now fix the summary" },
+    ]);
+  });
 });
 
 describe("computeRevisionVersions", () => {

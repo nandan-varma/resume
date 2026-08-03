@@ -97,10 +97,12 @@ export function revisionIdOf(msg: ChatMsg): number | undefined {
   return;
 }
 
-// Every checkpoint (an AI edit or a restore) gets a stable, incrementing
-// version number in the order it was created — V1 is the first checkpoint
-// ever made for this document. Restoring creates a new checkpoint rather
-// than reusing the old number, so the sequence always keeps counting up.
+// Every checkpoint (a resumeRevisions row, created only by an AI edit) gets
+// a stable, incrementing version number in the order it was created — V1 is
+// the first checkpoint ever made for this document. Restoring re-points the
+// current state at an existing checkpoint's revisionId rather than creating
+// a new row, so it shows as sticking to that version instead of growing the
+// sequence.
 export function computeRevisionVersions(msgs: ChatMsg[]): Map<number, number> {
   const versions = new Map<number, number>();
   for (const msg of msgs) {
@@ -112,22 +114,45 @@ export function computeRevisionVersions(msgs: ChatMsg[]): Map<number, number> {
   return versions;
 }
 
+function lastCheckpointIndex(msgs: ChatMsg[]): number {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (revisionIdOf(msgs[i]) !== undefined) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 // The most recent checkpoint is whichever one the editor currently reflects
 // — the latest AI edit, or the latest restore if one happened after.
 export function getCurrentRevisionId(msgs: ChatMsg[]): number | undefined {
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    const revisionId = revisionIdOf(msgs[i]);
-    if (revisionId !== undefined) {
-      return revisionId;
-    }
+  const i = lastCheckpointIndex(msgs);
+  return i === -1 ? undefined : revisionIdOf(msgs[i]);
+}
+
+// A restore re-points current state at an earlier revision without deleting
+// anything, so the messages between that revision's original creation and
+// the restore describe an abandoned branch — edits the LaTeX being sent to
+// the AI no longer contains. Feeding them as history would contradict the
+// document, so they're dropped; the prefix through the restored point, plus
+// anything chatted since, is what's actually still true.
+function effectiveTimeline(msgs: ChatMsg[]): ChatMsg[] {
+  const lastIdx = lastCheckpointIndex(msgs);
+  if (lastIdx === -1) {
+    return msgs;
   }
-  return;
+  const revisionId = revisionIdOf(msgs[lastIdx]);
+  const firstIdx = msgs.findIndex((m) => revisionIdOf(m) === revisionId);
+  if (firstIdx === lastIdx) {
+    return msgs;
+  }
+  return [...msgs.slice(0, firstIdx + 1), ...msgs.slice(lastIdx + 1)];
 }
 
 export function buildHistory(
   msgs: ChatMsg[]
 ): { role: "user" | "assistant"; content: string }[] {
-  return msgs.flatMap((m) => {
+  return effectiveTimeline(msgs).flatMap((m) => {
     if (m.role === "user" || m.role === "assistant") {
       return [{ role: m.role, content: m.content }];
     }

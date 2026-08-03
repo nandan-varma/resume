@@ -268,19 +268,16 @@ export const restoreRevision = async (
         throw new VersionConflictError();
       }
 
-      // The restored state becomes its own checkpoint, so restoring from a
-      // restore keeps working — nothing is ever deleted.
-      const [newRevision] = await tx
-        .insert(resumeRevisions)
-        .values({ documentId: doc.id, resumeLatex: revision.resumeLatex })
-        .returning();
+      // Restoring re-points current state at the existing revision rather
+      // than creating a new one, so the version list doesn't keep growing
+      // every time you restore — it just shows which past version you're on.
       const [message] = await tx
         .insert(resumeMessages)
         .values({
           documentId: doc.id,
           role: "notice",
           content: "Restored to an earlier version.",
-          revisionId: newRevision.id,
+          revisionId: revision.id,
         })
         .returning();
 
