@@ -2,10 +2,11 @@
 const APP_URL =
   chrome.runtime.getManifest().homepage_url ?? "https://resume.nandan.fyi";
 
+// Keep in sync with the enabled entries in lib/models.ts (DEFAULT_MODEL_ID)
 const DEFAULT_SETTINGS = {
   autoAnalyze: false,
   autoSave: false,
-  modelId: "gemini-2.5-flash-lite",
+  modelId: "nemotron-3-ultra-550b",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

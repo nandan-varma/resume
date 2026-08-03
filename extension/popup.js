@@ -42,7 +42,7 @@ async function init() {
   const modelId = document.getElementById("modelId");
   autoAnalyze.checked = settings?.autoAnalyze ?? false;
   autoSave.checked = settings?.autoSave ?? false;
-  modelId.value = settings?.modelId ?? "gemini-2.5-flash-lite";
+  modelId.value = settings?.modelId ?? "nemotron-3-ultra-550b";
 
   const save = () =>
     msg({
