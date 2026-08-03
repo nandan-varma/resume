@@ -90,6 +90,40 @@ export function fromDocumentMessage(m: ResumeDocumentMessage): ChatMsg {
   }
 }
 
+export function revisionIdOf(msg: ChatMsg): number | undefined {
+  if (msg.role === "assistant" || msg.role === "notice") {
+    return msg.revisionId;
+  }
+  return;
+}
+
+// Every checkpoint (an AI edit or a restore) gets a stable, incrementing
+// version number in the order it was created — V1 is the first checkpoint
+// ever made for this document. Restoring creates a new checkpoint rather
+// than reusing the old number, so the sequence always keeps counting up.
+export function computeRevisionVersions(msgs: ChatMsg[]): Map<number, number> {
+  const versions = new Map<number, number>();
+  for (const msg of msgs) {
+    const revisionId = revisionIdOf(msg);
+    if (revisionId !== undefined && !versions.has(revisionId)) {
+      versions.set(revisionId, versions.size + 1);
+    }
+  }
+  return versions;
+}
+
+// The most recent checkpoint is whichever one the editor currently reflects
+// — the latest AI edit, or the latest restore if one happened after.
+export function getCurrentRevisionId(msgs: ChatMsg[]): number | undefined {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const revisionId = revisionIdOf(msgs[i]);
+    if (revisionId !== undefined) {
+      return revisionId;
+    }
+  }
+  return;
+}
+
 export function buildHistory(
   msgs: ChatMsg[]
 ): { role: "user" | "assistant"; content: string }[] {

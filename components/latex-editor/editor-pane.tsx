@@ -1,18 +1,20 @@
 "use client";
 
-import {
-  AlertTriangle,
-  History,
-  Loader2,
-  Send,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { AlertTriangle, Loader2, Send, Sparkles, Trash2 } from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { AssistantBubble, LoadingBubble, QuestionBubble } from "./chat-bubbles";
+import {
+  AssistantBubble,
+  LoadingBubble,
+  QuestionBubble,
+  RevisionBadge,
+} from "./chat-bubbles";
 import { LatexEditorCm } from "./latex-editor-cm";
-import type { ChatMsg } from "./types";
+import {
+  type ChatMsg,
+  computeRevisionVersions,
+  getCurrentRevisionId,
+} from "./types";
 
 interface EditorPaneProps {
   activeTab: "editor" | "chat" | "preview";
@@ -48,10 +50,15 @@ function renderMessage(
   onConsultPick: EditorPaneProps["onConsultPick"],
   onConsultSkip: () => void,
   onRestore: (revisionId: number) => void,
-  restoringRevisionId: number | null
+  restoringRevisionId: number | null,
+  revisionVersions: Map<number, number>,
+  currentRevisionId: number | undefined
 ) {
   if (msg.role === "notice") {
-    const canRestore = msg.revisionId !== undefined;
+    const revisionVersion =
+      msg.revisionId === undefined
+        ? undefined
+        : revisionVersions.get(msg.revisionId);
     return (
       <div
         className="flex items-center justify-center gap-1.5 py-1 text-muted-foreground text-xs"
@@ -59,17 +66,13 @@ function renderMessage(
       >
         <AlertTriangle className="size-3 shrink-0 text-yellow-500" />
         {msg.content}
-        {canRestore && (
-          <button
-            className="inline-flex items-center gap-1 underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-50"
-            disabled={restoringRevisionId !== null}
-            onClick={() => onRestore(msg.revisionId as number)}
-            title="Restore resume to this point"
-            type="button"
-          >
-            <History className="size-3" />
-            Restore
-          </button>
+        {msg.revisionId !== undefined && revisionVersion !== undefined && (
+          <RevisionBadge
+            isCurrent={msg.revisionId === currentRevisionId}
+            onRestore={() => onRestore(msg.revisionId as number)}
+            restoring={restoringRevisionId !== null}
+            version={revisionVersion}
+          />
         )}
       </div>
     );
@@ -102,6 +105,7 @@ function renderMessage(
           <AssistantBubble
             content={msg.content}
             editsApplied={msg.editsApplied}
+            isCurrentRevision={msg.revisionId === currentRevisionId}
             onRestore={
               msg.revisionId === undefined
                 ? undefined
@@ -109,6 +113,11 @@ function renderMessage(
             }
             restoring={restoringRevisionId !== null}
             revisionId={msg.revisionId}
+            revisionVersion={
+              msg.revisionId === undefined
+                ? undefined
+                : revisionVersions.get(msg.revisionId)
+            }
             streaming={msg.streaming}
           />
         ) : (
@@ -157,6 +166,15 @@ function EditorPane({
     return "e.g. Add a skills section…";
   }, [pendingQuestion, job]);
 
+  const revisionVersions = useMemo(
+    () => computeRevisionVersions(chatMessages),
+    [chatMessages]
+  );
+  const currentRevisionId = useMemo(
+    () => getCurrentRevisionId(chatMessages),
+    [chatMessages]
+  );
+
   const chatPanel = useMemo(() => {
     if (chatMessages.length > 0) {
       return (
@@ -169,7 +187,9 @@ function EditorPane({
                 onConsultPick,
                 onConsultSkip,
                 onRestore,
-                restoringRevisionId
+                restoringRevisionId,
+                revisionVersions,
+                currentRevisionId
               )
             )}
             {chatLoading &&
@@ -295,6 +315,8 @@ function EditorPane({
     onClearChat,
     onRestore,
     restoringRevisionId,
+    revisionVersions,
+    currentRevisionId,
     chatInput,
   ]);
 

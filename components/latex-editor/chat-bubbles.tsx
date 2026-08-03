@@ -160,19 +160,60 @@ function RawQuestionBubble({
   );
 }
 
+interface RevisionBadgeProps {
+  isCurrent: boolean;
+  onRestore: () => void;
+  restoring: boolean;
+  version: number;
+}
+
+// A numbered checkpoint pill — solid + non-interactive for "this is what
+// you're looking at right now", outlined + clickable for anything earlier.
+// Used both inline in the assistant bubble and in the restore-notice row so
+// every checkpoint in the chat reads the same way at a glance.
+function RawRevisionBadge({
+  isCurrent,
+  onRestore,
+  restoring,
+  version,
+}: RevisionBadgeProps) {
+  if (isCurrent) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-[10px] text-primary">
+        <CheckCircle2 className="size-3 shrink-0" />V{version} · Current
+      </span>
+    );
+  }
+  return (
+    <button
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 font-medium text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:opacity-50"
+      disabled={restoring}
+      onClick={onRestore}
+      title={`Restore resume to V${version}`}
+      type="button"
+    >
+      <History className="size-3 shrink-0" />V{version} · Restore
+    </button>
+  );
+}
+
 interface AssistantBubbleProps {
   content: string;
   editsApplied?: number;
+  isCurrentRevision?: boolean;
   onRestore?: () => void;
   restoring?: boolean;
   revisionId?: number;
+  revisionVersion?: number;
   streaming?: boolean;
 }
 
 function RawAssistantBubble({
   content,
   editsApplied,
+  isCurrentRevision,
   revisionId,
+  revisionVersion,
   onRestore,
   restoring,
   streaming,
@@ -199,18 +240,16 @@ function RawAssistantBubble({
             Applied {editsApplied} {editsApplied === 1 ? "change" : "changes"}{" "}
             to editor
           </span>
-          {revisionId !== undefined && onRestore && (
-            <button
-              className="inline-flex shrink-0 items-center gap-1 text-muted-foreground text-xs underline decoration-dotted underline-offset-2 hover:text-foreground disabled:opacity-50"
-              disabled={restoring}
-              onClick={onRestore}
-              title="Restore resume to this point"
-              type="button"
-            >
-              <History className="size-3" />
-              Restore
-            </button>
-          )}
+          {revisionId !== undefined &&
+            revisionVersion !== undefined &&
+            onRestore && (
+              <RevisionBadge
+                isCurrent={!!isCurrentRevision}
+                onRestore={onRestore}
+                restoring={!!restoring}
+                version={revisionVersion}
+              />
+            )}
         </div>
       )}
     </div>
@@ -235,3 +274,4 @@ function RawLoadingBubble({ label = "Thinking…" }: LoadingBubbleProps) {
 export const QuestionBubble = memo(RawQuestionBubble);
 export const AssistantBubble = memo(RawAssistantBubble);
 export const LoadingBubble = memo(RawLoadingBubble);
+export const RevisionBadge = memo(RawRevisionBadge);

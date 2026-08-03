@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ChatMsg } from "./types";
-import { buildHistory, createMsgId } from "./types";
+import {
+  buildHistory,
+  computeRevisionVersions,
+  createMsgId,
+  getCurrentRevisionId,
+} from "./types";
 
 const MSG_ID_RE = /^msg-\d+-\d+$/;
 
@@ -84,6 +89,77 @@ describe("buildHistory", () => {
 
   it("returns an empty array for an empty input", () => {
     expect(buildHistory([])).toEqual([]);
+  });
+});
+
+describe("computeRevisionVersions", () => {
+  it("numbers checkpoints 1, 2, 3... in chronological order", () => {
+    const msgs: ChatMsg[] = [
+      { id: "1", role: "user", content: "hi" },
+      { id: "2", role: "assistant", content: "done", revisionId: 101 },
+      { id: "3", role: "user", content: "more" },
+      { id: "4", role: "assistant", content: "done again", revisionId: 205 },
+    ];
+    expect(computeRevisionVersions(msgs)).toEqual(
+      new Map([
+        [101, 1],
+        [205, 2],
+      ])
+    );
+  });
+
+  it("assigns a version to a restore notice's revisionId too", () => {
+    const msgs: ChatMsg[] = [
+      { id: "1", role: "assistant", content: "done", revisionId: 1 },
+      { id: "2", role: "notice", content: "Restored", revisionId: 2 },
+    ];
+    expect(computeRevisionVersions(msgs)).toEqual(
+      new Map([
+        [1, 1],
+        [2, 2],
+      ])
+    );
+  });
+
+  it("ignores messages without a revisionId", () => {
+    const msgs: ChatMsg[] = [
+      { id: "1", role: "user", content: "hi" },
+      { id: "2", role: "assistant", content: "no edits" },
+      { id: "3", role: "notice", content: "Could not apply edits" },
+    ];
+    expect(computeRevisionVersions(msgs)).toEqual(new Map());
+  });
+
+  it("returns an empty map for an empty input", () => {
+    expect(computeRevisionVersions([])).toEqual(new Map());
+  });
+});
+
+describe("getCurrentRevisionId", () => {
+  it("returns the most recent checkpoint's revisionId", () => {
+    const msgs: ChatMsg[] = [
+      { id: "1", role: "assistant", content: "done", revisionId: 1 },
+      { id: "2", role: "user", content: "more" },
+      { id: "3", role: "assistant", content: "done again", revisionId: 2 },
+    ];
+    expect(getCurrentRevisionId(msgs)).toBe(2);
+  });
+
+  it("returns the restore's revisionId when a restore is the latest checkpoint", () => {
+    const msgs: ChatMsg[] = [
+      { id: "1", role: "assistant", content: "done", revisionId: 1 },
+      { id: "2", role: "notice", content: "Restored", revisionId: 2 },
+    ];
+    expect(getCurrentRevisionId(msgs)).toBe(2);
+  });
+
+  it("returns undefined when no message has a revisionId", () => {
+    const msgs: ChatMsg[] = [{ id: "1", role: "user", content: "hi" }];
+    expect(getCurrentRevisionId(msgs)).toBeUndefined();
+  });
+
+  it("returns undefined for an empty input", () => {
+    expect(getCurrentRevisionId([])).toBeUndefined();
   });
 });
 
