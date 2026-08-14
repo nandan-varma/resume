@@ -4,3 +4,8 @@ allowBuilds:
   sharp: true
 minimumReleaseAgeExclude:
   - '@nandan-varma/platex@0.1.0'
+# Remove once drizzle-kit drops @esbuild-kit (GHSA-67mh-4wv8-2f99)
+overrides:
+  esbuild: '>=0.28.1'
+  # vite's pinned postcss ships nanoid <3.3.18 (GHSA-2v37-7h3g-55p8)
+  nanoid: '>=3.3.18'

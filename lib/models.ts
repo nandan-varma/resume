@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import type { GoogleGenerativeAIModelId } from "@ai-sdk/google/internal";
+import type { GoogleModelId } from "@ai-sdk/google/internal";
 import { mistral } from "@ai-sdk/mistral";
 import { openai } from "@ai-sdk/openai";
 import type { OpenAIChatModelId } from "@ai-sdk/openai/internal";
@@ -31,7 +31,7 @@ export type Model =
       id: string;
       name: string;
       provider: "google";
-      modelId: GoogleGenerativeAIModelId;
+      modelId: GoogleModelId;
       disabled?: boolean;
     }
   | {
