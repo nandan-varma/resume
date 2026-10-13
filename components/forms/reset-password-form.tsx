@@ -30,8 +30,8 @@ import { cn } from "@/lib/utils";
 
 const formSchema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
+    password: z.string().min(8, "Password must be at least 8 characters"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -48,8 +48,8 @@ export function ResetPasswordForm({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
+    defaultValues: { confirmPassword: "", password: "" },
     resolver: zodResolver(formSchema),
-    defaultValues: { password: "", confirmPassword: "" },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

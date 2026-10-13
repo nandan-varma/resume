@@ -43,7 +43,7 @@ async function runAnalysis() {
   }
 
   renderLoading("Analyzing your resume…");
-  const result = await sendMsg({ type: "ANALYZE", jobDescription: jd });
+  const result = await sendMsg({ jobDescription: jd, type: "ANALYZE" });
   if (result?.error) {
     logger.warn("Analyze failed:", result.error);
     renderError(result.error);
@@ -57,11 +57,11 @@ async function runAnalysis() {
   if (autoSave) {
     renderLoading("Saving job…");
     const saveRes = await sendMsg({
-      type: "SAVE_JOB",
-      jobTitle: extractJobTitle(),
-      jobDescription: jd,
-      link: location.href,
       analysis: result.result,
+      jobDescription: jd,
+      jobTitle: extractJobTitle(),
+      link: location.href,
+      type: "SAVE_JOB",
     });
     if (saveRes?.error) {
       logger.warn("Auto-save failed:", saveRes.error);
@@ -81,11 +81,11 @@ async function doSaveJob() {
   }
 
   const res = await sendMsg({
-    type: "SAVE_JOB",
-    jobTitle: extractJobTitle(),
-    jobDescription: lastJd,
-    link: location.href,
     analysis: lastAnalysis,
+    jobDescription: lastJd,
+    jobTitle: extractJobTitle(),
+    link: location.href,
+    type: "SAVE_JOB",
   });
 
   if (res?.error) {
@@ -139,7 +139,7 @@ const observer = new MutationObserver(() => {
 
 chrome.runtime.sendMessage({ type: "GET_INIT" }, (res) => {
   if (res?.appUrl) {
-    appUrl = res.appUrl;
+    ({ appUrl } = res);
   }
   if (res?.settings?.autoAnalyze) {
     autoAnalyze = true;

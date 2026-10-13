@@ -13,8 +13,8 @@ import { getJobs } from "@/server/jobs";
 import { getPersonalInformation } from "@/server/resume";
 
 export const metadata: Metadata = {
-  title: "Jobs",
   description: "Track applications and analyze job fits.",
+  title: "Jobs",
 };
 
 function JobsContentSkeleton() {
@@ -41,10 +41,10 @@ function JobsContentSkeleton() {
 
 export default function JobsPage() {
   const queryClient = getQueryClient();
-  queryClient.prefetchQuery({ queryKey: jobsQueryKey, queryFn: getJobs });
+  queryClient.prefetchQuery({ queryFn: getJobs, queryKey: jobsQueryKey });
   queryClient.prefetchQuery({
-    queryKey: personalInfoQueryKey,
     queryFn: getPersonalInformation,
+    queryKey: personalInfoQueryKey,
   });
 
   return (

@@ -4,8 +4,8 @@ import { ForgotPasswordForm } from "@/components/forms/forgot-password-form";
 import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
+  robots: { follow: false, index: false },
   title: "Forgot Password",
-  robots: { index: false, follow: false },
 };
 
 export default function ForgotPasswordPage() {

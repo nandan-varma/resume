@@ -29,7 +29,7 @@ export function collapseBlankLines(lines: string[]): {
   const out: string[] = [];
   const idx: number[] = [];
   let prevBlank = false;
-  for (let i = 0; i < lines.length; i++) {
+  for (let i = 0; i < lines.length; i += 1) {
     const t = lines[i].trim();
     if (t === "" && prevBlank) {
       continue;
@@ -38,7 +38,7 @@ export function collapseBlankLines(lines: string[]): {
     idx.push(i);
     prevBlank = t === "";
   }
-  return { out, idx };
+  return { idx, out };
 }
 
 export function applyEdits(
@@ -53,7 +53,7 @@ export function applyEdits(
     // Pass 1: exact
     if (next.includes(f)) {
       next = next.replace(f, replace);
-      applied++;
+      applied += 1;
       continue;
     }
 
@@ -63,7 +63,7 @@ export function applyEdits(
     // Pass 2: trim each line (handles indentation differences)
     const findTrimmed = findLines.map((l) => l.trim()).join("\n");
     let matched = false;
-    for (let i = 0; i <= srcLines.length - findLines.length; i++) {
+    for (let i = 0; i <= srcLines.length - findLines.length; i += 1) {
       if (
         srcLines
           .slice(i, i + findLines.length)
@@ -72,7 +72,7 @@ export function applyEdits(
       ) {
         srcLines.splice(i, findLines.length, ...replace.split("\n"));
         next = srcLines.join("\n");
-        applied++;
+        applied += 1;
         matched = true;
         break;
       }
@@ -85,7 +85,7 @@ export function applyEdits(
     const { out: fNorm } = collapseBlankLines(findLines);
     const { out: sNorm, idx: sIdx } = collapseBlankLines(srcLines);
     const fJoined = fNorm.join("\n");
-    for (let i = 0; i <= sNorm.length - fNorm.length; i++) {
+    for (let i = 0; i <= sNorm.length - fNorm.length; i += 1) {
       if (sNorm.slice(i, i + fNorm.length).join("\n") === fJoined) {
         const origStart = sIdx[i];
         const origEnd = sIdx[i + fNorm.length - 1];
@@ -95,12 +95,12 @@ export function applyEdits(
           ...replace.split("\n")
         );
         next = srcLines.join("\n");
-        applied++;
+        applied += 1;
         break;
       }
     }
   }
-  return { next, applied };
+  return { applied, next };
 }
 
 export function useAiChat(
@@ -183,7 +183,7 @@ export function useAiChat(
       if (noticeMsg) {
         try {
           await appendTurn({
-            messages: [{ role: "notice", content: noticeMsg }],
+            messages: [{ content: noticeMsg, role: "notice" }],
           });
         } catch {
           // toasted by the mutation's onError; keep going, the edit itself still matters
@@ -196,9 +196,9 @@ export function useAiChat(
 
       const streamMsgId = createMsgId();
       setStreamingMessage({
+        content: "",
         id: streamMsgId,
         role: "assistant",
-        content: "",
         streaming: true,
       });
 
@@ -215,17 +215,17 @@ export function useAiChat(
 
       try {
         const res = await fetch("/api/edit-latex", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            history,
             instruction,
             latex: getLatex(),
             modelId,
-            history,
             ...(jobDescription ? { jobDescription } : {}),
             ...(pageCount === null ? {} : { pageCount }),
             ...(fillRatio === null ? {} : { fillRatio }),
           }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
           signal: ctrl.signal,
         });
         if (!res.ok) {
@@ -243,8 +243,8 @@ export function useAiChat(
         // rather than aborting the whole exchange — otherwise one bad frame
         // silently discards an otherwise-complete reply.
         const chunkStream = parseJsonEventStream({
-          stream: res.body,
           schema: uiMessageChunkSchema,
+          stream: res.body,
         }).pipeThrough(
           new TransformStream({
             transform(chunk, controller) {
@@ -256,7 +256,6 @@ export function useAiChat(
         );
 
         for await (const message of readUIMessageStream({
-          stream: chunkStream,
           // The protocol's own error signal (a provider/stream failure mid-
           // response) — distinct from the model just legitimately saying
           // nothing, so the notice below can be specific when this fires.
@@ -264,6 +263,7 @@ export function useAiChat(
             streamError =
               error instanceof Error ? error.message : String(error);
           },
+          stream: chunkStream,
         })) {
           content = message.parts
             .filter((p) => p.type === "text")
@@ -278,14 +278,14 @@ export function useAiChat(
               | { edits?: { find: string; replace: string }[] }
               | undefined;
             if (Array.isArray(input?.edits)) {
-              edits = input.edits;
+              ({ edits } = input);
             }
           }
 
           setStreamingMessage({
+            content,
             id: streamMsgId,
             role: "assistant",
-            content,
             streaming: true,
           });
         }
@@ -299,8 +299,8 @@ export function useAiChat(
           await appendTurn({
             messages: [
               {
-                role: "notice",
                 content: "Could not apply edits — try rephrasing.",
+                role: "notice",
               },
             ],
           }).catch(() => {
@@ -316,9 +316,9 @@ export function useAiChat(
           await appendTurn({
             messages: [
               {
-                role: "assistant",
                 content,
                 editsApplied: applied || undefined,
+                role: "assistant",
               },
             ],
             ...(applied > 0 ? { latex: next } : {}),
@@ -327,9 +327,9 @@ export function useAiChat(
           await appendTurn({
             messages: [
               {
-                role: "notice",
                 content:
                   streamError ?? "AI returned no response — please try again.",
+                role: "notice",
               },
             ],
           }).catch(() => {
@@ -363,7 +363,7 @@ export function useAiChat(
         // without a trace in the chat log.
         if (content.trim()) {
           await appendTurn({
-            messages: [{ role: "assistant", content }],
+            messages: [{ content, role: "assistant" }],
           }).catch(() => {
             // toasted by the mutation's onError
           });
@@ -371,7 +371,7 @@ export function useAiChat(
           // Nothing to show and the toast above is ephemeral — leave a
           // permanent trace so the user isn't left assuming a silent no-op.
           await appendTurn({
-            messages: [{ role: "notice", content: errorMessage }],
+            messages: [{ content: errorMessage, role: "notice" }],
           }).catch(() => {
             // toasted by the mutation's onError
           });
@@ -402,7 +402,7 @@ export function useAiChat(
 
     setChatInput("");
     try {
-      await appendTurn({ messages: [{ role: "user", content: msg }] });
+      await appendTurn({ messages: [{ content: msg, role: "user" }] });
     } catch {
       return; // toasted by the mutation's onError
     }
@@ -417,10 +417,10 @@ export function useAiChat(
 
   return {
     chatInput,
-    setChatInput,
-    handleChatSend,
     executeAIEdit,
-    undo,
+    handleChatSend,
     redo,
+    setChatInput,
+    undo,
   };
 }

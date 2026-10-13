@@ -26,10 +26,10 @@ function parseCompileLog(log: string) {
   const pages = log.match(PAGE_COUNT_RE)?.[1];
   const fillMatch = log.match(FILL_PROBE_RE);
   return {
-    pageCount: pages ? Number.parseInt(pages, 10) : null,
     fillRatio: fillMatch
       ? Number.parseFloat(fillMatch[1]) / Number.parseFloat(fillMatch[2])
       : null,
+    pageCount: pages ? Number.parseInt(pages, 10) : null,
   };
 }
 
@@ -51,7 +51,7 @@ export function useEngine() {
   const [showLog, setShowLog] = useState(false);
 
   const pdfBlobUrlRef = useRef<string | null>(null);
-  const hasCompiledRef = useRef(false);
+  const hasCompiledRef = useRef<boolean>(false);
 
   useEffect(
     () => () => {
@@ -75,7 +75,7 @@ export function useEngine() {
     setEngine(
       hasCompiledRef.current
         ? { phase: "compiling" }
-        : { phase: "loading", label: "Loading LaTeX engine…" }
+        : { label: "Loading LaTeX engine…", phase: "loading" }
     );
 
     try {
@@ -98,14 +98,14 @@ export function useEngine() {
         setEngine({ phase: "ready" });
       } else {
         setEngine({
-          phase: "error",
           message: "Compilation failed — see log below",
+          phase: "error",
         });
       }
     } catch (err) {
       setEngine({
-        phase: "error",
         message: err instanceof Error ? err.message : String(err),
+        phase: "error",
       });
     }
   }, []);

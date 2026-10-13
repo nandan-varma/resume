@@ -17,6 +17,14 @@
       "!.source"
     ]
   },
+  "linter": {
+    "rules": {
+      "performance": {
+        // Inline handlers are used throughout (incl. inside .map loops where useCallback is impossible); no React Compiler/memo boundaries here.
+        "noJsxPropsBind": "off"
+      }
+    }
+  },
   "overrides": [
     {
       "includes": ["extension/content/**", "extension/content.js"],

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -216,33 +216,33 @@
     <div class="section">
       <div class="logo">
         <svg
-          width="20"
+          aria-hidden="true"
+          fill="none"
           height="20"
           viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
+          width="20"
         >
           <circle cx="12" cy="12" r="9" stroke="var(--ac)" stroke-width="2" />
           <circle cx="12" cy="12" r="5" stroke="var(--ac)" stroke-width="2" />
-          <circle cx="12" cy="12" r="1.5" fill="var(--ac)" />
+          <circle cx="12" cy="12" fill="var(--ac)" r="1.5" />
         </svg>
         JobMatch
       </div>
     </div>
 
     <div class="section" id="auth-section">
-      <div id="auth-loading" class="status-row">
+      <div class="status-row" id="auth-loading">
         <div class="dot off"></div>
         Loading…
       </div>
-      <div id="auth-user" class="user-row hidden">
+      <div class="user-row hidden" id="auth-user">
         <div class="avatar" id="avatar">?</div>
         <div style="min-width:0;">
           <div class="user-name" id="user-name">—</div>
           <div class="user-email" id="user-email">—</div>
         </div>
       </div>
-      <div id="auth-anon" class="status-row hidden">
+      <div class="status-row hidden" id="auth-anon">
         <div class="dot off"></div>
         Not logged in
       </div>
@@ -255,8 +255,8 @@
           <div class="tname">Auto-analyze</div>
           <div class="tdesc">Run on every LinkedIn job</div>
         </div>
-        <label class="toggle"
-          ><input type="checkbox" id="autoAnalyze">
+        <label aria-label="Auto-analyze" class="toggle" for="autoAnalyze"
+          ><input id="autoAnalyze" type="checkbox">
           <span class="slider"></span></label
         >
       </div>
@@ -265,8 +265,8 @@
           <div class="tname">Auto-save job</div>
           <div class="tdesc">Save + cache analysis instantly</div>
         </div>
-        <label class="toggle"
-          ><input type="checkbox" id="autoSave">
+        <label aria-label="Auto-save job" class="toggle" for="autoSave"
+          ><input id="autoSave" type="checkbox">
           <span class="slider"></span></label
         >
       </div>
@@ -278,18 +278,18 @@
 
     <div class="section">
       <div class="actions">
-        <a id="jobs-btn" class="btn btn-p hidden" href="#" target="_blank"
+        <a class="btn btn-p hidden" href="/jobs" id="jobs-btn" target="_blank"
           >Open Jobs</a
         >
-        <a id="login-btn" class="btn btn-p hidden" href="#" target="_blank"
+        <a class="btn btn-p hidden" href="/login" id="login-btn" target="_blank"
           >Log In →</a
         >
-        <button id="signout-btn" type="button" class="btn btn-o hidden">
+        <button class="btn btn-o hidden" id="signout-btn" type="button">
           Sign Out
         </button>
       </div>
     </div>
 
-    <script type="module" src="popup.js"></script>
+    <script src="popup.js" type="module"></script>
   </body>
 </html>

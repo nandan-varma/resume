@@ -6,28 +6,21 @@ import { BusyTexSW } from "@/components/busytex-sw";
 import { Providers } from "./providers";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
   subsets: ["latin"],
+  variable: "--font-geist-sans",
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
+  variable: "--font-geist-mono",
 });
 
 export const viewport: Viewport = {
-  width: "device-width",
   initialScale: 1,
+  width: "device-width",
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ),
-  title: {
-    default: "JobMatch — AI Resume Analyzer",
-    template: "%s | JobMatch",
-  },
   description:
     "Paste any job description. Get a match score, missing keywords, and concrete edits — in seconds.",
   keywords: [
@@ -38,19 +31,26 @@ export const metadata: Metadata = {
     "resume keywords",
     "job application tracker",
   ],
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  ),
   openGraph: {
-    title: "JobMatch — AI Resume Analyzer",
     description:
       "Paste any job description. Get a match score, missing keywords, and concrete edits — in seconds.",
-    type: "website",
     siteName: "JobMatch",
+    title: "JobMatch — AI Resume Analyzer",
+    type: "website",
     url: "/",
+  },
+  title: {
+    default: "JobMatch — AI Resume Analyzer",
+    template: "%s | JobMatch",
   },
   twitter: {
     card: "summary_large_image",
-    title: "JobMatch — AI Resume Analyzer",
     description:
       "Paste any job description. Get a match score, missing keywords, and concrete edits — in seconds.",
+    title: "JobMatch — AI Resume Analyzer",
   },
 };
 

@@ -7,21 +7,6 @@ import Markdown from "react-markdown";
 
 // Tight spacing to fit the chat bubble — default markdown block margins are too loose.
 const markdownComponents: Components = {
-  p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
-  ul: ({ children }) => (
-    <ul className="mb-1.5 list-disc space-y-0.5 pl-4 last:mb-0">{children}</ul>
-  ),
-  ol: ({ children }) => (
-    <ol className="mb-1.5 list-decimal space-y-0.5 pl-4 last:mb-0">
-      {children}
-    </ol>
-  ),
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-  code: ({ children }) => (
-    <code className="rounded bg-foreground/10 px-1 py-0.5 font-mono text-[0.85em]">
-      {children}
-    </code>
-  ),
   a: ({ children, href }) => (
     <a
       className="underline underline-offset-2"
@@ -31,6 +16,21 @@ const markdownComponents: Components = {
     >
       {children}
     </a>
+  ),
+  code: ({ children }) => (
+    <code className="rounded bg-foreground/10 px-1 py-0.5 font-mono text-[0.85em]">
+      {children}
+    </code>
+  ),
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  ol: ({ children }) => (
+    <ol className="mb-1.5 list-decimal space-y-0.5 pl-4 last:mb-0">
+      {children}
+    </ol>
+  ),
+  p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+  ul: ({ children }) => (
+    <ul className="mb-1.5 list-disc space-y-0.5 pl-4 last:mb-0">{children}</ul>
   ),
 };
 
@@ -105,7 +105,7 @@ function RawQuestionBubble({
               );
             })}
           </div>
-          {showCustom && (
+          {!!showCustom && (
             <div className="flex gap-1.5">
               <input
                 autoFocus
@@ -229,7 +229,7 @@ function RawAssistantBubble({
         ) : (
           <Markdown components={markdownComponents}>{content}</Markdown>
         )}
-        {streaming && (
+        {!!streaming && (
           <span className="ml-0.5 inline-block h-[0.75em] w-[2px] translate-y-[1px] animate-pulse bg-current align-middle" />
         )}
       </div>

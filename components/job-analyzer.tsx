@@ -82,14 +82,17 @@ export function JobAnalyzer() {
     defaultValues: { jobDescription: "", linkedJobId: "" },
   });
 
-  const handleSaveToJob = async (jobId: number, result: AnalysisResult) => {
+  const handleSaveToJob = async (
+    jobId: number,
+    analysisResult: AnalysisResult
+  ) => {
     const res = await saveAnalysis(jobId, {
-      match_percentage: result.match_percentage,
-      summary: result.summary,
-      strengths: result.strengths,
-      missing_keywords: result.missing_keywords,
-      improvement_suggestions: result.improvement_suggestions,
-      additional_insights: result.additional_insights,
+      additional_insights: analysisResult.additional_insights,
+      improvement_suggestions: analysisResult.improvement_suggestions,
+      match_percentage: analysisResult.match_percentage,
+      missing_keywords: analysisResult.missing_keywords,
+      strengths: analysisResult.strengths,
+      summary: analysisResult.summary,
     });
     if (res.success) {
       setAnalysis((prev) => (prev ? { ...prev, saved: true } : null));
@@ -102,14 +105,14 @@ export function JobAnalyzer() {
   const handleAnalyze = form.handleSubmit(async (values) => {
     const data = await analyze.mutateAsync({
       jobDescription: values.jobDescription.trim(),
-      modelId,
       jobId:
         values.linkedJobId && values.linkedJobId !== "none"
           ? Number(values.linkedJobId)
           : undefined,
+      modelId,
     });
     const linked = values.linkedJobId;
-    setAnalysis({ result: data, linkedJobId: linked, saved: false });
+    setAnalysis({ linkedJobId: linked, result: data, saved: false });
     toast.success("Analysis complete");
     if (linked && linked !== "none") {
       await handleSaveToJob(Number(linked), data);
@@ -127,8 +130,8 @@ export function JobAnalyzer() {
     }
     createJob.mutate(
       {
-        title: analysis?.result.short_title ?? "Job Application",
         description: jobDescription.trim(),
+        title: analysis?.result.short_title ?? "Job Application",
       },
       {
         onSuccess: (job) => {
@@ -237,7 +240,7 @@ export function JobAnalyzer() {
               </div>
             </div>
 
-            {analyze.isError && (
+            {!!analyze.isError && (
               <p className="animate-enter rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive text-sm">
                 {analyze.error.message}
               </p>
@@ -245,7 +248,7 @@ export function JobAnalyzer() {
           </form>
         </Card>
 
-        {result && (
+        {!!result && (
           <div className="animate-enter-up space-y-4">
             <AnalysisResults result={result} />
 
@@ -277,7 +280,7 @@ export function JobAnalyzer() {
                 </div>
               )}
 
-            {analysis?.saved && (
+            {!!analysis?.saved && (
               <p className="font-medium text-sm text-success">
                 ✓ Analysis saved to job
               </p>

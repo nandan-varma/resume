@@ -45,10 +45,10 @@ function spawnNode(w: number, h: number): Node {
   const a = Math.random() * TAU;
   const s = MAX_SPEED * (0.5 + Math.random() * 0.5);
   return {
-    x: Math.random() * w,
-    y: Math.random() * h,
     vx: Math.cos(a) * s,
     vy: Math.sin(a) * s,
+    x: Math.random() * w,
+    y: Math.random() * h,
   };
 }
 
@@ -161,7 +161,7 @@ export function NetworkBackground() {
 
       // Phase 1 — update positions, bounce off walls, weak mouse attraction.
       const maxSpeedBoosted = MAX_SPEED * 2.2;
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         const nd = nodes[i];
         nd.x += nd.vx;
         nd.y += nd.vy;
@@ -205,11 +205,11 @@ export function NetworkBackground() {
 
       // Phase 2 — bucket edges + node-node repulsion (one O(n²) pass, no per-frame alloc).
       _lens.fill(0);
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         const ni = nodes[i];
         const ax = ni.x,
           ay = ni.y;
-        for (let j = i + 1; j < n; j++) {
+        for (let j = i + 1; j < n; j += 1) {
           const nj = nodes[j];
           const dx = ax - nj.x;
           const dy = ay - nj.y;
@@ -225,7 +225,7 @@ export function NetworkBackground() {
             _bufs[b][off + 1] = ay;
             _bufs[b][off + 2] = nj.x;
             _bufs[b][off + 3] = nj.y;
-            _lens[b]++;
+            _lens[b] += 1;
             // Repulsion — only near-mouse nodes, smooth quadratic fade to 0 at REPEL_DIST.
             if (
               d2 < REPEL_DIST_SQ &&
@@ -233,8 +233,8 @@ export function NetworkBackground() {
               _nearMouse[i] &&
               _nearMouse[j]
             ) {
-              const t = 1 - dist / REPEL_DIST; // 0 at boundary → 1 at overlap
-              const repF = (0.6 * t * t) / dist;
+              const fade = 1 - dist / REPEL_DIST; // 0 at boundary → 1 at overlap
+              const repF = (0.6 * fade * fade) / dist;
               ni.vx += dx * repF;
               ni.vy += dy * repF;
               nj.vx -= dx * repF;
@@ -250,10 +250,10 @@ export function NetworkBackground() {
       ctx.lineWidth = 4;
       ctx.globalAlpha = dark ? 0.048 : 0.03;
       ctx.beginPath();
-      for (let b = 0; b < BUCKETS; b++) {
+      for (let b = 0; b < BUCKETS; b += 1) {
         const c = _lens[b];
         const buf = _bufs[b];
-        for (let e = 0; e < c; e++) {
+        for (let e = 0; e < c; e += 1) {
           // biome-ignore lint/suspicious/noBitwiseOperators: multiply by 4 via shift in hot path
           const o = e << 2;
           ctx.moveTo(buf[o], buf[o + 1]);
@@ -263,7 +263,7 @@ export function NetworkBackground() {
       ctx.stroke();
 
       // Phase 3b — detail pass: one stroke per bucket, brightness driven by proximity (t²).
-      for (let b = 0; b < BUCKETS; b++) {
+      for (let b = 0; b < BUCKETS; b += 1) {
         const c = _lens[b];
         if (c === 0) {
           continue;
@@ -273,7 +273,7 @@ export function NetworkBackground() {
         ctx.lineWidth = tMid * 1.4 + 0.1;
         const buf = _bufs[b];
         ctx.beginPath();
-        for (let e = 0; e < c; e++) {
+        for (let e = 0; e < c; e += 1) {
           // biome-ignore lint/suspicious/noBitwiseOperators: multiply by 4 via shift in hot path
           const o = e << 2;
           ctx.moveTo(buf[o], buf[o + 1]);
@@ -287,7 +287,7 @@ export function NetworkBackground() {
 
       ctx.globalAlpha = dark ? 0.1 : 0.06;
       ctx.beginPath();
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         ctx.moveTo(nodes[i].x + 5, nodes[i].y);
         ctx.arc(nodes[i].x, nodes[i].y, 5, 0, TAU);
       }
@@ -295,7 +295,7 @@ export function NetworkBackground() {
 
       ctx.globalAlpha = dark ? 0.55 : 0.38;
       ctx.beginPath();
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         ctx.moveTo(nodes[i].x + 1.5, nodes[i].y);
         ctx.arc(nodes[i].x, nodes[i].y, 1.5, 0, TAU);
       }
@@ -310,7 +310,7 @@ export function NetworkBackground() {
         // Outer zone: large faint halo
         ctx.globalAlpha = dark ? 0.13 : 0.08;
         ctx.beginPath();
-        for (let i = 0; i < n; i++) {
+        for (let i = 0; i < n; i += 1) {
           const mdx = nodes[i].x - mx,
             mdy = nodes[i].y - my;
           if (mdx * mdx + mdy * mdy < NODE_GLOW_SQ) {
@@ -323,7 +323,7 @@ export function NetworkBackground() {
         // Inner zone: brighter core
         ctx.globalAlpha = dark ? 0.85 : 0.65;
         ctx.beginPath();
-        for (let i = 0; i < n; i++) {
+        for (let i = 0; i < n; i += 1) {
           const mdx = nodes[i].x - mx,
             mdy = nodes[i].y - my;
           if (mdx * mdx + mdy * mdy < innerSq) {

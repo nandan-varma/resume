@@ -10,7 +10,6 @@ neonConfig.webSocketConstructor = ws;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export const db = drizzle(pool, {
-  schema,
   logger:
     process.env.NODE_ENV === "development"
       ? {
@@ -18,4 +17,5 @@ export const db = drizzle(pool, {
             console.log(q.length > 150 ? `${q.slice(0, 40)}...` : q),
         }
       : false,
+  schema,
 });

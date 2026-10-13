@@ -7,14 +7,14 @@ import { cache } from "react";
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: {
-        staleTime: 5 * 60 * 1000,
-      },
       dehydrate: {
         shouldDehydrateQuery: (query) =>
           defaultShouldDehydrateQuery(query) ||
           query.state.status === "pending",
         shouldRedactErrors: () => false,
+      },
+      queries: {
+        staleTime: 5 * 60 * 1000,
       },
     },
   });

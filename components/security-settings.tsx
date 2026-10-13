@@ -14,9 +14,9 @@ import { ErrorBoundary } from "@/lib/error-boundary";
 
 const schema = z
   .object({
+    confirmPassword: z.string().min(1, "Required"),
     currentPassword: z.string().min(1, "Required"),
     newPassword: z.string().min(8, "Must be at least 8 characters"),
-    confirmPassword: z.string().min(1, "Required"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords don't match",
@@ -33,12 +33,12 @@ export function SecuritySettings() {
 
 function SecuritySettingsInner() {
   const form = useForm({
-    resolver: zodResolver(schema),
     defaultValues: {
+      confirmPassword: "",
       currentPassword: "",
       newPassword: "",
-      confirmPassword: "",
     },
+    resolver: zodResolver(schema),
   });
 
   const onSubmit = form.handleSubmit(
@@ -76,7 +76,7 @@ function SecuritySettingsInner() {
             id="currentPassword"
             {...form.register("currentPassword")}
           />
-          {form.formState.errors.currentPassword && (
+          {!!form.formState.errors.currentPassword && (
             <p className="mt-1 text-destructive text-xs">
               {form.formState.errors.currentPassword.message}
             </p>
@@ -92,7 +92,7 @@ function SecuritySettingsInner() {
             id="newPassword"
             {...form.register("newPassword")}
           />
-          {form.formState.errors.newPassword && (
+          {!!form.formState.errors.newPassword && (
             <p className="mt-1 text-destructive text-xs">
               {form.formState.errors.newPassword.message}
             </p>
@@ -108,7 +108,7 @@ function SecuritySettingsInner() {
             id="confirmPassword"
             {...form.register("confirmPassword")}
           />
-          {form.formState.errors.confirmPassword && (
+          {!!form.formState.errors.confirmPassword && (
             <p className="mt-1 text-destructive text-xs">
               {form.formState.errors.confirmPassword.message}
             </p>

@@ -23,7 +23,7 @@ describe("parseJsonBody", () => {
   const schema = z.object({ name: z.string().min(1) });
 
   it("returns ok:false with a 400 for invalid JSON", async () => {
-    const req = new Request("http://x", { method: "POST", body: "not json" });
+    const req = new Request("http://x", { body: "not json", method: "POST" });
     const result = await parseJsonBody(req, schema);
 
     expect(result.ok).toBe(false);
@@ -36,8 +36,8 @@ describe("parseJsonBody", () => {
 
   it("returns ok:false with a 400 and joined issues when the schema fails", async () => {
     const req = new Request("http://x", {
-      method: "POST",
       body: JSON.stringify({ name: "" }),
+      method: "POST",
     });
     const result = await parseJsonBody(req, schema);
 
@@ -51,8 +51,8 @@ describe("parseJsonBody", () => {
 
   it("returns ok:true with the parsed data on success", async () => {
     const req = new Request("http://x", {
-      method: "POST",
       body: JSON.stringify({ name: "Alex" }),
+      method: "POST",
     });
     const result = await parseJsonBody(req, schema);
 

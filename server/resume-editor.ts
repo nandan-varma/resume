@@ -31,7 +31,7 @@ async function findOrCreateDocument(userId: string, jobId: number | null) {
   }
   const [created] = await db
     .insert(resumeDocuments)
-    .values({ userId, jobId })
+    .values({ jobId, userId })
     .onConflictDoNothing()
     .returning();
   if (created) {
@@ -62,8 +62,8 @@ export const getResumeDocument = async (jobId: number | null) => {
 };
 
 const saveLatexSchema = z.object({
-  latex: z.string().max(60_000, "LaTeX too large (max 60 000 chars)"),
   expectedVersion: z.number().int().min(0),
+  latex: z.string().max(60_000, "LaTeX too large (max 60 000 chars)"),
 });
 
 export const saveLatex = async (
@@ -72,17 +72,17 @@ export const saveLatex = async (
   expectedVersion: number
 ) => {
   try {
-    const parsed = saveLatexSchema.safeParse({ latex, expectedVersion });
+    const parsed = saveLatexSchema.safeParse({ expectedVersion, latex });
     if (!parsed.success) {
       return {
-        success: false as const,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false as const,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false as const, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false as const };
     }
 
     const doc = await findOrCreateDocument(session.user.id, jobId);
@@ -102,37 +102,37 @@ export const saveLatex = async (
 
     if (!row) {
       return {
-        success: false as const,
         conflict: true as const,
         message: "This resume was edited elsewhere — reload to continue.",
+        success: false as const,
       };
     }
-    return { success: true as const, document: row };
+    return { document: row, success: true as const };
   } catch (error) {
     return {
-      success: false as const,
       message: error instanceof Error ? error.message : "Failed to save.",
+      success: false as const,
     };
   }
 };
 
 const messageInputSchema = z.object({
-  role: z.enum(resumeMessageRole),
   content: z.string().max(20_000).default(""),
   editsApplied: z.number().int().min(0).optional(),
+  questionAnswered: z.string().max(500).optional(),
   questionKey: z.string().max(200).optional(),
   questionOptions: z.array(z.string().max(200)).max(20).optional(),
-  questionAnswered: z.string().max(500).optional(),
+  role: z.enum(resumeMessageRole),
 });
 
 const appendTurnSchema = z.object({
-  messages: z.array(messageInputSchema).min(1).max(10),
   latexUpdate: z
     .object({
-      latex: z.string().max(60_000, "LaTeX too large (max 60 000 chars)"),
       expectedVersion: z.number().int().min(0),
+      latex: z.string().max(60_000, "LaTeX too large (max 60 000 chars)"),
     })
     .optional(),
+  messages: z.array(messageInputSchema).min(1).max(10),
 });
 
 type AppendTurnInput = z.infer<typeof appendTurnSchema>;
@@ -148,14 +148,14 @@ export const appendTurn = async (
     const parsed = appendTurnSchema.safeParse(input);
     if (!parsed.success) {
       return {
-        success: false as const,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false as const,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false as const, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false as const };
     }
 
     const doc = await findOrCreateDocument(session.user.id, jobId);
@@ -194,17 +194,17 @@ export const appendTurn = async (
         .insert(resumeMessages)
         .values(
           parsed.data.messages.map((m) => ({
-            documentId: doc.id,
-            role: m.role,
             content: m.content,
+            documentId: doc.id,
             editsApplied: m.editsApplied,
+            questionAnswered: m.questionAnswered,
             questionKey: m.questionKey,
             questionOptions: m.questionOptions,
-            questionAnswered: m.questionAnswered,
             revisionId:
               (m.role === "assistant" || m.role === "notice") && revisionId
                 ? revisionId
                 : undefined,
+            role: m.role,
           }))
         )
         .returning();
@@ -216,14 +216,14 @@ export const appendTurn = async (
   } catch (error) {
     if (error instanceof VersionConflictError) {
       return {
-        success: false as const,
         conflict: true as const,
         message: "This resume was edited elsewhere — reload to continue.",
+        success: false as const,
       };
     }
     return {
-      success: false as const,
       message: error instanceof Error ? error.message : "Failed to save.",
+      success: false as const,
     };
   }
 };
@@ -236,7 +236,7 @@ export const restoreRevision = async (
   try {
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false as const, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false as const };
     }
 
     const doc = await findOrCreateDocument(session.user.id, jobId);
@@ -247,7 +247,7 @@ export const restoreRevision = async (
       ),
     });
     if (!revision) {
-      return { success: false as const, message: "Revision not found." };
+      return { message: "Revision not found.", success: false as const };
     }
 
     const result = await db.transaction(async (tx) => {
@@ -274,10 +274,10 @@ export const restoreRevision = async (
       const [message] = await tx
         .insert(resumeMessages)
         .values({
-          documentId: doc.id,
-          role: "notice",
           content: "Restored to an earlier version.",
+          documentId: doc.id,
           revisionId: revision.id,
+          role: "notice",
         })
         .returning();
 
@@ -288,14 +288,14 @@ export const restoreRevision = async (
   } catch (error) {
     if (error instanceof VersionConflictError) {
       return {
-        success: false as const,
         conflict: true as const,
         message: "This resume was edited elsewhere — reload to continue.",
+        success: false as const,
       };
     }
     return {
-      success: false as const,
       message: error instanceof Error ? error.message : "Restore failed.",
+      success: false as const,
     };
   }
 };
@@ -304,7 +304,7 @@ export const clearMessages = async (jobId: number | null) => {
   try {
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false as const, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false as const };
     }
     const doc = await findOrCreateDocument(session.user.id, jobId);
     await db
@@ -313,8 +313,8 @@ export const clearMessages = async (jobId: number | null) => {
     return { success: true as const };
   } catch (error) {
     return {
-      success: false as const,
       message: error instanceof Error ? error.message : "Failed to clear chat.",
+      success: false as const,
     };
   }
 };
@@ -332,13 +332,13 @@ export const answerQuestion = async (
     const parsed = answerQuestionSchema.safeParse({ answer });
     if (!parsed.success) {
       return {
-        success: false as const,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false as const,
       };
     }
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false as const, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false as const };
     }
     const doc = await findOrCreateDocument(session.user.id, jobId);
     const [row] = await db
@@ -352,14 +352,14 @@ export const answerQuestion = async (
       )
       .returning();
     if (!row) {
-      return { success: false as const, message: "Question not found." };
+      return { message: "Question not found.", success: false as const };
     }
-    return { success: true as const, message: row };
+    return { message: row, success: true as const };
   } catch (error) {
     return {
-      success: false as const,
       message:
         error instanceof Error ? error.message : "Failed to save answer.",
+      success: false as const,
     };
   }
 };

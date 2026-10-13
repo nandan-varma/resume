@@ -12,8 +12,8 @@ export const jobsQueryKey = ["jobs"] as const;
 
 export function useJobs() {
   return useSuspenseQuery({
-    queryKey: jobsQueryKey,
     queryFn: getJobs,
+    queryKey: jobsQueryKey,
   });
 }
 
@@ -35,18 +35,18 @@ export function useCreateJob() {
       }
       return result.job;
     },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to add application"
+      );
+      queryClient.invalidateQueries({ queryKey: jobsQueryKey });
+    },
     onSuccess: (job) => {
       queryClient.setQueryData<Job[]>(jobsQueryKey, (old) => [
         job,
         ...(old ?? []),
       ]);
       toast.success("Application added");
-    },
-    onError: (err) => {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to add application"
-      );
-      queryClient.invalidateQueries({ queryKey: jobsQueryKey });
     },
   });
 }
@@ -61,6 +61,12 @@ export function useDeleteJob() {
       }
       return jobId;
     },
+    onError: (err, _, context: { previous: Job[] | undefined } | undefined) => {
+      if (context?.previous) {
+        queryClient.setQueryData(jobsQueryKey, context.previous);
+      }
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    },
     onMutate: async (jobId) => {
       await queryClient.cancelQueries({ queryKey: jobsQueryKey });
       const previous = queryClient.getQueryData<Job[]>(jobsQueryKey);
@@ -70,17 +76,11 @@ export function useDeleteJob() {
       );
       return { previous };
     },
-    onSuccess: () => {
-      toast.success("Application removed");
-    },
-    onError: (err, _, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(jobsQueryKey, context.previous);
-      }
-      toast.error(err instanceof Error ? err.message : "Failed to delete");
-    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: jobsQueryKey });
+    },
+    onSuccess: () => {
+      toast.success("Application removed");
     },
   });
 }
@@ -98,9 +98,9 @@ export function useReanalyzeJob() {
       modelId: string;
     }) => {
       const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobDescription, modelId }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -113,12 +113,12 @@ export function useReanalyzeJob() {
       }
       return result.match_percentage as number;
     },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Re-analyze failed"),
     onSuccess: (matchPercentage) => {
       queryClient.invalidateQueries({ queryKey: jobsQueryKey });
       toast.success(`Score updated: ${matchPercentage}%`);
     },
-    onError: (err) =>
-      toast.error(err instanceof Error ? err.message : "Re-analyze failed"),
   });
 }
 
@@ -138,6 +138,14 @@ export function useUpdateJobStatus() {
       }
       return { jobId, status };
     },
+    onError: (err, _, context: { previous: Job[] | undefined } | undefined) => {
+      if (context?.previous) {
+        queryClient.setQueryData(jobsQueryKey, context.previous);
+      }
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update status"
+      );
+    },
     onMutate: async ({ jobId, status }) => {
       await queryClient.cancelQueries({ queryKey: jobsQueryKey });
       const previous = queryClient.getQueryData<Job[]>(jobsQueryKey);
@@ -147,19 +155,11 @@ export function useUpdateJobStatus() {
       );
       return { previous };
     },
-    onSuccess: () => {
-      toast.success("Status updated");
-    },
-    onError: (err, _, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(jobsQueryKey, context.previous);
-      }
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update status"
-      );
-    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: jobsQueryKey });
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
     },
   });
 }

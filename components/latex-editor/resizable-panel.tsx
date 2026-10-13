@@ -34,7 +34,7 @@ export function ResizablePanel({
   const [leftPercent, setLeftPercent] = useState(() =>
     loadSaved(defaultLeftPercent)
   );
-  const draggingRef = useRef(false);
+  const draggingRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

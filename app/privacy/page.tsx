@@ -3,11 +3,11 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "How JobMatch collects, uses, and protects your data.",
   alternates: {
     canonical: "/privacy",
   },
+  description: "How JobMatch collects, uses, and protects your data.",
+  title: "Privacy Policy",
 };
 
 export default function PrivacyPage() {

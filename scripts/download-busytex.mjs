@@ -37,7 +37,9 @@ function getJson(url) {
             }
             let buf = "";
             res.setEncoding("utf8");
-            res.on("data", (d) => (buf += d));
+            res.on("data", (d) => {
+              buf += d;
+            });
             res.on("end", () => resolve(JSON.parse(buf)));
             res.on("error", reject);
           }
@@ -117,6 +119,7 @@ async function main() {
     release.assets.map((a) => [a.name, a.browser_download_url])
   );
 
+  const downloads = [];
   for (const file of REQUIRED) {
     const dest = path.join(DEST, file);
     if (fs.existsSync(dest)) {
@@ -129,8 +132,9 @@ async function main() {
       process.exit(1);
     }
     process.stdout.write(`  Downloading ${file}...\n`);
-    await downloadFile(url, dest);
+    downloads.push(downloadFile(url, dest));
   }
+  await Promise.all(downloads);
 
   console.log("\n✓ BusyTeX assets ready");
 }

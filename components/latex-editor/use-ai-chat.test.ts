@@ -30,7 +30,7 @@ describe("applyEdits", () => {
     const result = applyEdits("hello world", [
       { find: "world", replace: "there" },
     ]);
-    expect(result).toEqual({ next: "hello there", applied: 1 });
+    expect(result).toEqual({ applied: 1, next: "hello there" });
   });
 
   it("pass 2: matches when only indentation differs", () => {
@@ -40,8 +40,8 @@ describe("applyEdits", () => {
       { find, replace: "function f() {\n    return 2;\n}" },
     ]);
     expect(result).toEqual({
-      next: "function f() {\n    return 2;\n}",
       applied: 1,
+      next: "function f() {\n    return 2;\n}",
     });
   });
 
@@ -49,12 +49,12 @@ describe("applyEdits", () => {
     const source = "a\n\n\nb\nc";
     const find = "a\n\nb\nc";
     const result = applyEdits(source, [{ find, replace: "X" }]);
-    expect(result).toEqual({ next: "X", applied: 1 });
+    expect(result).toEqual({ applied: 1, next: "X" });
   });
 
   it("leaves the source untouched when nothing matches", () => {
     const result = applyEdits("hello", [{ find: "nope", replace: "x" }]);
-    expect(result).toEqual({ next: "hello", applied: 0 });
+    expect(result).toEqual({ applied: 0, next: "hello" });
   });
 
   it("applies only the edits that match, in order, counting just the hits", () => {
@@ -62,14 +62,14 @@ describe("applyEdits", () => {
       { find: "aaa", replace: "AAA" },
       { find: "zzz", replace: "Z" },
     ]);
-    expect(result).toEqual({ next: "AAA bbb", applied: 1 });
+    expect(result).toEqual({ applied: 1, next: "AAA bbb" });
   });
 
   it("normalizes CRLF line endings in the find string before matching", () => {
     const result = applyEdits("line1\nline2", [
       { find: "line1\r\nline2", replace: "X" },
     ]);
-    expect(result).toEqual({ next: "X", applied: 1 });
+    expect(result).toEqual({ applied: 1, next: "X" });
   });
 
   it("applies sequential edits against the progressively-updated source", () => {
@@ -77,6 +77,6 @@ describe("applyEdits", () => {
       { find: "one", replace: "1" },
       { find: "1 two", replace: "1 2" },
     ]);
-    expect(result).toEqual({ next: "1 2 three", applied: 2 });
+    expect(result).toEqual({ applied: 2, next: "1 2 three" });
   });
 });

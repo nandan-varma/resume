@@ -26,10 +26,10 @@ const tabs: {
     "aria-hidden"?: boolean | "true" | "false";
   }>;
 }[] = [
-  { id: "jobs", label: "Jobs", to: "/jobs", Icon: Briefcase },
-  { id: "analyze", label: "Analyze", to: "/analyze", Icon: Search },
-  { id: "editor", label: "Editor", to: "/editor", Icon: FileText },
-  { id: "settings", label: "Settings", to: "/settings", Icon: Settings },
+  { Icon: Briefcase, id: "jobs", label: "Jobs", to: "/jobs" },
+  { Icon: Search, id: "analyze", label: "Analyze", to: "/analyze" },
+  { Icon: FileText, id: "editor", label: "Editor", to: "/editor" },
+  { Icon: Settings, id: "settings", label: "Settings", to: "/settings" },
 ];
 
 export function Navigation({ user }: NavigationProps) {
@@ -51,7 +51,7 @@ export function Navigation({ user }: NavigationProps) {
     width: number;
     visible: boolean;
     animated: boolean;
-  }>({ left: 0, width: 0, visible: false, animated: false });
+  }>({ animated: false, left: 0, visible: false, width: 0 });
 
   // Close mobile menu when active tab changes (page navigation)
   // biome-ignore lint/correctness/useExhaustiveDependencies: activeTab is the trigger dep (not used inside body)
@@ -88,7 +88,7 @@ export function Navigation({ user }: NavigationProps) {
       if (e.key !== "?") {
         return;
       }
-      const target = e.target;
+      const { target } = e;
       const isTyping =
         target instanceof HTMLElement &&
         (target.tagName === "INPUT" ||
@@ -124,25 +124,25 @@ export function Navigation({ user }: NavigationProps) {
 
       if (fromEl) {
         setIndicator({
-          left: fromEl.offsetLeft,
-          width: fromEl.offsetWidth,
-          visible: true,
           animated: false,
+          left: fromEl.offsetLeft,
+          visible: true,
+          width: fromEl.offsetWidth,
         });
         innerRaf = requestAnimationFrame(() => {
           setIndicator({
-            left: toLeft,
-            width: toWidth,
-            visible: true,
             animated: true,
+            left: toLeft,
+            visible: true,
+            width: toWidth,
           });
         });
       } else {
         setIndicator({
-          left: toLeft,
-          width: toWidth,
-          visible: true,
           animated: false,
+          left: toLeft,
+          visible: true,
+          width: toWidth,
         });
       }
 
@@ -171,7 +171,7 @@ export function Navigation({ user }: NavigationProps) {
   };
 
   const userInitial = user
-    ? (user.name ?? user.email).charAt(0).toUpperCase()
+    ? (user.name || user.email).charAt(0).toUpperCase()
     : null;
 
   const indicatorTransition = () => {
@@ -213,9 +213,9 @@ export function Navigation({ user }: NavigationProps) {
             className="pointer-events-none absolute bottom-0 h-px bg-foreground"
             style={{
               left: indicator.left,
-              width: indicator.width,
               opacity: indicator.visible ? 1 : 0,
               transition: indicatorTransition(),
+              width: indicator.width,
             }}
           >
             <span
@@ -264,7 +264,7 @@ export function Navigation({ user }: NavigationProps) {
             ?
           </button>
 
-          {user && (
+          {!!user && (
             <>
               {/* Desktop: avatar + sign-out text */}
               <div className="hidden items-center gap-3 md:flex">
@@ -323,7 +323,7 @@ export function Navigation({ user }: NavigationProps) {
       </div>
 
       {/* ── Mobile dropdown ──────────────────────────────────── */}
-      {mobileOpen && (
+      {!!mobileOpen && (
         <div
           className="border-border border-t bg-background/95 backdrop-blur-sm md:hidden"
           id="mobile-nav-menu"

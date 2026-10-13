@@ -52,9 +52,9 @@ export default async function EditorPage({
           job={
             job
               ? {
+                  description: job.jobDescription,
                   id: job.id,
                   title: job.jobTitle,
-                  description: job.jobDescription,
                 }
               : null
           }

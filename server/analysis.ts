@@ -7,13 +7,13 @@ import { analysis } from "@/db/schema";
 import { getSession } from "./session";
 
 const saveAnalysisSchema = z.object({
+  additional_insights: z.string().nullable().optional(),
+  improvement_suggestions: z.array(z.string()),
   jobId: z.number().positive(),
   match_percentage: z.number().min(0).max(100),
-  summary: z.string(),
-  strengths: z.array(z.string()),
   missing_keywords: z.array(z.string()),
-  improvement_suggestions: z.array(z.string()),
-  additional_insights: z.string().nullable().optional(),
+  strengths: z.array(z.string()),
+  summary: z.string(),
 });
 
 const getAnalysisByIdSchema = z.object({
@@ -35,41 +35,41 @@ export const saveAnalysis = async (
     const parsed = saveAnalysisSchema.safeParse({ jobId, ...analysisData });
     if (!parsed.success) {
       return {
-        success: false,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
 
     const values = {
-      jobId: parsed.data.jobId,
-      userId: session.user.id,
-      matchPercentage: parsed.data.match_percentage,
-      summary: parsed.data.summary,
-      strengths: parsed.data.strengths,
-      missingKeywords: parsed.data.missing_keywords,
-      improvementSuggestions: parsed.data.improvement_suggestions,
       additionalInsights: parsed.data.additional_insights ?? null,
+      improvementSuggestions: parsed.data.improvement_suggestions,
+      jobId: parsed.data.jobId,
+      matchPercentage: parsed.data.match_percentage,
+      missingKeywords: parsed.data.missing_keywords,
+      strengths: parsed.data.strengths,
+      summary: parsed.data.summary,
+      userId: session.user.id,
     };
     const [result] = await db
       .insert(analysis)
       .values(values)
       .onConflictDoUpdate({
-        target: [analysis.jobId, analysis.userId],
         set: values,
+        target: [analysis.jobId, analysis.userId],
       })
       .returning();
 
-    return { success: true, message: "Analysis saved.", analysis: result };
+    return { analysis: result, message: "Analysis saved.", success: true };
   } catch (error) {
     return {
-      success: false,
       message:
         error instanceof Error ? error.message : "Failed to save analysis.",
+      success: false,
     };
   }
 };

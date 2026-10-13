@@ -9,7 +9,7 @@ export default async function ProtectedLayout({
   const { currentUser } = await requireSession();
   return (
     <>
-      <Navigation user={{ name: currentUser.name, email: currentUser.email }} />
+      <Navigation user={{ email: currentUser.email, name: currentUser.name }} />
       {children}
     </>
   );

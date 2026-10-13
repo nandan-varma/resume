@@ -31,31 +31,31 @@ function Row({ combo, label }: { combo: string[]; label: string }) {
 const groups: { rows: { combo: string[]; label: string }[]; title: string }[] =
   [
     {
-      title: "Global",
       rows: [
         { combo: ["Alt", "←/→"], label: "Switch between tabs" },
         { combo: ["?"], label: "Show this help" },
       ],
+      title: "Global",
     },
     {
-      title: "Jobs",
       rows: [
         { combo: ["c"], label: "Add new application" },
         { combo: ["Esc"], label: "Clear status filter" },
       ],
+      title: "Jobs",
     },
     {
-      title: "Forms",
       rows: [{ combo: ["⌘", "Enter"], label: "Submit (any textarea)" }],
+      title: "Forms",
     },
     {
-      title: "Editor",
       rows: [
         { combo: ["⌘", "S"], label: "Save resume" },
         { combo: ["⌘", "Z"], label: "Undo last AI edit" },
         { combo: ["⌘", "Y"], label: "Redo" },
         { combo: ["Enter"], label: "Send chat message" },
       ],
+      title: "Editor",
     },
   ];
 

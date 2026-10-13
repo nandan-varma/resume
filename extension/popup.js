@@ -57,12 +57,12 @@ async function init() {
 
   const save = () =>
     msg({
-      type: "SET_SETTINGS",
       settings: {
         autoAnalyze: autoAnalyze.checked,
         autoSave: autoSave.checked,
         modelId: modelId.value,
       },
+      type: "SET_SETTINGS",
     });
   autoAnalyze.addEventListener("change", save);
   autoSave.addEventListener("change", save);

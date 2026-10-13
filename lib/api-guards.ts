@@ -24,7 +24,7 @@ export async function requireApiSession(
       response: Response.json({ error: "Unauthorized" }, { status: 401 }),
     };
   }
-  return { ok: true, data: { session } };
+  return { data: { session }, ok: true };
 }
 
 export function checkRateLimit(
@@ -73,5 +73,5 @@ export async function parseJsonBody<T>(
     };
   }
 
-  return { ok: true, data: parsed.data };
+  return { data: parsed.data, ok: true };
 }

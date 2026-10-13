@@ -3,11 +3,11 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
-  title: "Terms of Service",
-  description: "The rules for using JobMatch.",
   alternates: {
     canonical: "/terms",
   },
+  description: "The rules for using JobMatch.",
+  title: "Terms of Service",
 };
 
 export default function TermsPage() {

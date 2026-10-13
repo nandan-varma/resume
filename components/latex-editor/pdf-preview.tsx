@@ -60,10 +60,10 @@ function renderPreviewBody(
       <div className="flex h-full flex-1 overflow-auto">
         <div
           style={{
+            height: "100%",
             transform: `scale(${zoom / 100})`,
             transformOrigin: "top left",
             width: `${10_000 / zoom}%`,
-            height: "100%",
           }}
         >
           <iframe
@@ -139,13 +139,13 @@ function PdfPreview({
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex items-center justify-end border-border/50 border-b px-3 py-1">
         <div className="flex items-center gap-2">
-          {isCompiling && (
+          {!!isCompiling && (
             <span className="flex items-center gap-1 text-muted-foreground text-xs">
               <Loader2 className="size-3 animate-spin" />
               {statusLabel}
             </span>
           )}
-          {hasError && compileLog && (
+          {hasError && !!compileLog && (
             <button
               className="flex items-center gap-1 text-destructive text-xs hover:underline"
               onClick={() => onShowLogChange(!showLog)}
@@ -163,7 +163,7 @@ function PdfPreview({
         </div>
       </div>
 
-      {hasError && showLog && compileLog && (
+      {hasError && showLog && !!compileLog && (
         <div className="max-h-48 overflow-auto border-border/50 border-b bg-destructive/5 p-3">
           <pre className="whitespace-pre-wrap font-mono text-destructive text-xs">
             {compileLog}

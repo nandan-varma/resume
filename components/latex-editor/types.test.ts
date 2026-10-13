@@ -12,29 +12,29 @@ const MSG_ID_RE = /^msg-\d+-\d+$/;
 describe("buildHistory", () => {
   it("passes user and assistant messages through unchanged", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "user", content: "hi" },
-      { id: "2", role: "assistant", content: "hello" },
+      { content: "hi", id: "1", role: "user" },
+      { content: "hello", id: "2", role: "assistant" },
     ];
     expect(buildHistory(msgs)).toEqual([
-      { role: "user", content: "hi" },
-      { role: "assistant", content: "hello" },
+      { content: "hi", role: "user" },
+      { content: "hello", role: "assistant" },
     ]);
   });
 
   it("expands an answered question into assistant+user turns", () => {
     const msgs: ChatMsg[] = [
       {
-        id: "1",
-        role: "question",
-        key: "k",
-        question: "What stack?",
-        options: ["React", "Vue"],
         answered: "React",
+        id: "1",
+        key: "k",
+        options: ["React", "Vue"],
+        question: "What stack?",
+        role: "question",
       },
     ];
     expect(buildHistory(msgs)).toEqual([
-      { role: "assistant", content: "What stack?" },
-      { role: "user", content: "React" },
+      { content: "What stack?", role: "assistant" },
+      { content: "React", role: "user" },
     ]);
   });
 
@@ -42,48 +42,48 @@ describe("buildHistory", () => {
     const msgs: ChatMsg[] = [
       {
         id: "1",
-        role: "question",
         key: "k",
-        question: "What stack?",
         options: [],
+        question: "What stack?",
+        role: "question",
       },
     ];
     expect(buildHistory(msgs)).toEqual([
-      { role: "assistant", content: "What stack?" },
+      { content: "What stack?", role: "assistant" },
     ]);
   });
 
   it("drops notice messages entirely", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "user", content: "hi" },
-      { id: "2", role: "notice", content: "Retrying…" },
-      { id: "3", role: "assistant", content: "hello" },
+      { content: "hi", id: "1", role: "user" },
+      { content: "Retrying…", id: "2", role: "notice" },
+      { content: "hello", id: "3", role: "assistant" },
     ];
     expect(buildHistory(msgs)).toEqual([
-      { role: "user", content: "hi" },
-      { role: "assistant", content: "hello" },
+      { content: "hi", role: "user" },
+      { content: "hello", role: "assistant" },
     ]);
   });
 
   it("preserves order across a mixed sequence", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "user", content: "start" },
+      { content: "start", id: "1", role: "user" },
       {
-        id: "2",
-        role: "question",
-        key: "k",
-        question: "Which role?",
-        options: [],
         answered: "Backend",
+        id: "2",
+        key: "k",
+        options: [],
+        question: "Which role?",
+        role: "question",
       },
-      { id: "3", role: "notice", content: "ignored" },
-      { id: "4", role: "assistant", content: "done" },
+      { content: "ignored", id: "3", role: "notice" },
+      { content: "done", id: "4", role: "assistant" },
     ];
     expect(buildHistory(msgs)).toEqual([
-      { role: "user", content: "start" },
-      { role: "assistant", content: "Which role?" },
-      { role: "user", content: "Backend" },
-      { role: "assistant", content: "done" },
+      { content: "start", role: "user" },
+      { content: "Which role?", role: "assistant" },
+      { content: "Backend", role: "user" },
+      { content: "done", role: "assistant" },
     ]);
   });
 
@@ -93,17 +93,17 @@ describe("buildHistory", () => {
 
   it("drops the abandoned branch after a restore to an earlier revision", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "user", content: "add a skill" },
-      { id: "2", role: "assistant", content: "added", revisionId: 1 },
-      { id: "3", role: "user", content: "add another skill" },
-      { id: "4", role: "assistant", content: "added another", revisionId: 2 },
-      { id: "5", role: "notice", content: "Restored", revisionId: 1 },
-      { id: "6", role: "user", content: "now fix the summary" },
+      { content: "add a skill", id: "1", role: "user" },
+      { content: "added", id: "2", revisionId: 1, role: "assistant" },
+      { content: "add another skill", id: "3", role: "user" },
+      { content: "added another", id: "4", revisionId: 2, role: "assistant" },
+      { content: "Restored", id: "5", revisionId: 1, role: "notice" },
+      { content: "now fix the summary", id: "6", role: "user" },
     ];
     expect(buildHistory(msgs)).toEqual([
-      { role: "user", content: "add a skill" },
-      { role: "assistant", content: "added" },
-      { role: "user", content: "now fix the summary" },
+      { content: "add a skill", role: "user" },
+      { content: "added", role: "assistant" },
+      { content: "now fix the summary", role: "user" },
     ]);
   });
 });
@@ -111,10 +111,10 @@ describe("buildHistory", () => {
 describe("computeRevisionVersions", () => {
   it("numbers checkpoints 1, 2, 3... in chronological order", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "user", content: "hi" },
-      { id: "2", role: "assistant", content: "done", revisionId: 101 },
-      { id: "3", role: "user", content: "more" },
-      { id: "4", role: "assistant", content: "done again", revisionId: 205 },
+      { content: "hi", id: "1", role: "user" },
+      { content: "done", id: "2", revisionId: 101, role: "assistant" },
+      { content: "more", id: "3", role: "user" },
+      { content: "done again", id: "4", revisionId: 205, role: "assistant" },
     ];
     expect(computeRevisionVersions(msgs)).toEqual(
       new Map([
@@ -126,8 +126,8 @@ describe("computeRevisionVersions", () => {
 
   it("assigns a version to a restore notice's revisionId too", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "assistant", content: "done", revisionId: 1 },
-      { id: "2", role: "notice", content: "Restored", revisionId: 2 },
+      { content: "done", id: "1", revisionId: 1, role: "assistant" },
+      { content: "Restored", id: "2", revisionId: 2, role: "notice" },
     ];
     expect(computeRevisionVersions(msgs)).toEqual(
       new Map([
@@ -139,9 +139,9 @@ describe("computeRevisionVersions", () => {
 
   it("ignores messages without a revisionId", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "user", content: "hi" },
-      { id: "2", role: "assistant", content: "no edits" },
-      { id: "3", role: "notice", content: "Could not apply edits" },
+      { content: "hi", id: "1", role: "user" },
+      { content: "no edits", id: "2", role: "assistant" },
+      { content: "Could not apply edits", id: "3", role: "notice" },
     ];
     expect(computeRevisionVersions(msgs)).toEqual(new Map());
   });
@@ -154,23 +154,23 @@ describe("computeRevisionVersions", () => {
 describe("getCurrentRevisionId", () => {
   it("returns the most recent checkpoint's revisionId", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "assistant", content: "done", revisionId: 1 },
-      { id: "2", role: "user", content: "more" },
-      { id: "3", role: "assistant", content: "done again", revisionId: 2 },
+      { content: "done", id: "1", revisionId: 1, role: "assistant" },
+      { content: "more", id: "2", role: "user" },
+      { content: "done again", id: "3", revisionId: 2, role: "assistant" },
     ];
     expect(getCurrentRevisionId(msgs)).toBe(2);
   });
 
   it("returns the restore's revisionId when a restore is the latest checkpoint", () => {
     const msgs: ChatMsg[] = [
-      { id: "1", role: "assistant", content: "done", revisionId: 1 },
-      { id: "2", role: "notice", content: "Restored", revisionId: 2 },
+      { content: "done", id: "1", revisionId: 1, role: "assistant" },
+      { content: "Restored", id: "2", revisionId: 2, role: "notice" },
     ];
     expect(getCurrentRevisionId(msgs)).toBe(2);
   });
 
   it("returns undefined when no message has a revisionId", () => {
-    const msgs: ChatMsg[] = [{ id: "1", role: "user", content: "hi" }];
+    const msgs: ChatMsg[] = [{ content: "hi", id: "1", role: "user" }];
     expect(getCurrentRevisionId(msgs)).toBeUndefined();
   });
 

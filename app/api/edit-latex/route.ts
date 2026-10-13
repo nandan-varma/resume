@@ -18,13 +18,13 @@ const historyMessageSchema = z.object({
 });
 
 const requestSchema = z.object({
+  fillRatio: z.number().min(0).optional(),
+  history: z.array(historyMessageSchema).default([]),
   instruction: z.string().min(1, "Instruction is required"),
+  jobDescription: z.string().optional(),
   latex: z.string().max(60_000, "LaTeX too large (max 60 000 chars)"),
   modelId: z.string(),
-  history: z.array(historyMessageSchema).default([]),
-  jobDescription: z.string().optional(),
   pageCount: z.number().int().positive().optional(),
-  fillRatio: z.number().min(0).optional(),
 });
 
 // Client-side tool: the model calls this to make edits, but we apply them
@@ -84,8 +84,8 @@ export async function POST(req: Request) {
   } = parsed.data;
 
   const personalInfo = await db.query.personalInformation.findFirst({
-    where: eq(personalInformation.userId, session.user.id),
     columns: { aiPreferences: true },
+    where: eq(personalInformation.userId, session.user.id),
   });
 
   const modelInstance = resolveModel(modelId);
@@ -149,12 +149,13 @@ CRITICAL RULES:
 
   try {
     const result = streamText({
+      messages: [...history, { content: instruction.trim(), role: "user" }],
       model: modelInstance,
-      system: systemParts.join("\n"),
-      messages: [...history, { role: "user", content: instruction.trim() }],
-      tools: { editResume: editResumeTool },
       onChunk: () => {
         firstChunkAt ??= performance.now();
+      },
+      onError: (event) => {
+        logApiError("[edit-latex]", event.error);
       },
       onFinish: (event) => {
         const total = Math.round(performance.now() - startedAt);
@@ -165,9 +166,8 @@ CRITICAL RULES:
           `[edit-latex] ${modelId} first token ${ttft}ms, total ${total}ms, toolCalls=${event.toolCalls.length}, finishReason=${event.finishReason}`
         );
       },
-      onError: (event) => {
-        logApiError("[edit-latex]", event.error);
-      },
+      system: systemParts.join("\n"),
+      tools: { editResume: editResumeTool },
     });
 
     return result.toUIMessageStreamResponse({

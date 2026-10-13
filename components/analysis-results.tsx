@@ -215,7 +215,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps) {
       </Card>
 
       {/* Additional insights */}
-      {result.additional_insights && (
+      {!!result.additional_insights && (
         <Card className="animate-enter-up bg-muted/40 p-4 [animation-delay:240ms]">
           <p className="text-muted-foreground text-sm leading-relaxed">
             <strong className="font-medium text-foreground">Pro tip — </strong>

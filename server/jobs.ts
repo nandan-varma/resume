@@ -8,8 +8,8 @@ import { jobStatus, jobs } from "@/db/schema";
 import { getSession } from "./session";
 
 const createJobSchema = z.object({
-  jobTitle: z.string().min(1, "Job title is required").max(200),
   jobDescription: z.string().min(1, "Job description is required").max(10_000),
+  jobTitle: z.string().min(1, "Job title is required").max(200),
   link: z.string().url().optional(),
 });
 
@@ -25,39 +25,43 @@ export const createJob = async (
 ) => {
   try {
     const parsed = createJobSchema.safeParse({
-      jobTitle,
       jobDescription,
+      jobTitle,
       link,
     });
     if (!parsed.success) {
       return {
-        success: false,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
 
-    const { jobTitle: title, jobDescription: desc, link: url } = parsed.data;
+    const {
+      jobTitle: title,
+      jobDescription: description,
+      link: url,
+    } = parsed.data;
 
     const [job] = await db
       .insert(jobs)
       .values({
+        jobDescription: description,
         jobTitle: title,
-        jobDescription: desc,
         link: url,
         userId: session.user.id,
       })
       .returning();
 
-    return { success: true, message: "Job created.", job };
+    return { job, message: "Job created.", success: true };
   } catch (error) {
     return {
-      success: false,
       message: error instanceof Error ? error.message : "Failed to create job.",
+      success: false,
     };
   }
 };
@@ -69,9 +73,9 @@ export const getJobs = async () => {
       return [];
     }
     const rows = await db.query.jobs.findMany({
-      where: eq(jobs.userId, session.user.id),
-      orderBy: [desc(jobs.createdAt)],
       limit: 200, // ponytail: 200 cap; add cursor pagination when users hit this
+      orderBy: [desc(jobs.createdAt)],
+      where: eq(jobs.userId, session.user.id),
       with: { analysis: true },
     });
     return rows.map((j) => ({
@@ -88,14 +92,14 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
     const parsed = updateJobStatusSchema.safeParse({ jobId, status });
     if (!parsed.success) {
       return {
-        success: false,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
 
     const [job] = await db
@@ -106,12 +110,12 @@ export const updateJobStatus = async (jobId: number, status: JobStatus) => {
       )
       .returning();
 
-    return { success: true, message: "Status updated.", job };
+    return { job, message: "Status updated.", success: true };
   } catch (error) {
     return {
-      success: false,
       message:
         error instanceof Error ? error.message : "Failed to update status.",
+      success: false,
     };
   }
 };
@@ -137,23 +141,23 @@ export const getJobById = async (jobId: number) => {
 export const deleteJob = async (jobId: number) => {
   try {
     if (!Number.isInteger(jobId) || jobId < 1) {
-      return { success: false, message: "Invalid job ID" };
+      return { message: "Invalid job ID", success: false };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
 
     await db
       .delete(jobs)
       .where(and(eq(jobs.id, jobId), eq(jobs.userId, session.user.id)));
 
-    return { success: true, message: "Job deleted." };
+    return { message: "Job deleted.", success: true };
   } catch (error) {
     return {
-      success: false,
       message: error instanceof Error ? error.message : "Failed to delete job.",
+      success: false,
     };
   }
 };

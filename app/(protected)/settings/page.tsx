@@ -15,8 +15,8 @@ import { getResumeDocument } from "@/server/resume-editor";
 import { getSession } from "@/server/session";
 
 export const metadata: Metadata = {
-  title: "Settings",
   description: "Manage your profile, AI preferences, and resume.",
+  title: "Settings",
 };
 
 function SettingsContentSkeleton() {
@@ -45,12 +45,12 @@ export default async function SettingsPage() {
   const [session] = await Promise.all([
     getSession(),
     queryClient.prefetchQuery({
-      queryKey: personalInfoQueryKey,
       queryFn: getPersonalInformation,
+      queryKey: personalInfoQueryKey,
     }),
     queryClient.prefetchQuery({
-      queryKey: resumeDocumentQueryKey(null),
       queryFn: () => getResumeDocument(null),
+      queryKey: resumeDocumentQueryKey(null),
     }),
   ]);
 

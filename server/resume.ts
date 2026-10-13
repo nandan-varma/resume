@@ -26,8 +26,8 @@ async function upsertPersonalInfo(userId: string, update: PersonalInfoUpdate) {
     .insert(personalInformation)
     .values({ userId, ...update })
     .onConflictDoUpdate({
-      target: personalInformation.userId,
       set: update,
+      target: personalInformation.userId,
     });
 }
 
@@ -35,17 +35,17 @@ export const uploadResume = async (fileBuffer: Buffer, fileName: string) => {
   try {
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
 
     const resumeUrl = await uploadToR2(fileName, fileBuffer, "application/pdf");
     await upsertPersonalInfo(session.user.id, { resumeUrl });
 
-    return { success: true, message: "Resume uploaded.", resumeUrl };
+    return { message: "Resume uploaded.", resumeUrl, success: true };
   } catch (error) {
     return {
-      success: false,
       message: error instanceof Error ? error.message : "Upload failed.",
+      success: false,
     };
   }
 };
@@ -73,24 +73,24 @@ export const saveAiPreferences = async (aiPreferences: string) => {
     const parsed = saveAiPreferencesSchema.safeParse({ aiPreferences });
     if (!parsed.success) {
       return {
-        success: false,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
     await upsertPersonalInfo(session.user.id, {
       aiPreferences: parsed.data.aiPreferences,
     });
-    return { success: true, message: "Preferences saved." };
+    return { message: "Preferences saved.", success: true };
   } catch (error) {
     return {
-      success: false,
       message:
         error instanceof Error ? error.message : "Failed to save preferences.",
+      success: false,
     };
   }
 };
@@ -100,23 +100,23 @@ export const savePreferredModelId = async (preferredModelId: string) => {
     const parsed = savePreferredModelIdSchema.safeParse({ preferredModelId });
     if (!parsed.success) {
       return {
-        success: false,
         message: parsed.error.issues.map((e) => e.message).join(", "),
+        success: false,
       };
     }
 
     const session = await getSession();
     if (!session?.user.id) {
-      return { success: false, message: "Unauthorized" };
+      return { message: "Unauthorized", success: false };
     }
     await upsertPersonalInfo(session.user.id, {
       preferredModelId: parsed.data.preferredModelId,
     });
-    return { success: true, message: "Model preference saved." };
+    return { message: "Model preference saved.", success: true };
   } catch (error) {
     return {
-      success: false,
       message: error instanceof Error ? error.message : "Failed to save model.",
+      success: false,
     };
   }
 };

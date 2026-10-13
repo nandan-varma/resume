@@ -35,7 +35,7 @@ export async function handleGetInit() {
   ]);
   if (!cookie) {
     logger.info("GET_INIT: no session cookie");
-    return { loggedIn: false, user: null, settings, appUrl: APP_URL };
+    return { appUrl: APP_URL, loggedIn: false, settings, user: null };
   }
 
   try {
@@ -43,14 +43,14 @@ export async function handleGetInit() {
     const data = await res.json();
     logger.info("GET_INIT: loggedIn =", !!data?.user);
     return {
-      loggedIn: !!data?.user,
-      user: data?.user ?? null,
-      settings,
       appUrl: APP_URL,
+      loggedIn: !!data?.user,
+      settings,
+      user: data?.user ?? null,
     };
   } catch (e) {
     logger.error("GET_INIT failed:", e.message);
-    return { loggedIn: false, user: null, settings, appUrl: APP_URL };
+    return { appUrl: APP_URL, loggedIn: false, settings, user: null };
   }
 }
 
@@ -69,8 +69,8 @@ export async function handleAnalyze(jobDescription) {
   );
 
   const res = await authedFetch("/api/analyze", {
-    method: "POST",
     body: JSON.stringify({ jobDescription, modelId }),
+    method: "POST",
   });
 
   if (!res.ok) {
@@ -89,13 +89,13 @@ export async function handleSaveJob(jobTitle, jobDescription, link, analysis) {
 
   logger.info("SAVE_JOB:", jobTitle);
   const res = await authedFetch("/api/jobs", {
-    method: "POST",
     body: JSON.stringify({
-      jobTitle,
       jobDescription,
+      jobTitle,
       link,
       ...(analysis ? { analysis } : {}),
     }),
+    method: "POST",
   });
 
   if (!res.ok) {

@@ -68,8 +68,8 @@ interface WriteHookOptions {
 
 export function usePersonalInfo() {
   return useSuspenseQuery({
-    queryKey: personalInfoQueryKey,
     queryFn: getPersonalInformation,
+    queryKey: personalInfoQueryKey,
   });
 }
 
@@ -78,10 +78,10 @@ export function usePersonalInfo() {
 // needs to actually refetch every time the tab regains focus.
 export function useResumeDocument(jobId: number | null) {
   return useSuspenseQuery({
-    queryKey: resumeDocumentQueryKey(jobId),
     queryFn: () => getResumeDocument(jobId),
-    staleTime: 0,
+    queryKey: resumeDocumentQueryKey(jobId),
     refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 
@@ -95,8 +95,8 @@ export function useUploadResume() {
       formData.append("file", file);
       formData.append("fileName", file.name);
       const res = await fetch("/api/upload-resume", {
-        method: "POST",
         body: formData,
+        method: "POST",
       });
       const data = await res.json();
       if (!(res.ok && data.success)) {
@@ -104,14 +104,14 @@ export function useUploadResume() {
       }
       return data.resumeUrl as string;
     },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    },
     // A brand-new user has no personalInformation row yet, so there's no
     // existing cache entry to patch — invalidate and let it refetch instead.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: personalInfoQueryKey });
       toast.success("Resume uploaded");
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
     },
   });
 }
@@ -127,6 +127,9 @@ export function useRegenerateLatex() {
       }
       return data.resumeLatex as string;
     },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Generation failed");
+    },
     // Writes via the background PDF->LaTeX path, outside the normal
     // version-checked mutation flow — invalidate rather than hand-patch so
     // the real version the upsert produced gets picked up.
@@ -135,9 +138,6 @@ export function useRegenerateLatex() {
         queryKey: resumeDocumentQueryKey(null),
       });
       toast.success("Resume regenerated");
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Generation failed");
     },
   });
 }
@@ -152,6 +152,11 @@ export function useSaveAiPreferences() {
       }
       return aiPreferences;
     },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save preferences"
+      );
+    },
     onSuccess: (aiPreferences) => {
       queryClient.setQueryData(
         personalInfoQueryKey,
@@ -159,11 +164,6 @@ export function useSaveAiPreferences() {
           old ? { ...old, aiPreferences } : old
       );
       toast.success("Preferences saved");
-    },
-    onError: (err) => {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save preferences"
-      );
     },
   });
 }
@@ -178,6 +178,12 @@ export function useSavePreferredModelId() {
       }
       return preferredModelId;
     },
+    onError: (err, _vars, context: { previous: unknown } | undefined) => {
+      if (context?.previous) {
+        queryClient.setQueryData(personalInfoQueryKey, context.previous);
+      }
+      toast.error(err instanceof Error ? err.message : "Failed to save model");
+    },
     onMutate: async (preferredModelId) => {
       await queryClient.cancelQueries({ queryKey: personalInfoQueryKey });
       const previous = queryClient.getQueryData(personalInfoQueryKey);
@@ -187,12 +193,6 @@ export function useSavePreferredModelId() {
           old ? { ...old, preferredModelId } : old
       );
       return { previous };
-    },
-    onError: (err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(personalInfoQueryKey, context.previous);
-      }
-      toast.error(err instanceof Error ? err.message : "Failed to save model");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: personalInfoQueryKey });
@@ -212,18 +212,12 @@ export function useSaveLatex(jobId: number | null, options?: WriteHookOptions) {
       );
       const result = await saveLatex(jobId, latex, current?.version ?? 0);
       if (!result.success) {
-        if (result.conflict) {
+        if (result.conflict === true) {
           throw new ResumeConflictError(result.message);
         }
         throw new Error(result.message);
       }
       return result.document;
-    },
-    onSuccess: (document) => {
-      queryClient.setQueryData<ResumeDocument | null>(
-        resumeDocumentQueryKey(jobId),
-        (old) => (old ? { ...old, ...document } : { ...document, messages: [] })
-      );
     },
     onError: (err) =>
       handleMutationError(
@@ -233,6 +227,12 @@ export function useSaveLatex(jobId: number | null, options?: WriteHookOptions) {
         "Failed to save",
         options?.onConflict
       ),
+    onSuccess: (document) => {
+      queryClient.setQueryData<ResumeDocument | null>(
+        resumeDocumentQueryKey(jobId),
+        (old) => (old ? { ...old, ...document } : { ...document, messages: [] })
+      );
+    },
   });
 }
 
@@ -263,25 +263,16 @@ export function useAppendTurn(
         ...(latex === undefined
           ? {}
           : {
-              latexUpdate: { latex, expectedVersion: current?.version ?? 0 },
+              latexUpdate: { expectedVersion: current?.version ?? 0, latex },
             }),
       });
       if (!result.success) {
-        if (result.conflict) {
+        if (result.conflict === true) {
           throw new ResumeConflictError(result.message);
         }
         throw new Error(result.message);
       }
       return result;
-    },
-    onSuccess: ({ document, messages }) => {
-      queryClient.setQueryData<ResumeDocument | null>(
-        resumeDocumentQueryKey(jobId),
-        (old) => ({
-          ...document,
-          messages: [...(old?.messages ?? []), ...messages],
-        })
-      );
     },
     onError: (err) =>
       handleMutationError(
@@ -291,6 +282,15 @@ export function useAppendTurn(
         "Failed to send",
         options?.onConflict
       ),
+    onSuccess: ({ document, messages }) => {
+      queryClient.setQueryData<ResumeDocument | null>(
+        resumeDocumentQueryKey(jobId),
+        (old) => ({
+          ...document,
+          messages: [...(old?.messages ?? []), ...messages],
+        })
+      );
+    },
   });
 }
 
@@ -310,21 +310,12 @@ export function useRestoreRevision(
         current?.version ?? 0
       );
       if (!result.success) {
-        if (result.conflict) {
+        if (result.conflict === true) {
           throw new ResumeConflictError(result.message);
         }
         throw new Error(result.message);
       }
       return result;
-    },
-    onSuccess: ({ document, message }) => {
-      queryClient.setQueryData<ResumeDocument | null>(
-        resumeDocumentQueryKey(jobId),
-        (old) => ({
-          ...document,
-          messages: [...(old?.messages ?? []), message],
-        })
-      );
     },
     onError: (err) =>
       handleMutationError(
@@ -334,6 +325,15 @@ export function useRestoreRevision(
         "Restore failed",
         options?.onConflict
       ),
+    onSuccess: ({ document, message }) => {
+      queryClient.setQueryData<ResumeDocument | null>(
+        resumeDocumentQueryKey(jobId),
+        (old) => ({
+          ...document,
+          messages: [...(old?.messages ?? []), message],
+        })
+      );
+    },
   });
 }
 
@@ -353,6 +353,9 @@ export function useAnswerQuestion(jobId: number | null) {
       }
       return result.message;
     },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to save answer");
+    },
     onSuccess: (message) => {
       queryClient.setQueryData<ResumeDocument | null>(
         resumeDocumentQueryKey(jobId),
@@ -367,9 +370,6 @@ export function useAnswerQuestion(jobId: number | null) {
             : old
       );
     },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to save answer");
-    },
   });
 }
 
@@ -382,14 +382,14 @@ export function useClearMessages(jobId: number | null) {
         throw new Error(result.message ?? "Failed to clear chat");
       }
     },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to clear chat");
+    },
     onSuccess: () => {
       queryClient.setQueryData<ResumeDocument | null>(
         resumeDocumentQueryKey(jobId),
         (old) => (old ? { ...old, messages: [] } : old)
       );
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to clear chat");
     },
   });
 }

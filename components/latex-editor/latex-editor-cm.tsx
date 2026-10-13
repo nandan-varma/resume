@@ -102,11 +102,11 @@ export function LatexEditorCm({
       extensions: [
         basicSetup,
         latex({
-          autoCloseTags: true,
           autoCloseBrackets: true,
+          autoCloseTags: true,
+          enableAutocomplete: true,
           enableLinting: true,
           enableTooltips: true,
-          enableAutocomplete: true,
           fileName: "main.tex",
         }),
         EditorView.lineWrapping,
@@ -117,8 +117,8 @@ export function LatexEditorCm({
     });
 
     const view = new EditorView({
-      state,
       parent: container,
+      state,
     });
 
     viewRef.current = view;
@@ -137,8 +137,8 @@ export function LatexEditorCm({
     const current = view.state.doc.toString();
     if (current !== value) {
       view.dispatch({
-        changes: { from: 0, to: current.length, insert: value },
         annotations: externalSync.of(true),
+        changes: { from: 0, insert: value, to: current.length },
       });
     }
   }, [value]);

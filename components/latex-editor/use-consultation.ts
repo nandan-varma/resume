@@ -45,7 +45,7 @@ export function useConsultation(
       try {
         await appendTurn({
           messages: [
-            { role: "user", content: "Tailor my resume for this job" },
+            { content: "Tailor my resume for this job", role: "user" },
           ],
         });
       } catch {
@@ -67,16 +67,16 @@ export function useConsultation(
       let chain = false;
       try {
         const res = await fetch("/api/job-customize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            latex: getLatex(),
-            jobDescription: job?.description,
-            modelId,
             answers,
+            jobDescription: job?.description,
+            latex: getLatex(),
+            modelId,
             ...(pageCount === null ? {} : { pageCount }),
             ...(fillRatio === null ? {} : { fillRatio }),
           }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
         const data = await res.json().catch(() => ({}));
         if (res.status === 429) {
@@ -89,10 +89,10 @@ export function useConsultation(
           await appendTurn({
             messages: [
               {
-                role: "question",
                 content: data.question,
                 questionKey: data.key,
                 questionOptions: data.options,
+                role: "question",
               },
             ],
           });
@@ -107,8 +107,8 @@ export function useConsultation(
           await appendTurn({
             messages: [
               {
-                role: "notice",
                 content: `Consultation failed — retrying (${retryCountRef.current}/${MAX_RETRIES})…`,
+                role: "notice",
               },
             ],
           }).catch(() => {
@@ -141,10 +141,10 @@ export function useConsultation(
     (messageId: number, key: string, question: string, answer: string) => {
       const next: ConsultAnswer[] = [
         ...consultAnswers,
-        { key, question, answer },
+        { answer, key, question },
       ];
       setConsultAnswers(next);
-      answerQuestion({ messageId, answer }).catch(() => {
+      answerQuestion({ answer, messageId }).catch(() => {
         // toasted by the mutation's onError
       });
       fetchNextQuestion(next);
@@ -171,8 +171,8 @@ export function useConsultation(
   return {
     consultAnswers,
     consultDone,
-    pendingQuestion,
     handleConsultPick,
     handleConsultSkip,
+    pendingQuestion,
   };
 }

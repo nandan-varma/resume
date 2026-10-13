@@ -15,5 +15,5 @@ export async function requireSession() {
   if (!session) {
     redirect("/login");
   }
-  return { session, currentUser: session.user };
+  return { currentUser: session.user, session };
 }

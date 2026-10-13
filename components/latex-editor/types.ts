@@ -51,7 +51,7 @@ export interface EditorJob {
 let msgCounter = 0;
 
 export function createMsgId(): string {
-  msgCounter++;
+  msgCounter += 1;
   return `msg-${msgCounter}-${Date.now()}`;
 }
 
@@ -60,33 +60,33 @@ export function fromDocumentMessage(m: ResumeDocumentMessage): ChatMsg {
   const id = String(m.id);
   switch (m.role) {
     case "user":
-      return { id, role: "user", content: m.content };
+      return { content: m.content, id, role: "user" };
     case "assistant":
       return {
-        id,
-        role: "assistant",
         content: m.content,
         editsApplied: m.editsApplied ?? undefined,
+        id,
         revisionId: m.revisionId ?? undefined,
+        role: "assistant",
       };
     case "notice":
       return {
-        id,
-        role: "notice",
         content: m.content,
+        id,
         revisionId: m.revisionId ?? undefined,
+        role: "notice",
       };
     case "question":
       return {
-        id,
-        role: "question",
-        key: m.questionKey ?? "",
-        question: m.content,
-        options: m.questionOptions ?? [],
         answered: m.questionAnswered ?? undefined,
+        id,
+        key: m.questionKey ?? "",
+        options: m.questionOptions ?? [],
+        question: m.content,
+        role: "question",
       };
     default:
-      return { id, role: "notice", content: m.content };
+      return { content: m.content, id, role: "notice" };
   }
 }
 
@@ -94,7 +94,6 @@ export function revisionIdOf(msg: ChatMsg): number | undefined {
   if (msg.role === "assistant" || msg.role === "notice") {
     return msg.revisionId;
   }
-  return;
 }
 
 // Every checkpoint (a resumeRevisions row, created only by an AI edit) gets
@@ -115,7 +114,7 @@ export function computeRevisionVersions(msgs: ChatMsg[]): Map<number, number> {
 }
 
 function lastCheckpointIndex(msgs: ChatMsg[]): number {
-  for (let i = msgs.length - 1; i >= 0; i--) {
+  for (let i = msgs.length - 1; i >= 0; i -= 1) {
     if (revisionIdOf(msgs[i]) !== undefined) {
       return i;
     }
@@ -154,12 +153,12 @@ export function buildHistory(
 ): { role: "user" | "assistant"; content: string }[] {
   return effectiveTimeline(msgs).flatMap((m) => {
     if (m.role === "user" || m.role === "assistant") {
-      return [{ role: m.role, content: m.content }];
+      return [{ content: m.content, role: m.role }];
     }
     if (m.role === "question") {
       return [
-        { role: "assistant", content: m.question },
-        ...(m.answered ? [{ role: "user" as const, content: m.answered }] : []),
+        { content: m.question, role: "assistant" },
+        ...(m.answered ? [{ content: m.answered, role: "user" as const }] : []),
       ];
     }
     return [];

@@ -7,8 +7,8 @@ import { Logo } from "@/components/logo";
 // This URL carries a one-time reset token in its query string — must never
 // be indexed or cached, even if a reset email link ends up crawled somewhere.
 export const metadata: Metadata = {
+  robots: { follow: false, index: false },
   title: "Reset Password",
-  robots: { index: false, follow: false },
 };
 
 export default function ResetPasswordPage() {

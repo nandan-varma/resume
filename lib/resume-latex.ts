@@ -177,21 +177,21 @@ export async function generateLatexFromPdf(
     );
     const startedAt = performance.now();
     const { text } = await generateText({
-      model: getModelInstanceById("gemini-3.6-flash"),
       messages: [
         {
-          role: "user",
           content: [
-            { type: "text", text: LATEX_PROMPT },
+            { text: LATEX_PROMPT, type: "text" },
             {
-              type: "file",
               data: base64,
-              mediaType: "application/pdf",
               filename: "resume.pdf",
+              mediaType: "application/pdf",
+              type: "file",
             },
           ],
+          role: "user",
         },
       ],
+      model: getModelInstanceById("gemini-3.6-flash"),
     });
     logVendorTiming("[resume-latex] gemini-3.6-flash", startedAt);
 
@@ -218,14 +218,14 @@ export async function generateLatexFromPdf(
     // Global resume doc (jobId null) may not exist yet for a first-time upload.
     await db
       .insert(resumeDocuments)
-      .values({ userId, jobId: null, resumeLatex: latex })
+      .values({ jobId: null, resumeLatex: latex, userId })
       .onConflictDoUpdate({
-        target: resumeDocuments.userId,
-        targetWhere: sql`${resumeDocuments.jobId} IS NULL`,
         set: {
           resumeLatex: latex,
           version: sql`${resumeDocuments.version} + 1`,
         },
+        target: resumeDocuments.userId,
+        targetWhere: sql`${resumeDocuments.jobId} IS NULL`,
       });
     return latex;
   } catch (error) {

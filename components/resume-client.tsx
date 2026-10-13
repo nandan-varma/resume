@@ -86,7 +86,7 @@ function ResumeClientInner() {
               PDF Resume
             </h2>
             <div className="flex items-center gap-3">
-              {resumeUrl && (
+              {!!resumeUrl && (
                 <a
                   className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
                   href={resumeUrl}
@@ -108,7 +108,7 @@ function ResumeClientInner() {
             </div>
           </div>
 
-          {resumeUrl && (
+          {!!resumeUrl && (
             <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-info/20 bg-info/10 px-3 py-2.5 text-info text-sm">
               <FileText className="mt-0.5 size-4 shrink-0" />
               <span>
@@ -154,7 +154,7 @@ function ResumeClientInner() {
                 Synced from PDF
               </Badge>
             )}
-            {pendingGeneration && (
+            {!!pendingGeneration && (
               <Badge
                 className="gap-1 border-warning/30 text-warning"
                 variant="outline"

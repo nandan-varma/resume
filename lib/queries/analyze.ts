@@ -6,9 +6,9 @@ export function useFetchJobDescription() {
   return useMutation({
     mutationFn: async (url: string) => {
       const res = await fetch("/api/fetch-job", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       if (!res.ok) {
         throw new Error("Failed to fetch job description");
@@ -33,9 +33,9 @@ export function useAnalyzeMatch() {
       jobId?: number;
     }) => {
       const res = await fetch("/api/analyze", {
-        method: "POST",
+        body: JSON.stringify({ jobDescription, jobId, modelId }),
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription, modelId, jobId }),
+        method: "POST",
       });
       if (!res.ok) {
         const err = await res.json();

@@ -5,12 +5,12 @@ const CARD_ID = "jm-card";
 // in card.css. Kept as inline markup (no icon font/library dependency) so the
 // content script stays a plain, dependency-free script.
 const ICONS = {
-  target:
-    '<svg class="jm-icon-lg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
   bookmark:
     '<svg class="jm-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.5C6 3.22 6.22 3 6.5 3H17.5C17.78 3 18 3.22 18 3.5V21L12 17L6 21V3.5Z" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></svg>',
   close:
     '<svg class="jm-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5L19 19M19 5L5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  target:
+    '<svg class="jm-icon-lg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
 };
 
 // LinkedIn ships two different job-detail layouts: the standalone
@@ -95,7 +95,7 @@ function injectCard() {
 // left alone so an in-progress analysis or its result isn't disturbed.
 function tryRelocateToInline() {
   const card = getCard();
-  if (!card || card.dataset.mode !== "float") {
+  if (card?.dataset.mode !== "float") {
     return;
   }
   if (!card.querySelector("#jm-trigger, #jm-analyze")) {
@@ -249,7 +249,7 @@ function renderError(msg) {
                 <button class="jm-btn-g" id="jm-retry">I've logged in, retry</button>
               </div>`
            : ""
-}`
+       }`
     : `<div class="jm-btwn" style="align-items:center;">
          <p class="jm-body jm-c-er">${escHtml(msg)}</p>
          ${
@@ -259,7 +259,7 @@ function renderError(msg) {
                   <button class="jm-btn-g" id="jm-retry">Retry</button>
                 </div>`
              : `<button class="jm-btn-g" id="jm-retry">Retry</button>`
-}
+         }
        </div>`;
 
   setHtml(wrap(inner));

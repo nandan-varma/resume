@@ -11,41 +11,41 @@ import { schema } from "@/db/schema";
 const resend = new Resend(process.env.RESEND_API_KEY as string);
 
 export const auth = betterAuth({
-  emailVerification: {
-    sendVerificationEmail: async ({ user, url }) => {
-      await resend.emails.send({
-        from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
-        to: user.email,
-        subject: "Verify your email",
-        react: VerifyEmail({ username: user.name, verifyUrl: url }),
-      });
-    },
-    sendOnSignUp: true,
-  },
-  emailAndPassword: {
-    enabled: true,
-    sendResetPassword: async ({ user, url }) => {
-      await resend.emails.send({
-        from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
-        to: user.email,
-        subject: "Reset your password",
-        react: ResetPasswordEmail({
-          username: user.name,
-          resetUrl: url,
-          userEmail: user.email,
-        }),
-      });
-    },
-    requireEmailVerification: true,
-  },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
   }),
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      await resend.emails.send({
+        from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
+        react: ResetPasswordEmail({
+          resetUrl: url,
+          userEmail: user.email,
+          username: user.name,
+        }),
+        subject: "Reset your password",
+        to: user.email,
+      });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await resend.emails.send({
+        from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
+        react: VerifyEmail({ username: user.name, verifyUrl: url }),
+        subject: "Verify your email",
+        to: user.email,
+      });
+    },
+  },
+  plugins: [lastLoginMethod(), nextCookies()],
   user: {
     deleteUser: {
       enabled: true,
     },
   },
-  plugins: [lastLoginMethod(), nextCookies()],
 });

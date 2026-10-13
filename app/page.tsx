@@ -17,17 +17,17 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "JobMatch",
-  url: APP_URL,
+  applicationCategory: "BusinessApplication",
   description:
     "AI-powered resume analyzer that scores your resume against any job description, surfaces missing keywords, and tracks applications.",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
+  name: "JobMatch",
   offers: {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
   },
+  operatingSystem: "Web",
+  url: APP_URL,
 };
 
 export default function Home() {

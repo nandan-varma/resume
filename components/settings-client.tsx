@@ -50,8 +50,8 @@ export function SettingsClient(props: SettingsClientProps) {
 function ProfileCard({ userEmail, userName }: SettingsClientProps) {
   const router = useRouter();
   const form = useForm({
-    resolver: zodResolver(profileSchema),
     defaultValues: { name: userName },
+    resolver: zodResolver(profileSchema),
   });
 
   const onSubmit = form.handleSubmit(async ({ name }) => {
@@ -81,7 +81,7 @@ function ProfileCard({ userEmail, userName }: SettingsClientProps) {
               Name
             </Label>
             <Input className="mt-1" id="name" {...form.register("name")} />
-            {form.formState.errors.name && (
+            {!!form.formState.errors.name && (
               <p className="mt-1 text-destructive text-xs">
                 {form.formState.errors.name.message}
               </p>

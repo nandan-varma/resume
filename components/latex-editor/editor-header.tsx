@@ -85,13 +85,13 @@ function EditorHeader({
           <Eye className="size-3" />
         </button>
         <div className="mx-2 h-4 w-px bg-border" />
-        {job && (
+        {!!job && (
           <span className="hidden items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-primary text-xs sm:flex">
             <Briefcase className="size-3" />
             {job.title}
           </span>
         )}
-        {incognito && (
+        {!!incognito && (
           <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
             <EyeOff className="size-3" />
             <span className="hidden sm:inline">Saves paused</span>
@@ -111,7 +111,7 @@ function EditorHeader({
           !incognito &&
           dirty && (
             <span className="inline-flex items-center gap-1 text-xs text-yellow-500 dark:text-yellow-400">
-              {autoSaving && <Loader2 className="size-3 animate-spin" />}
+              {!!autoSaving && <Loader2 className="size-3 animate-spin" />}
               <span className="hidden sm:inline">
                 {autoSaving ? "Saving…" : "Unsaved changes"}
               </span>

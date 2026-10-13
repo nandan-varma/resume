@@ -30,9 +30,9 @@ import { cn } from "@/lib/utils";
 import { signUp } from "@/server/users";
 
 const formSchema = z.object({
-  username: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  username: z.string().min(2, "Name must be at least 2 characters"),
 });
 
 export function SignupForm({
@@ -43,8 +43,8 @@ export function SignupForm({
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
+    defaultValues: { email: "", password: "", username: "" },
     resolver: zodResolver(formSchema),
-    defaultValues: { username: "", email: "", password: "" },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

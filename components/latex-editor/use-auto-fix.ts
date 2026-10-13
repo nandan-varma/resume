@@ -53,9 +53,9 @@ export function useAutoFix({
     onConflict,
   });
   const autoFixCountRef = useRef(0);
-  const pendingAutoFixRef = useRef(false);
+  const pendingAutoFixRef = useRef<boolean>(false);
   const pageFitCountRef = useRef(0);
-  const pendingPageFitRef = useRef(false);
+  const pendingPageFitRef = useRef<boolean>(false);
 
   const tryPageFit = useCallback(
     (wasAI: boolean) => {
@@ -70,8 +70,8 @@ export function useAutoFix({
         appendTurn({
           messages: [
             {
-              role: "notice",
               content: `Still ${pageCount} pages after ${MAX_PAGE_FIT} tightening passes — try a manual edit or a different instruction.`,
+              role: "notice",
             },
           ],
         });
@@ -109,9 +109,9 @@ export function useAutoFix({
         appendTurn({
           messages: [
             {
-              role: "notice",
               content:
                 "Could not auto-fix — edit manually or try a different instruction.",
+              role: "notice",
             },
           ],
         });

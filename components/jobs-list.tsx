@@ -55,8 +55,8 @@ import { useModelId } from "@/lib/use-model-id";
 import { isSubmitShortcut } from "@/lib/utils";
 
 const addJobSchema = z.object({
-  jobTitle: z.string().min(1, "Required"),
   jobDescription: z.string().min(1, "Required"),
+  jobTitle: z.string().min(1, "Required"),
   link: z.string().url("Must be a valid URL").or(z.literal("")).optional(),
 });
 
@@ -64,8 +64,8 @@ type AddJobValues = z.infer<typeof addJobSchema>;
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
-    month: "short",
     day: "numeric",
+    month: "short",
     year: "numeric",
   }).format(new Date(date));
 }
@@ -78,16 +78,16 @@ interface AddJobDialogProps {
 function AddJobDialog({ open, onOpenChange }: AddJobDialogProps) {
   const createJob = useCreateJob();
   const form = useForm<AddJobValues>({
+    defaultValues: { jobDescription: "", jobTitle: "", link: "" },
     resolver: zodResolver(addJobSchema),
-    defaultValues: { jobTitle: "", jobDescription: "", link: "" },
   });
 
   const onSubmit = form.handleSubmit((values) => {
     createJob.mutate(
       {
-        title: values.jobTitle,
         description: values.jobDescription,
         link: values.link || undefined,
+        title: values.jobTitle,
       },
       {
         onSuccess: () => {
@@ -122,7 +122,7 @@ function AddJobDialog({ open, onOpenChange }: AddJobDialogProps) {
               placeholder="Senior React Developer at Acme Corp"
               {...form.register("jobTitle")}
             />
-            {form.formState.errors.jobTitle && (
+            {!!form.formState.errors.jobTitle && (
               <p className="mt-1 text-destructive text-xs">
                 {form.formState.errors.jobTitle.message}
               </p>
@@ -143,7 +143,7 @@ function AddJobDialog({ open, onOpenChange }: AddJobDialogProps) {
               rows={6}
               {...form.register("jobDescription")}
             />
-            {form.formState.errors.jobDescription && (
+            {!!form.formState.errors.jobDescription && (
               <p className="mt-1 text-destructive text-xs">
                 {form.formState.errors.jobDescription.message}
               </p>
@@ -158,7 +158,7 @@ function AddJobDialog({ open, onOpenChange }: AddJobDialogProps) {
               type="url"
               {...form.register("link")}
             />
-            {form.formState.errors.link && (
+            {!!form.formState.errors.link && (
               <p className="mt-1 text-destructive text-xs">
                 {form.formState.errors.link.message}
               </p>
@@ -309,28 +309,28 @@ function WrappedJobsList() {
 
   const stats = [
     {
+      color: "text-primary",
+      Icon: Briefcase,
       label: "Applications",
       value: jobs.length,
-      Icon: Briefcase,
-      color: "text-primary",
     },
     {
+      color: "text-info",
+      Icon: BarChart3,
       label: "Interviews",
       value: statusCounts.interview ?? 0,
-      Icon: BarChart3,
-      color: "text-info",
     },
     {
+      color: "text-success",
+      Icon: Target,
       label: "Offers",
       value: statusCounts.offer ?? 0,
-      Icon: Target,
-      color: "text-success",
     },
     {
+      color: "text-success",
+      Icon: CheckCircle2,
       label: "Accepted",
       value: statusCounts.accepted ?? 0,
-      Icon: CheckCircle2,
-      color: "text-success",
     },
   ] as const;
 
@@ -366,7 +366,7 @@ function WrappedJobsList() {
 
       {jobs.length > 0 && (
         <div className="mb-5 flex animate-enter flex-wrap gap-2 [animation-delay:80ms]">
-          {filterStatus && (
+          {!!filterStatus && (
             <button
               className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1 text-muted-foreground text-xs transition-colors hover:border-foreground/30 hover:text-foreground"
               onClick={() => setFilterStatus(null)}
@@ -475,7 +475,7 @@ function WrappedJobsList() {
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 text-muted-foreground text-xs">
                         <span>{formatDate(job.createdAt)}</span>
-                        {job.link && (
+                        {!!job.link && (
                           <>
                             <span aria-hidden="true">·</span>
                             <a
@@ -541,8 +541,8 @@ function WrappedJobsList() {
                         disabled={reanalyze.isPending}
                         onClick={() =>
                           reanalyze.mutate({
-                            jobId: job.id,
                             jobDescription: job.jobDescription,
+                            jobId: job.id,
                             modelId,
                           })
                         }

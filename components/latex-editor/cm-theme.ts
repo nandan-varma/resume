@@ -9,42 +9,55 @@ import { tags } from "@lezer/highlight";
 
 export const cmTheme = EditorView.theme(
   {
-    "&": {
-      backgroundColor: "var(--background)",
-      color: "var(--foreground)",
-      height: "100%",
-    },
-    "&.cm-editor.cm-focused": {
-      outline: "none",
-    },
-    ".cm-scroller": {
-      fontFamily:
-        "var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace)",
-      fontSize: "13px",
-      lineHeight: "1.6",
-    },
-    ".cm-content": {
-      caretColor: "var(--foreground)",
-      padding: "16px",
-    },
-    ".cm-line": {
-      padding: "0",
-    },
-    ".cm-cursor": {
-      borderLeftColor: "var(--foreground)",
-      borderLeftWidth: "1.5px",
-    },
-    ".cm-selectionBackground, .cm-focused .cm-selectionBackground": {
-      backgroundColor: "oklch(from var(--primary) l c h / 0.12)",
-    },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-      backgroundColor: "oklch(from var(--primary) l c h / 0.12)",
-    },
     ".cm-activeLine": {
       backgroundColor: "oklch(from var(--foreground) l c h / 0.03)",
     },
     ".cm-activeLineGutter": {
       backgroundColor: "oklch(from var(--foreground) l c h / 0.03)",
+    },
+    ".cm-content": {
+      caretColor: "var(--foreground)",
+      padding: "16px",
+    },
+    ".cm-cursor": {
+      borderLeftColor: "var(--foreground)",
+      borderLeftWidth: "1.5px",
+    },
+    ".cm-diagnostic": {
+      fontFamily: "var(--font-sans, ui-sans-serif, system-ui)",
+      fontSize: "12px",
+      padding: "2px 6px",
+    },
+    ".cm-diagnostic-error": {
+      borderLeft: "3px solid var(--destructive)",
+      color: "var(--destructive)",
+    },
+    ".cm-diagnostic-info": {
+      borderLeft: "3px solid var(--info)",
+      color: "var(--info)",
+    },
+    ".cm-diagnostic-warning": {
+      borderLeft: "3px solid var(--warning)",
+      color: "var(--warning)",
+    },
+
+    /* ── Fat cursor for overtype mode ───────────── */
+    ".cm-fat-cursor": {
+      backgroundColor: "var(--foreground)",
+      color: "var(--background)",
+    },
+
+    /* ── Fold marker ────────────────────────────── */
+    ".cm-foldPlaceholder": {
+      backgroundColor: "transparent",
+      border: "none",
+      color: "var(--muted-foreground)",
+      padding: "0 2px",
+    },
+    ".cm-gutterElement": {
+      fontSize: "11px",
+      lineHeight: "1.6",
+      padding: "0 8px 0 4px",
     },
 
     /* ── Gutter (line numbers) ──────────────────── */
@@ -55,28 +68,12 @@ export const cmTheme = EditorView.theme(
       paddingLeft: "4px",
       userSelect: "none",
     },
-    ".cm-gutterElement": {
-      padding: "0 8px 0 4px",
-      fontSize: "11px",
-      lineHeight: "1.6",
+    ".cm-line": {
+      padding: "0",
     },
     ".cm-lineNumbers .cm-gutterElement": {
       minWidth: "24px",
       textAlign: "right",
-    },
-
-    /* ── Selection match ────────────────────────── */
-    ".cm-selectionMatch": {
-      backgroundColor: "oklch(from var(--primary) l c h / 0.08)",
-    },
-
-    /* ── Search ─────────────────────────────────── */
-    ".cm-searchMatch": {
-      backgroundColor: "oklch(from var(--warning) l c h / 0.3)",
-      outline: "1px solid oklch(from var(--warning) l c h / 0.5)",
-    },
-    ".cm-searchMatch.selected": {
-      backgroundColor: "oklch(from var(--warning) l c h / 0.5)",
     },
 
     /* ── Bracket matching ───────────────────────── */
@@ -89,16 +86,83 @@ export const cmTheme = EditorView.theme(
       outline: "1px solid oklch(from var(--destructive) l c h / 0.3)",
     },
 
+    /* ── Panel (e.g. search) ────────────────────── */
+    ".cm-panel": {
+      "& button": {
+        backgroundColor: "var(--muted)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-md, 4px)",
+        color: "var(--foreground)",
+        cursor: "pointer",
+        fontSize: "12px",
+        padding: "2px 8px",
+      },
+      "& input": {
+        backgroundColor: "var(--background)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-md, 4px)",
+        color: "var(--foreground)",
+        fontSize: "12px",
+        padding: "2px 6px",
+      },
+      "& label": {
+        color: "var(--muted-foreground)",
+        fontSize: "12px",
+      },
+      backgroundColor: "var(--background)",
+      borderBottom: "1px solid var(--border)",
+      padding: "4px 8px",
+    },
+    ".cm-scroller": {
+      fontFamily:
+        "var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace)",
+      fontSize: "13px",
+      lineHeight: "1.6",
+    },
+
+    /* ── Scrollbar ──────────────────────────────── */
+    ".cm-scroller::-webkit-scrollbar": {
+      height: "8px",
+      width: "8px",
+    },
+    ".cm-scroller::-webkit-scrollbar-thumb": {
+      backgroundColor: "var(--border)",
+      borderRadius: "4px",
+    },
+    ".cm-scroller::-webkit-scrollbar-thumb:hover": {
+      backgroundColor: "var(--muted-foreground)",
+    },
+    ".cm-scroller::-webkit-scrollbar-track": {
+      backgroundColor: "transparent",
+    },
+
+    /* ── Search ─────────────────────────────────── */
+    ".cm-searchMatch": {
+      backgroundColor: "oklch(from var(--warning) l c h / 0.3)",
+      outline: "1px solid oklch(from var(--warning) l c h / 0.5)",
+    },
+    ".cm-searchMatch.selected": {
+      backgroundColor: "oklch(from var(--warning) l c h / 0.5)",
+    },
+    ".cm-selectionBackground, .cm-focused .cm-selectionBackground": {
+      backgroundColor: "oklch(from var(--primary) l c h / 0.12)",
+    },
+
+    /* ── Selection match ────────────────────────── */
+    ".cm-selectionMatch": {
+      backgroundColor: "oklch(from var(--primary) l c h / 0.08)",
+    },
+
     /* ── Tooltip ────────────────────────────────── */
     ".cm-tooltip": {
       backgroundColor: "var(--popover)",
-      color: "var(--popover-foreground)",
       border: "1px solid var(--border)",
       borderRadius: "var(--radius-md, 6px)",
       boxShadow: "0 4px 12px oklch(from var(--foreground) l c h / 0.1)",
-      padding: "4px 8px",
+      color: "var(--popover-foreground)",
       fontSize: "12px",
       lineHeight: "1.5",
+      padding: "4px 8px",
     },
     ".cm-tooltip-autocomplete": {
       "& > ul": {
@@ -115,12 +179,6 @@ export const cmTheme = EditorView.theme(
         color: "var(--foreground)",
       },
     },
-    ".cm-tooltip.cm-tooltip-above": {
-      marginBottom: "4px",
-    },
-    ".cm-tooltip.cm-tooltip-below": {
-      marginTop: "4px",
-    },
     ".cm-tooltip-lint": {
       borderColor: "var(--destructive)",
     },
@@ -128,84 +186,26 @@ export const cmTheme = EditorView.theme(
       borderTop: "1px solid var(--border)",
       padding: "2px 0",
     },
-    ".cm-diagnostic": {
-      padding: "2px 6px",
-      fontFamily: "var(--font-sans, ui-sans-serif, system-ui)",
-      fontSize: "12px",
+    ".cm-tooltip.cm-tooltip-above": {
+      marginBottom: "4px",
     },
-    ".cm-diagnostic-error": {
-      color: "var(--destructive)",
-      borderLeft: "3px solid var(--destructive)",
+    ".cm-tooltip.cm-tooltip-below": {
+      marginTop: "4px",
     },
-    ".cm-diagnostic-warning": {
-      color: "var(--warning)",
-      borderLeft: "3px solid var(--warning)",
-    },
-    ".cm-diagnostic-info": {
-      color: "var(--info)",
-      borderLeft: "3px solid var(--info)",
-    },
-
-    /* ── Fold marker ────────────────────────────── */
-    ".cm-foldPlaceholder": {
-      backgroundColor: "transparent",
-      border: "none",
-      color: "var(--muted-foreground)",
-      padding: "0 2px",
-    },
-
-    /* ── Panel (e.g. search) ────────────────────── */
-    ".cm-panel": {
+    "&": {
       backgroundColor: "var(--background)",
-      borderBottom: "1px solid var(--border)",
-      padding: "4px 8px",
-      "& input": {
-        fontSize: "12px",
-        padding: "2px 6px",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-md, 4px)",
-        backgroundColor: "var(--background)",
-        color: "var(--foreground)",
-      },
-      "& label": {
-        fontSize: "12px",
-        color: "var(--muted-foreground)",
-      },
-      "& button": {
-        fontSize: "12px",
-        padding: "2px 8px",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-md, 4px)",
-        backgroundColor: "var(--muted)",
-        color: "var(--foreground)",
-        cursor: "pointer",
-      },
+      color: "var(--foreground)",
+      height: "100%",
     },
-
-    /* ── Fat cursor for overtype mode ───────────── */
-    ".cm-fat-cursor": {
-      backgroundColor: "var(--foreground)",
-      color: "var(--background)",
+    "&.cm-editor.cm-focused": {
+      outline: "none",
     },
     "&.cm-focused .cm-fat-cursor": {
       backgroundColor: "var(--foreground)",
       color: "var(--background)",
     },
-
-    /* ── Scrollbar ──────────────────────────────── */
-    ".cm-scroller::-webkit-scrollbar": {
-      width: "8px",
-      height: "8px",
-    },
-    ".cm-scroller::-webkit-scrollbar-track": {
-      backgroundColor: "transparent",
-    },
-    ".cm-scroller::-webkit-scrollbar-thumb": {
-      backgroundColor: "var(--border)",
-      borderRadius: "4px",
-    },
-    ".cm-scroller::-webkit-scrollbar-thumb:hover": {
-      backgroundColor: "var(--muted-foreground)",
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+      backgroundColor: "oklch(from var(--primary) l c h / 0.12)",
     },
   },
   { dark: false }
@@ -217,91 +217,91 @@ export const cmSyntaxHighlight = syntaxHighlighting(
   HighlightStyle.define([
     /* Comments */
     {
+      color: "var(--muted-foreground)",
+      fontStyle: "italic",
       tag: tags.comment,
-      color: "var(--muted-foreground)",
-      fontStyle: "italic",
     },
     {
+      color: "var(--muted-foreground)",
+      fontStyle: "italic",
       tag: tags.lineComment,
-      color: "var(--muted-foreground)",
-      fontStyle: "italic",
     },
     {
-      tag: tags.blockComment,
       color: "var(--muted-foreground)",
       fontStyle: "italic",
+      tag: tags.blockComment,
     },
 
     /* Keywords — \begin, \end, \documentclass, etc. */
-    { tag: tags.keyword, color: "var(--info)" },
-    { tag: tags.controlKeyword, color: "var(--info)" },
-    { tag: tags.definitionKeyword, color: "var(--info)" },
-    { tag: tags.moduleKeyword, color: "var(--info)" },
+    { color: "var(--info)", tag: tags.keyword },
+    { color: "var(--info)", tag: tags.controlKeyword },
+    { color: "var(--info)", tag: tags.definitionKeyword },
+    { color: "var(--info)", tag: tags.moduleKeyword },
 
     /* Strings — text content in braces */
-    { tag: tags.string, color: "var(--foreground)" },
-    { tag: tags.special(tags.string), color: "var(--success)" },
+    { color: "var(--foreground)", tag: tags.string },
+    { color: "var(--success)", tag: tags.special(tags.string) },
 
     /* Characters */
-    { tag: tags.character, color: "var(--foreground)" },
-    { tag: tags.escape, color: "var(--warning)" },
-    { tag: tags.invalid, color: "var(--destructive)" },
+    { color: "var(--foreground)", tag: tags.character },
+    { color: "var(--warning)", tag: tags.escape },
+    { color: "var(--destructive)", tag: tags.invalid },
 
     /* Numbers */
-    { tag: tags.number, color: "var(--success)" },
-    { tag: tags.integer, color: "var(--success)" },
-    { tag: tags.float, color: "var(--success)" },
+    { color: "var(--success)", tag: tags.number },
+    { color: "var(--success)", tag: tags.integer },
+    { color: "var(--success)", tag: tags.float },
 
     /* Environment names / types */
-    { tag: tags.typeName, color: "var(--primary)" },
-    { tag: tags.className, color: "var(--primary)" },
+    { color: "var(--primary)", tag: tags.typeName },
+    { color: "var(--primary)", tag: tags.className },
 
-    { tag: tags.definition(tags.typeName), color: "var(--primary)" },
+    { color: "var(--primary)", tag: tags.definition(tags.typeName) },
 
     /* Command names (control sequences) — like \section, \textbf etc. */
-    { tag: tags.attributeName, color: "var(--info)" },
-    { tag: tags.propertyName, color: "var(--info)" },
-    { tag: tags.function(tags.propertyName), color: "var(--info)" },
+    { color: "var(--info)", tag: tags.attributeName },
+    { color: "var(--info)", tag: tags.propertyName },
+    { color: "var(--info)", tag: tags.function(tags.propertyName) },
 
     /* Sectioning commands — \section, \subsection, etc. */
-    { tag: tags.heading, color: "var(--foreground)", fontWeight: "600" },
-    { tag: tags.heading1, color: "var(--foreground)", fontWeight: "700" },
-    { tag: tags.heading2, color: "var(--foreground)", fontWeight: "600" },
-    { tag: tags.heading3, color: "var(--foreground)", fontWeight: "600" },
-    { tag: tags.content, color: "var(--foreground)" },
+    { color: "var(--foreground)", fontWeight: "600", tag: tags.heading },
+    { color: "var(--foreground)", fontWeight: "700", tag: tags.heading1 },
+    { color: "var(--foreground)", fontWeight: "600", tag: tags.heading2 },
+    { color: "var(--foreground)", fontWeight: "600", tag: tags.heading3 },
+    { color: "var(--foreground)", tag: tags.content },
 
     /* Emphasis / formatting — \emph, \textbf, etc. */
-    { tag: tags.emphasis, fontStyle: "italic" },
-    { tag: tags.strong, fontWeight: "600" },
+    { fontStyle: "italic", tag: tags.emphasis },
+    { fontWeight: "600", tag: tags.strong },
     { tag: tags.strikethrough, textDecoration: "line-through" },
-    { tag: tags.link, color: "var(--info)", textDecoration: "underline" },
-    { tag: tags.url, color: "var(--info)", textDecoration: "underline" },
+    { color: "var(--info)", tag: tags.link, textDecoration: "underline" },
+    { color: "var(--info)", tag: tags.url, textDecoration: "underline" },
 
     /* Braces, brackets */
-    { tag: tags.brace, color: "var(--muted-foreground)" },
-    { tag: tags.bracket, color: "var(--muted-foreground)" },
-    { tag: tags.paren, color: "var(--muted-foreground)" },
-    { tag: tags.angleBracket, color: "var(--muted-foreground)" },
-    { tag: tags.squareBracket, color: "var(--muted-foreground)" },
+    { color: "var(--muted-foreground)", tag: tags.brace },
+    { color: "var(--muted-foreground)", tag: tags.bracket },
+    { color: "var(--muted-foreground)", tag: tags.paren },
+    { color: "var(--muted-foreground)", tag: tags.angleBracket },
+    { color: "var(--muted-foreground)", tag: tags.squareBracket },
 
     /* Meta — \usepackage options, document class options */
-    { tag: tags.meta, color: "var(--muted-foreground)" },
+    { color: "var(--muted-foreground)", tag: tags.meta },
 
     /* Document structure */
-    { tag: tags.documentMeta, color: "var(--muted-foreground)" },
-    { tag: tags.annotation, color: "var(--warning)" },
+    { color: "var(--muted-foreground)", tag: tags.documentMeta },
+    { color: "var(--warning)", tag: tags.annotation },
 
     /* Labels and references */
-    { tag: tags.labelName, color: "var(--success)" },
+    { color: "var(--success)", tag: tags.labelName },
 
     /* Separator — & in tables, etc. */
-    { tag: tags.separator, color: "var(--muted-foreground)" },
-    { tag: tags.inserted, color: "var(--success)" },
-    { tag: tags.deleted, color: "var(--destructive)" },
-    { tag: tags.changed, color: "var(--warning)" },
+    { color: "var(--muted-foreground)", tag: tags.separator },
+    { color: "var(--success)", tag: tags.inserted },
+    { color: "var(--destructive)", tag: tags.deleted },
+    { color: "var(--warning)", tag: tags.changed },
 
     /* Units */
-    { tag: tags.unit, color: "var(--success)" },
+    { color: "var(--success)", tag: tags.unit },
   ])
 );
 

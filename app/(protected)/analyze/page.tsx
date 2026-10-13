@@ -9,16 +9,16 @@ import { getJobs } from "@/server/jobs";
 import { getPersonalInformation } from "@/server/resume";
 
 export const metadata: Metadata = {
-  title: "Analyze Job",
   description: "Paste a job description and see how your resume matches up.",
+  title: "Analyze Job",
 };
 
 export default function AnalyzePage() {
   const queryClient = getQueryClient();
-  queryClient.prefetchQuery({ queryKey: jobsQueryKey, queryFn: getJobs });
+  queryClient.prefetchQuery({ queryFn: getJobs, queryKey: jobsQueryKey });
   queryClient.prefetchQuery({
-    queryKey: personalInfoQueryKey,
     queryFn: getPersonalInformation,
+    queryKey: personalInfoQueryKey,
   });
 
   return (

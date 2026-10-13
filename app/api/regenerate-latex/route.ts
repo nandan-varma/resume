@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   }
 
   const info = await db.query.personalInformation.findFirst({
-    where: eq(personalInformation.userId, session.user.id),
     columns: { resumeUrl: true },
+    where: eq(personalInformation.userId, session.user.id),
   });
   if (!info?.resumeUrl) {
     return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ success: true, resumeLatex: latex });
+    return NextResponse.json({ resumeLatex: latex, success: true });
   } catch (error) {
     logApiError("[regenerate-latex]", error);
     const message =

@@ -17,12 +17,46 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  poweredByHeader: false,
+  experimental: {
+    // Better tree-shaking for icon libraries
+    optimizePackageImports: ["lucide-react"],
+  },
+
+  async headers() {
+    return [
+      {
+        headers: securityHeaders,
+        source: "/:path*",
+      },
+    ];
+  },
 
   // Server function logging dumps full argument values (e.g. entire LaTeX
   // documents) to the terminal — off since it's unreadable at this size.
   logging: {
     serverFunctions: false,
+  },
+  poweredByHeader: false,
+
+  async redirects() {
+    return [
+      {
+        destination: "https://resume-storage.nandan.fyi/public/busytex.wasm",
+        permanent: false,
+        source: "/core/busytex/busytex.wasm",
+      },
+      {
+        destination: "https://resume-storage.nandan.fyi/public/busytex.js",
+        permanent: false,
+        source: "/core/busytex/busytex.js",
+      },
+      {
+        destination:
+          "https://qujr12qsco.ufs.sh/f/fthLDAMTNUTlo2DzZXfKNuBGPq0OUSh5TDr7YsjQ9HmIvzRL",
+        permanent: false,
+        source: "/core/busytex/texlive-extra.data",
+      },
+    ];
   },
 
   // Prevent Node.js-only packages from being bundled into the client
@@ -32,41 +66,6 @@ const nextConfig: NextConfig = {
     "@aws-sdk/client-s3",
     "@neondatabase/serverless",
   ],
-
-  experimental: {
-    // Better tree-shaking for icon libraries
-    optimizePackageImports: ["lucide-react"],
-  },
-
-  async redirects() {
-    return [
-      {
-        source: "/core/busytex/busytex.wasm",
-        destination: "https://resume-storage.nandan.fyi/public/busytex.wasm",
-        permanent: false,
-      },
-      {
-        source: "/core/busytex/busytex.js",
-        destination: "https://resume-storage.nandan.fyi/public/busytex.js",
-        permanent: false,
-      },
-      {
-        source: "/core/busytex/texlive-extra.data",
-        destination:
-          "https://qujr12qsco.ufs.sh/f/fthLDAMTNUTlo2DzZXfKNuBGPq0OUSh5TDr7YsjQ9HmIvzRL",
-        permanent: false,
-      },
-    ];
-  },
-
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: securityHeaders,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

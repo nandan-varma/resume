@@ -17,10 +17,10 @@ interface State {
 
 // biome-ignore lint/style/useReactFunctionComponents: Error boundaries require class components
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+  state: State = { error: null, hasError: false };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { error, hasError: true };
   }
 
   render() {
@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
             onClick={
               this.props.reload
                 ? () => window.location.reload()
-                : () => this.setState({ hasError: false, error: null })
+                : () => this.setState({ error: null, hasError: false })
             }
             size="sm"
             variant="outline"

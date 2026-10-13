@@ -10,12 +10,12 @@ function requireEnv(name: string): string {
 }
 
 const r2Client = new S3Client({
-  region: process.env.R2_REGION ?? "auto",
   credentials: {
     accessKeyId: requireEnv("R2_ACCESS_KEY_ID"),
     secretAccessKey: requireEnv("R2_SECRET_ACCESS_KEY"),
   },
   endpoint: requireEnv("R2_ENDPOINT"),
+  region: process.env.R2_REGION ?? "auto",
 });
 
 export function sanitizeFileName(name: string): string {
@@ -35,10 +35,10 @@ export async function uploadToR2(
 
   await r2Client.send(
     new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME ?? "resume",
-      Key: key,
       Body: fileBuffer,
+      Bucket: process.env.R2_BUCKET_NAME ?? "resume",
       ContentType: contentType,
+      Key: key,
     })
   );
 

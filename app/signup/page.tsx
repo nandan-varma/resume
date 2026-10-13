@@ -4,12 +4,12 @@ import { SignupForm } from "@/components/forms/signup-form";
 import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
-  description:
-    "Create a free JobMatch account to get AI match scores, keyword gap analysis, and an AI-assisted resume editor.",
   alternates: {
     canonical: "/signup",
   },
+  description:
+    "Create a free JobMatch account to get AI match scores, keyword gap analysis, and an AI-assisted resume editor.",
+  title: "Sign Up",
 };
 
 export default function SignupPage() {

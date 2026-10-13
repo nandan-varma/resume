@@ -10,13 +10,13 @@ import { logger } from "./shared/logger.js";
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const handlers = {
+    ANALYZE: () => handleAnalyze(msg.jobDescription),
     GET_INIT: handleGetInit,
     GET_SETTINGS: () => getSettings(),
-    SET_SETTINGS: () =>
-      chrome.storage.sync.set(msg.settings).then(() => ({ ok: true })),
-    ANALYZE: () => handleAnalyze(msg.jobDescription),
     SAVE_JOB: () =>
       handleSaveJob(msg.jobTitle, msg.jobDescription, msg.link, msg.analysis),
+    SET_SETTINGS: () =>
+      chrome.storage.sync.set(msg.settings).then(() => ({ ok: true })),
     SIGN_OUT: handleSignOut,
   };
 

@@ -33,7 +33,7 @@ export function ResumeOnboarding({
           from scratch.
         </p>
 
-        {pending && (
+        {!!pending && (
           <div className="mb-4 flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-xs">
             {timedOut ? (
               <>

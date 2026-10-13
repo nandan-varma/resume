@@ -56,12 +56,12 @@ export function useAutoSave(
   }, [dirty, saving, incognito, chatLoading, handleSave]);
 
   return {
-    saving,
-    dirty,
     autoSaving,
-    incognito,
-    toggleIncognito,
+    dirty,
     handleSave,
+    incognito,
     markDirty,
+    saving,
+    toggleIncognito,
   };
 }
