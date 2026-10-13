@@ -42,17 +42,38 @@ export function isSafeUrl(raw: string): boolean {
   return !BLOCKED_HOSTS.some((p) => p.test(url.hostname));
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  "&#39;": "'",
+  "&amp;": "&",
+  "&gt;": ">",
+  "&lt;": "<",
+  "&nbsp;": " ",
+  "&quot;": '"',
+};
+
+function replaceUntilStable(
+  input: string,
+  pattern: RegExp,
+  replacement: string
+): string {
+  let prev: string;
+  let out = input;
+  do {
+    prev = out;
+    out = out.replace(pattern, replacement);
+  } while (out !== prev);
+  return out;
+}
+
 export function extractText(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  let text = replaceUntilStable(
+    html,
+    /<(script|style)\b[\s\S]*?<\/\1\s*>/gi,
+    ""
+  );
+  text = replaceUntilStable(text, /<[^>]*>/g, " ");
+  return text
+    .replace(/&(?:nbsp|lt|gt|amp|quot|#39);/g, (m) => HTML_ENTITIES[m])
     .replace(/\s+/g, " ")
     .trim();
 }
