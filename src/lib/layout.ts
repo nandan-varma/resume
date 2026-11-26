@@ -62,52 +62,55 @@ export const estimateLines = (r: Resume): number =>
 /** How many lines the resume runs past one page (zero or less means it fits). */
 export const overflow = (r: Resume) => Math.ceil(estimateLines(r) - PAGE_LINES);
 
-const without = <T>(items: T[], index: number) =>
-  items.filter((_, i) => i !== index);
+/** Each step makes one small cut and reports whether it changed anything. */
+type Cut = (r: Resume) => boolean;
+
+const keepFirst = <T>(items: T[], count: number) => {
+  if (items.length <= count) {
+    return false;
+  }
+  items.length = count;
+  return true;
+};
+
+const cuts: Cut[] = [
+  // 1. A fourth project and beyond.
+  (r) => keepFirst(r.projects, 3),
+  // 2. A third bullet on any project, last project first.
+  (r) => {
+    const project = r.projects.findLast((p) => p.highlights.length > 2);
+    return project ? keepFirst(project.highlights, 2) : false;
+  },
+  // 3. Skill groups beyond four.
+  (r) => keepFirst(r.skills, 4),
+  // 4. A work bullet beyond three, from the end of the last job.
+  (r) => {
+    const job = r.work.findLast((w) => w.highlights.length > 3);
+    return job ? keepFirst(job.highlights, job.highlights.length - 1) : false;
+  },
+  // 5. The last project's second bullet, then the project itself.
+  (r) => {
+    const last = r.projects.at(-1);
+    if (last && last.highlights.length > 1) {
+      return keepFirst(last.highlights, last.highlights.length - 1);
+    }
+    return r.projects.length > 2
+      ? keepFirst(r.projects, r.projects.length - 1)
+      : false;
+  },
+  // 6. Skill groups beyond three.
+  (r) => keepFirst(r.skills, 3),
+];
 
 /**
- * Last-resort, deterministic trimming: remove the weakest content first, never
- * touching work experience bullets below two, until the page fits.
+ * Last-resort, deterministic trimming: remove the weakest content first,
+ * never touching jobs or schools, until the page fits.
  */
 export const trimToFit = (resume: Resume): Resume => {
   const r = structuredClone(resume);
-  const steps: Array<(r: Resume) => boolean> = [
-    // 1. Fourth project and beyond.
-    (x) => x.projects.length > 3 && !!(x.projects = x.projects.slice(0, 3)),
-    // 2. A third bullet on any project, last project first.
-    (x) => {
-      const i = x.projects.findLastIndex((p) => p.highlights.length > 2);
-      return (
-        i >= 0 &&
-        !!(x.projects[i].highlights = x.projects[i].highlights.slice(0, 2))
-      );
-    },
-    // 3. Skill groups beyond four.
-    (x) => x.skills.length > 4 && !!(x.skills = x.skills.slice(0, 4)),
-    // 4. Work bullets beyond three, from the end of the last job.
-    (x) => {
-      const i = x.work.findLastIndex((w) => w.highlights.length > 3);
-      return i >= 0 && !!x.work[i].highlights.pop();
-    },
-    // 5. A second bullet on the last project, then the project itself.
-    (x) => {
-      const last = x.projects.at(-1);
-      if (last && last.highlights.length > 1) {
-        last.highlights.pop();
-        return true;
-      }
-      return (
-        x.projects.length > 2 &&
-        !!(x.projects = without(x.projects, x.projects.length - 1))
-      );
-    },
-    // 6. Skill groups beyond three.
-    (x) => x.skills.length > 3 && !!(x.skills = x.skills.slice(0, 3)),
-  ];
-
-  for (const step of steps) {
-    while (overflow(r) > 0 && step(r)) {
-      // keep applying this step while it still helps
+  for (const cut of cuts) {
+    while (overflow(r) > 0 && cut(r)) {
+      // keep applying this cut while it still helps
     }
   }
   return r;
