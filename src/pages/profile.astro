@@ -1,10 +1,12 @@
 ---
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { eq } from "drizzle-orm";
-import { FileUp, IdCard } from "lucide-react";
+import { ChevronRight, FileUp, IdCard } from "lucide-react";
 import ImportResume from "@/components/ImportResume";
 import SchemaForm from "@/components/SchemaForm";
 import Callout from "@/components/ui/Callout.astro";
 import PageHeader from "@/components/ui/PageHeader.astro";
+import Tag from "@/components/ui/Tag.astro";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
 import {
@@ -23,35 +25,146 @@ const resume = Resume.parse(profile?.resume ?? emptyResume());
 const prefs = Prefs.parse(profile?.prefs ?? defaultPrefs());
 
 const area = { "ui:widget": "textarea" };
-// Array rows get a stray "Title-1" label by default; hide it.
+// Hide the section's own title (the card header already has one) and the stray "Title-1" row labels.
+const root = { "ui:options": { label: false } };
 const row = (fields: object = {}) => ({
+  ...root,
   items: { "ui:title": " ", ...fields },
 });
 const bulletRow = { items: { "ui:title": " ", ...area } };
-const resumeUi = {
-  basics: { summary: area, links: row() },
-  summaries: bulletRow,
-  work: row({ highlights: bulletRow }),
-  projects: row({ highlights: bulletRow }),
-  education: row({ details: area }),
-  skills: row(),
-  leadership: row({ details: area }),
-  notes: area,
+
+const resumeSchema = toFormSchema(Resume).properties as Record<
+  string,
+  RJSFSchema
+>;
+
+type Section = {
+  key: keyof Resume;
+  title: string;
+  hint: string;
+  count?: number;
+  open?: boolean;
+  ui: UiSchema;
 };
-const prefsUi = { rules: area };
+const sections: Section[] = [
+  {
+    key: "basics",
+    title: "About you",
+    hint: "Your name, contact details and links.",
+    open: true,
+    ui: { ...root, summary: area, links: row() },
+  },
+  {
+    key: "summaries",
+    title: "Summary variants",
+    hint: "A few versions for different kinds of jobs. We pick the closest and tweak a word or two.",
+    count: resume.summaries.length,
+    ui: { ...root, items: { "ui:title": " ", ...area } },
+  },
+  {
+    key: "work",
+    title: "Work experience",
+    hint: "Every job, with what you achieved.",
+    count: resume.work.length,
+    ui: row({ highlights: { ...bulletRow } }),
+  },
+  {
+    key: "projects",
+    title: "Projects",
+    hint: "Your best work. We choose the most relevant for each job.",
+    count: resume.projects.length,
+    ui: row({ highlights: { ...bulletRow } }),
+  },
+  {
+    key: "skills",
+    title: "Skills",
+    hint: "Groups of skills. We show the most relevant groups first.",
+    count: resume.skills.length,
+    ui: row(),
+  },
+  {
+    key: "education",
+    title: "Education",
+    hint: "Schools and degrees.",
+    count: resume.education.length,
+    ui: row({ details: area }),
+  },
+  {
+    key: "leadership",
+    title: "Leadership and activities",
+    hint: "Clubs, teams you led, volunteering.",
+    count: resume.leadership.length,
+    ui: row({ details: area }),
+  },
+  {
+    key: "notes",
+    title: "Private notes",
+    hint: "Never printed. Work authorization, deal-breakers, anything the writer should know.",
+    ui: { ...root },
+  },
+];
+const noteUi = { ...root, "ui:widget": "textarea" };
+const nav = [
+  ...sections.map((s) => ({ id: s.key, label: s.title })),
+  { id: "preferences", label: "How we write" },
+];
 ---
-<Layout title="My details" width="text">
+<Layout title="My details">
   <PageHeader Icon={IdCard} title="My details" description="Everything we write comes from here. We never make facts up, so the more you add, the better your resumes." />
 
-  <Callout Icon={FileUp} class="mb-6">
-    <p class="font-medium">{hasContent(resume) ? "Start over from a new resume" : "Quick start"}</p>
-    <p class="mt-1 mb-3 text-muted-foreground">Upload an existing resume and we will fill in the form for you.</p>
-    <ImportResume client:load />
-  </Callout>
+  <div class="grid gap-8 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,60rem)]">
+    <nav aria-label="Sections" class="hidden lg:block">
+      <ul class="sticky top-20 grid gap-0.5 text-sm">
+        {nav.map((n) => (
+          <li><a href={`#${n.id}`} class="row-hover block truncate rounded-md px-2 py-1.5 text-muted-foreground hover:text-foreground">{n.label}</a></li>
+        ))}
+      </ul>
+    </nav>
 
-  <h2 class="block-heading mt-2">Your information</h2>
-  <SchemaForm client:load schema={toFormSchema(Resume)} uiSchema={resumeUi} data={resume} action="saveResume" field="resume" submitLabel="Save my details" />
+    <div class="grid min-w-0 content-start gap-3">
+      <Callout Icon={FileUp}>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">{hasContent(resume) ? "Replace with a new resume" : "Quick start"}</p>
+            <p class="text-muted-foreground">Upload a PDF and we will fill in the form for you.</p>
+          </div>
+          <ImportResume client:load />
+        </div>
+      </Callout>
 
-  <h2 class="block-heading">How we write</h2>
-  <SchemaForm client:load schema={toFormSchema(Prefs)} uiSchema={prefsUi} data={prefs} action="savePrefs" field="prefs" submitLabel="Save preferences" />
+      {sections.map((s) => (
+        <details id={s.key} open={s.open} class="group scroll-mt-16 rounded-lg border bg-card">
+          <summary class="row-hover flex items-center gap-2 rounded-lg px-4 py-3 select-none">
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+            <h2 class="font-semibold">{s.title}</h2>
+            {s.count !== undefined && <Tag>{s.count}</Tag>}
+            <span class="ml-2 hidden min-w-0 flex-1 truncate text-muted-foreground sm:inline">{s.hint}</span>
+          </summary>
+          <div class="border-t p-4">
+            <SchemaForm
+              client:idle
+              schema={{ ...resumeSchema[s.key], title: s.title }}
+              uiSchema={s.key === "notes" ? noteUi : s.ui}
+              data={resume[s.key]}
+              action="saveResumeSection"
+              payload={{ key: s.key }}
+              field="value"
+              submitLabel={`Save ${s.title.toLowerCase()}`}
+            />
+          </div>
+        </details>
+      ))}
+
+      <details id="preferences" class="group scroll-mt-16 rounded-lg border bg-card">
+        <summary class="row-hover flex items-center gap-2 rounded-lg px-4 py-3 select-none">
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+          <h2 class="font-semibold">How we write</h2>
+          <span class="ml-2 hidden min-w-0 flex-1 truncate text-muted-foreground sm:inline">Tone and your own rules.</span>
+        </summary>
+        <div class="border-t p-4">
+          <SchemaForm client:idle schema={{ ...toFormSchema(Prefs), title: "How we write" }} uiSchema={{ rules: area }} data={prefs} action="savePrefs" field="prefs" submitLabel="Save preferences" />
+        </div>
+      </details>
+    </div>
+  </div>
 </Layout>

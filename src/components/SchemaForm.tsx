@@ -4,10 +4,15 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import validator from "@rjsf/validator-ajv8";
 import { useState } from "react";
 import { toast } from "sonner";
+import { CollapsibleItem, GridObject } from "./FormTemplates";
 import { Button } from "./ui/button";
 import { Spinner } from "./ui/Spinner";
 
-type ActionName = "saveResume" | "savePrefs" | "saveApplication";
+type ActionName =
+  | "saveResume"
+  | "saveResumeSection"
+  | "savePrefs"
+  | "saveApplication";
 type Props = {
   schema: RJSFSchema;
   uiSchema?: UiSchema;
@@ -66,6 +71,10 @@ export default function SchemaForm({
       uiSchema={uiSchema}
       formData={data}
       validator={validator}
+      templates={{
+        ObjectFieldTemplate: GridObject,
+        ArrayFieldItemTemplate: CollapsibleItem,
+      }}
       onSubmit={submit}
     >
       <Button type="submit" disabled={saving} className="mt-6">

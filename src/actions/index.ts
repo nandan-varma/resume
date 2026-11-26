@@ -75,6 +75,35 @@ export const server = {
     },
   }),
 
+  /** Save one section of the master resume, so separate forms never overwrite each other. */
+  saveResumeSection: defineAction({
+    input: z.object({
+      key: z.enum([
+        "basics",
+        "summaries",
+        "work",
+        "education",
+        "projects",
+        "skills",
+        "leadership",
+        "notes",
+      ]),
+      value: z.unknown(),
+    }),
+    handler: async ({ key, value }, { locals }) => {
+      const user = requireUser(locals);
+      const current = Resume.parse((await getProfile(user.id))?.resume ?? {});
+      const parsed = Resume.safeParse({ ...current, [key]: value });
+      if (!parsed.success) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "Some fields need a fix.",
+        });
+      }
+      await saveProfile(user.id, { resume: parsed.data });
+    },
+  }),
+
   savePrefs: defineAction({
     input: z.object({ prefs: Prefs }),
     handler: async ({ prefs }, { locals }) => {
