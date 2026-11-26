@@ -1,0 +1,44 @@
+---
+import { desc, eq } from "drizzle-orm";
+import AppliedToggle from "@/components/AppliedToggle";
+import Badge from "@/components/ui/Badge.astro";
+import Card from "@/components/ui/Card.astro";
+import { buttonVariants } from "@/components/ui/variants";
+import { db, schema } from "@/db";
+import Layout from "@/layouts/Layout.astro";
+
+const rows = await db.query.application.findMany({
+  where: eq(schema.application.userId, Astro.locals.user?.id ?? ""),
+  orderBy: desc(schema.application.createdAt),
+});
+const level = {
+  strong: "success",
+  good: "secondary",
+  stretch: "warning",
+} as const;
+---
+<Layout title="My resumes" width="narrow">
+  <h1 class="text-3xl font-semibold tracking-tight">My resumes</h1>
+  {rows.length === 0 ? (
+    <Card class="mt-8 text-center">
+      <h2 class="font-semibold">Nothing here yet</h2>
+      <p class="mt-1 mb-4 text-sm text-muted-foreground">Find a job and we will write a resume for it.</p>
+      <a href="/" class={buttonVariants()}>Find jobs</a>
+    </Card>
+  ) : (
+    <ul class="mt-6 grid gap-3">
+      {rows.map((row) => (
+        <Card as="li" class="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div class="min-w-0">
+            <a href={`/resumes/${row.id}`} class="font-semibold hover:underline">{row.role}</a>
+            <p class="text-sm text-muted-foreground">{row.company} · {row.createdAt.toLocaleDateString("en-US", { dateStyle: "medium" })}</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <Badge variant={level[row.match.level]} class="capitalize">{row.match.level} match</Badge>
+            <AppliedToggle client:load id={row.id} applied={row.applied} />
+          </div>
+        </Card>
+      ))}
+    </ul>
+  )}
+</Layout>

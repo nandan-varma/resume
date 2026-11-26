@@ -1,0 +1,64 @@
+---
+import type { Resume } from "@/lib/resume";
+
+type Props = { resume: Resume };
+const { resume } = Astro.props;
+const { basics, work, education, projects, skills } = resume;
+const contact = [basics.email, basics.phone, basics.location].filter(Boolean);
+---
+<div class="resume-sheet" id="resume-sheet">
+  <div id="resume-content">
+    <h1>{basics.name}</h1>
+    {basics.headline && <p style="text-align:center">{basics.headline}</p>}
+    <p style="text-align:center;font-size:9pt">
+      {[...contact, ...basics.links.map((l) => l.url || l.label)].filter(Boolean).join("  |  ")}
+    </p>
+
+    {basics.summary && (<><h2>Summary</h2><p>{basics.summary}</p></>)}
+
+    {work.length > 0 && (
+      <>
+        <h2>Experience</h2>
+        {work.map((job) => (
+          <section style="margin-bottom:3pt">
+            <div class="row"><strong>{job.position}, {job.company}</strong><span>{[job.start, job.end].filter(Boolean).join(" - ")}</span></div>
+            {job.location && <div style="font-size:9pt">{job.location}</div>}
+            <ul>{job.highlights.map((h) => <li>{h}</li>)}</ul>
+          </section>
+        ))}
+      </>
+    )}
+
+    {projects.length > 0 && (
+      <>
+        <h2>Projects</h2>
+        {projects.map((p) => (
+          <section style="margin-bottom:3pt">
+            <div class="row"><strong>{p.name}{p.url && <span style="font-weight:400"> - {p.url}</span>}</strong><span>{p.year}</span></div>
+            {p.stack && <div style="font-style:italic;font-size:9pt">{p.stack}</div>}
+            <ul>{p.highlights.map((h) => <li>{h}</li>)}</ul>
+          </section>
+        ))}
+      </>
+    )}
+
+    {skills.length > 0 && (
+      <>
+        <h2>Skills</h2>
+        {skills.map((s) => <p><strong>{s.group}:</strong> {s.items}</p>)}
+      </>
+    )}
+
+    {education.length > 0 && (
+      <>
+        <h2>Education</h2>
+        {education.map((e) => (
+          <div>
+            <div class="row"><strong>{e.school}</strong><span>{e.end}</span></div>
+            <div>{[e.degree, e.details].filter(Boolean).join(" | ")}</div>
+          </div>
+        ))}
+      </>
+    )}
+  </div>
+</div>

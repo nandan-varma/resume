@@ -1,0 +1,8 @@
+# Copy to .dev.vars for local development (never commit .dev.vars).
+BETTER_AUTH_SECRET=change-me-to-a-long-random-string
+BETTER_AUTH_URL=http://localhost:4321
+OPENCODE_API_KEY=
+# GitHub OAuth app (callback: <BETTER_AUTH_URL>/api/auth/callback/github).
+# Leave blank to hide the button.
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=

@@ -1,0 +1,51 @@
+---
+import { eq } from "drizzle-orm";
+import ImportResume from "@/components/ImportResume";
+import SchemaForm from "@/components/SchemaForm";
+import Card from "@/components/ui/Card.astro";
+import { db, schema } from "@/db";
+import Layout from "@/layouts/Layout.astro";
+import {
+  defaultPrefs,
+  emptyResume,
+  hasContent,
+  Prefs,
+  Resume,
+  toFormSchema,
+} from "@/lib/resume";
+
+const profile = await db.query.profile.findFirst({
+  where: eq(schema.profile.userId, Astro.locals.user?.id ?? ""),
+});
+const resume = profile?.resume ?? emptyResume();
+const prefs = profile?.prefs ?? defaultPrefs();
+
+const resumeUi = {
+  basics: { summary: { "ui:widget": "textarea" } },
+  work: { items: { highlights: { items: { "ui:widget": "textarea" } } } },
+  projects: { items: { highlights: { items: { "ui:widget": "textarea" } } } },
+};
+const prefsUi = { rules: { "ui:widget": "textarea" } };
+---
+<Layout title="My details" width="narrow">
+  <h1 class="text-3xl font-semibold tracking-tight">My details</h1>
+  <p class="mt-1 text-muted-foreground">
+    Everything we write comes from here. We never make facts up, so the more you add, the better your resumes.
+  </p>
+
+  <Card class="mt-8">
+    <h2 class="mb-1 font-semibold">{hasContent(resume) ? "Start over with a new resume" : "Quick start"}</h2>
+    <p class="mb-4 text-sm text-muted-foreground">Upload an existing resume and we will fill in the form for you.</p>
+    <ImportResume client:load />
+  </Card>
+
+  <Card class="mt-6">
+    <h2 class="mb-4 font-semibold">Your information</h2>
+    <SchemaForm client:load schema={toFormSchema(Resume)} uiSchema={resumeUi} data={resume} action="saveResume" field="resume" submitLabel="Save my details" />
+  </Card>
+
+  <Card class="mt-6">
+    <h2 class="mb-4 font-semibold">How we write</h2>
+    <SchemaForm client:load schema={toFormSchema(Prefs)} uiSchema={prefsUi} data={prefs} action="savePrefs" field="prefs" submitLabel="Save preferences" />
+  </Card>
+</Layout>

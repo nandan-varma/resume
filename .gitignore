@@ -65,3 +65,9 @@ builder-debug.yml
 
 # LaTeX WASM engine assets (~125MB, downloaded during build)
 public/core/
+# Astro / Cloudflare
+.astro
+dist
+.wrangler
+.dev.vars
+worker-configuration.d.ts

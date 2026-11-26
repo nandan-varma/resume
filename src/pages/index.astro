@@ -1,0 +1,155 @@
+---
+import { eq } from "drizzle-orm";
+import { Banknote, MapPin } from "lucide-react";
+import Badge from "@/components/ui/Badge.astro";
+import Card from "@/components/ui/Card.astro";
+import { buttonVariants } from "@/components/ui/variants";
+import { db, schema } from "@/db";
+import Layout from "@/layouts/Layout.astro";
+import { searchJobs } from "@/lib/tallo";
+
+const params = Astro.url.searchParams;
+const title = params.get("title")?.trim() ?? "";
+const place = params.get("place")?.trim() ?? "";
+const remote = params.get("remote") === "on";
+const recent = Number(params.get("recent")) || undefined;
+const cursor = params.get("cursor") ?? undefined;
+const searching = title.length >= 2;
+
+let results: Awaited<ReturnType<typeof searchJobs>> | undefined;
+let failure: string | undefined;
+if (searching) {
+  try {
+    results = await searchJobs({
+      title: [title],
+      location: [place, remote ? "remote" : ""].filter(Boolean),
+      postedWithin: recent,
+      cursor,
+    });
+  } catch (e) {
+    failure = e instanceof Error ? e.message : "Search failed.";
+  }
+}
+
+const { user } = Astro.locals;
+const profile = user
+  ? await db.query.profile.findFirst({
+      where: eq(schema.profile.userId, user.id),
+    })
+  : undefined;
+
+const nextPage =
+  results?.hasMore && results.next
+    ? new URLSearchParams({
+        ...Object.fromEntries(params),
+        cursor: results.next,
+      })
+    : undefined;
+const examples = [
+  "Software engineer",
+  "Product designer",
+  "Data analyst",
+  "Nurse",
+  "Marketing manager",
+];
+const steps = [
+  ["1", "Tell us about you", "Upload a resume or type your details once."],
+  ["2", "Pick a job", "Search real openings from company career pages."],
+  ["3", "Get your resume", "We write a resume and cover letter for that job."],
+];
+const field =
+  "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
+---
+<Layout title="Find jobs">
+  <section class="mx-auto max-w-2xl text-center">
+    <h1 class="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Find a job. Get a resume made for it.</h1>
+    <p class="mt-3 text-pretty text-muted-foreground">
+      Search real job openings, then let us write a resume and cover letter for the one you pick, using only what you tell us about yourself.
+    </p>
+  </section>
+
+  {user && !profile && (
+    <Card class="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-between gap-3 border-warning/40 bg-warning-soft">
+      <p class="text-sm"><strong>Start here:</strong> add your details so we can write your resumes.</p>
+      <a href="/profile" class={buttonVariants({ size: "sm" })}>Add my details</a>
+    </Card>
+  )}
+
+  <form method="get" role="search" class="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-[1.4fr_1fr_auto]">
+    <label class="grid gap-1 text-sm font-medium">
+      Job title
+      <input name="title" value={title} required minlength="2" placeholder="e.g. Backend engineer" class={field} />
+    </label>
+    <label class="grid gap-1 text-sm font-medium">
+      Where
+      <input name="place" value={place} placeholder="City or country (optional)" class={field} />
+    </label>
+    <button type="submit" class={`${buttonVariants({ size: "lg" })} self-end`}>Search</button>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm sm:col-span-3">
+      <label class="flex items-center gap-2"><input type="checkbox" name="remote" checked={remote} class="size-4 accent-primary" /> Include remote jobs</label>
+      <label class="flex items-center gap-2">
+        Posted
+        <select name="recent" class="h-9 rounded-md border bg-background px-2">
+          <option value="" selected={!recent}>any time</option>
+          <option value="7" selected={recent === 7}>in the last week</option>
+          <option value="30" selected={recent === 30}>in the last month</option>
+        </select>
+      </label>
+    </div>
+  </form>
+
+  {!searching && (
+    <>
+      <p class="mx-auto mt-6 flex max-w-3xl flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        Try:
+        {examples.map((e) => <a href={`/?title=${encodeURIComponent(e)}`} class="rounded-full border px-3 py-1 hover:bg-accent">{e}</a>)}
+      </p>
+      <ol class="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-3">
+        {steps.map(([n, head, body]) => (
+          <Card as="li">
+            <span class="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{n}</span>
+            <h2 class="mt-3 font-semibold">{head}</h2>
+            <p class="mt-1 text-sm text-muted-foreground">{body}</p>
+          </Card>
+        ))}
+      </ol>
+    </>
+  )}
+
+  {failure && <Card class="mx-auto mt-8 max-w-3xl border-destructive/40"><p role="alert" class="text-sm">{failure} Please try again in a moment.</p></Card>}
+
+  {results && (
+    <section class="mx-auto mt-10 max-w-3xl" aria-label="Search results">
+      {results.results.length === 0 ? (
+        <Card class="text-center">
+          <h2 class="font-semibold">No jobs found</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Try a simpler title, such as "engineer", or remove the place.</p>
+        </Card>
+      ) : (
+        <ul class="grid gap-3">
+          {results.results.map((job) => (
+            <li>
+              <a href={`/jobs/${job.id}`} class="block rounded-xl border bg-card p-5 shadow-xs transition-colors hover:bg-accent/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h2 class="font-semibold">{job.title}</h2>
+                    <p class="text-sm text-muted-foreground">{job.company}</p>
+                  </div>
+                  {job.workMode && <Badge variant="success" class="capitalize">{job.workMode}</Badge>}
+                </div>
+                <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {job.location && <span class="inline-flex items-center gap-1"><MapPin className="size-3.5" />{job.location}</span>}
+                  {job.pay && <span class="inline-flex items-center gap-1"><Banknote className="size-3.5" />{job.pay}</span>}
+                  {job.postedAt && <span>Posted {job.postedAt}</span>}
+                </p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {nextPage && (
+        <p class="mt-6 text-center"><a href={`/?${nextPage}`} class={buttonVariants({ variant: "outline" })}>Show more jobs</a></p>
+      )}
+    </section>
+  )}
+</Layout>

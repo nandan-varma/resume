@@ -1,0 +1,126 @@
+---
+import type { RJSFSchema } from "@rjsf/utils";
+import { and, eq } from "drizzle-orm";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import CopyButton from "@/components/CopyButton";
+import ResumeToolbar from "@/components/ResumeToolbar";
+import ResumeView from "@/components/ResumeView.astro";
+import SchemaForm from "@/components/SchemaForm";
+import TailorButton from "@/components/TailorButton";
+import Badge from "@/components/ui/Badge.astro";
+import Card from "@/components/ui/Card.astro";
+import { db, schema } from "@/db";
+import Layout from "@/layouts/Layout.astro";
+import { Resume, toFormSchema } from "@/lib/resume";
+
+const row = await db.query.application.findFirst({
+  where: and(
+    eq(schema.application.id, Astro.params.id ?? ""),
+    eq(schema.application.userId, Astro.locals.user?.id ?? ""),
+  ),
+});
+if (!row) {
+  return new Response("Not found", { status: 404 });
+}
+
+const { match } = row;
+const levelText = {
+  strong: "Strong match",
+  good: "Good match",
+  stretch: "A stretch",
+}[match.level];
+const levelVariant = {
+  strong: "success",
+  good: "secondary",
+  stretch: "warning",
+}[match.level] as "success" | "secondary" | "warning";
+
+const editSchema: RJSFSchema = {
+  type: "object",
+  properties: {
+    resume: toFormSchema(Resume),
+    coverLetter: { type: "string", title: "Cover letter" },
+  },
+};
+const editUi = {
+  coverLetter: { "ui:widget": "textarea", "ui:options": { rows: 14 } },
+  resume: {
+    basics: { summary: { "ui:widget": "textarea" } },
+    work: { items: { highlights: { items: { "ui:widget": "textarea" } } } },
+    projects: { items: { highlights: { items: { "ui:widget": "textarea" } } } },
+  },
+};
+---
+<Layout title={`${row.role} at ${row.company}`}>
+  <div class="print:hidden">
+    <a href="/resumes" class="text-sm text-muted-foreground hover:text-foreground">← My resumes</a>
+    <h1 class="mt-2 text-balance text-3xl font-semibold tracking-tight">{row.role}</h1>
+    <p class="text-lg text-muted-foreground">{row.company}</p>
+
+    <div class="mt-6"><ResumeToolbar client:load id={row.id} applied={row.applied} applyUrl={row.applyUrl} /></div>
+
+    <Card class="mt-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <Badge variant={levelVariant}>{levelText}</Badge>
+        <span id="fit-status" class="text-sm text-muted-foreground" aria-live="polite"></span>
+        <div id="shorten" hidden class="ml-auto w-48"><TailorButton client:load talloId={row.talloId} shorter label="Make it shorter" variant="outline" /></div>
+      </div>
+      {match.blockers.length > 0 && (
+        <div class="mt-4 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm" role="note">
+          <p class="flex items-center gap-2 font-medium"><AlertTriangle className="size-4" /> Check before you apply</p>
+          <ul class="mt-1 list-disc pl-6">{match.blockers.map((b) => <li>{b}</li>)}</ul>
+        </div>
+      )}
+      <div class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+        <div>
+          <h2 class="mb-1 flex items-center gap-2 font-medium"><CheckCircle2 className="size-4 text-success" /> Why you fit</h2>
+          <ul class="list-disc pl-6 text-muted-foreground">{match.reasons.map((r) => <li>{r}</li>)}</ul>
+        </div>
+        {match.gaps.length > 0 && (
+          <div>
+            <h2 class="mb-1 font-medium">What could be stronger</h2>
+            <ul class="list-disc pl-6 text-muted-foreground">{match.gaps.map((g) => <li>{g}</li>)}</ul>
+          </div>
+        )}
+      </div>
+    </Card>
+  </div>
+
+  <div class="mt-6 overflow-x-auto print:mt-0 print:overflow-visible">
+    <div class="mx-auto w-fit rounded-md border shadow-md print:border-0 print:shadow-none"><ResumeView resume={row.resume} /></div>
+  </div>
+
+  <div class="print:hidden">
+    <Card class="mt-8">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="font-semibold">Cover letter</h2>
+        <CopyButton client:load text={row.coverLetter} />
+      </div>
+      <p class="whitespace-pre-wrap text-sm leading-relaxed">{row.coverLetter}</p>
+    </Card>
+
+    <Card class="mt-6">
+      <details>
+        <summary class="cursor-pointer font-semibold">Edit the words</summary>
+        <div class="mt-4">
+          <SchemaForm client:load schema={editSchema} uiSchema={editUi} data={{ resume: row.resume, coverLetter: row.coverLetter }} action="saveApplication" payload={{ id: row.id }} reloadOnSave submitLabel="Save and refresh" />
+        </div>
+      </details>
+    </Card>
+  </div>
+</Layout>
+
+<script>
+  // The sheet is fixed at one US Letter page; check whether the content still fits.
+  const content = document.getElementById("resume-content");
+  const sheet = document.getElementById("resume-sheet");
+  const status = document.getElementById("fit-status");
+  const shorten = document.getElementById("shorten");
+  if (content && sheet && status && shorten) {
+    const style = getComputedStyle(sheet);
+    const room = sheet.clientHeight - Number.parseFloat(style.paddingTop) - Number.parseFloat(style.paddingBottom);
+    const fits = content.offsetHeight <= room;
+    status.textContent = fits ? "Fits on one page ✓" : "Runs over one page";
+    shorten.hidden = fits;
+  }
+</script>

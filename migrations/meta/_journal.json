@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1778710658838,
-      "tag": "0000_silly_switch",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778711305282,
-      "tag": "0001_oval_the_initiative",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1750536000000,
-      "tag": "0002_add_job_resumes",
+      "version": "6",
+      "when": 1795673430433,
+      "tag": "0000_pale_quasimodo",
       "breakpoints": true
     }
   ]

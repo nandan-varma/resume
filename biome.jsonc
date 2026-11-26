@@ -1,39 +1,29 @@
 {
-  "extends": [
-    "ultracite/biome/core",
-    "ultracite/biome/next",
-    "ultracite/biome/react"
-  ],
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "javascript": {
-    "globals": ["chrome"]
-  },
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
     "includes": [
+      "**",
       "!public",
-      "!components/ui",
-
-      "!lib/utils.ts",
-      "!.source"
+      "!migrations",
+      "!src/lib/tallo-api.d.ts",
+      "!worker-configuration.d.ts",
+      "!.astro"
     ]
   },
-  "linter": {
-    "rules": {
-      "performance": {
-        // Inline handlers are used throughout (incl. inside .map loops where useCallback is impossible); no React Compiler/memo boundaries here.
-        "noJsxPropsBind": "off"
-      }
-    }
-  },
+  "formatter": { "indentStyle": "space" },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "linter": { "enabled": true },
   "overrides": [
     {
-      "includes": ["extension/content/**", "extension/content.js"],
+      "includes": ["**/*.astro"],
       "linter": {
         "rules": {
           "correctness": {
-            "noUndeclaredVariables": "off",
+            "noUnusedImports": "off",
             "noUnusedVariables": "off"
-          }
+          },
+          "style": { "useImportType": "off" }
         }
       }
     }
