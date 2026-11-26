@@ -1,6 +1,6 @@
 import { actions } from "astro:actions";
 import { RefreshCw, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { type Suggestion, suggestionUrl } from "@/lib/suggestions";
 import { Button } from "./ui/button";
 
@@ -8,16 +8,16 @@ export default function SuggestedSearches() {
   const [searches, setSearches] = useState<Suggestion[] | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async (refresh: boolean) => {
+  const load = useCallback(async (refresh: boolean) => {
     setLoading(true);
     const { data } = await actions.suggestedSearches({ refresh });
     setSearches(data ?? []);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     load(false);
-  }, []);
+  }, [load]);
 
   if (!(loading || searches?.length)) {
     return null;
