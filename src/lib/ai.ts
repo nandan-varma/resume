@@ -1,12 +1,30 @@
 import { env } from "cloudflare:workers";
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, Output } from "ai";
-import type { z } from "zod";
+import { generateText, jsonSchema, Output } from "ai";
+import { z } from "zod";
 import { importPrompt, type TailorInput, tailorPrompt } from "./prompts";
 import { assemble, Resume, Tailored } from "./resume";
 
 const openai = createOpenAI({ apiKey: env.OPENAI_API_KEY });
 const model = openai("gpt-6-luna");
+
+/**
+ * OpenAI's strict mode needs every key listed as required. Zod only does that
+ * in "output" mode (defaulted fields are always present in parsed output),
+ * so build the JSON Schema ourselves and still validate with Zod.
+ */
+const strictSchema = <T extends z.ZodType>(schema: T) =>
+  jsonSchema<z.infer<T>>(
+    z.toJSONSchema(schema, { io: "output", target: "draft-7" }) as never,
+    {
+      validate: (value) => {
+        const result = schema.safeParse(value);
+        return result.success
+          ? { success: true, value: result.data }
+          : { success: false, error: result.error };
+      },
+    },
+  );
 
 async function generate<T extends z.ZodType>(
   schema: T,
@@ -15,7 +33,7 @@ async function generate<T extends z.ZodType>(
 ) {
   const { output } = await generateText({
     model,
-    output: Output.object({ schema }),
+    output: Output.object({ schema: strictSchema(schema) }),
     system,
     prompt,
     abortSignal: AbortSignal.timeout(90_000),

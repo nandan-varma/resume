@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   assemble,
   defaultPrefs,
@@ -6,6 +7,7 @@ import {
   hasContent,
   Resume,
   type Tailored,
+  Tailored as TailoredSchema,
   toFormSchema,
 } from "./resume";
 
@@ -93,5 +95,29 @@ describe("assemble", () => {
       ["P1", ["p1"]],
     ]);
     expect(result.skills.map((s) => s.group)).toEqual(["Tools", "Langs"]);
+  });
+});
+
+describe("AI JSON Schema", () => {
+  it("lists every property as required, as OpenAI strict mode demands", () => {
+    const check = (node: unknown): void => {
+      if (!node || typeof node !== "object") {
+        return;
+      }
+      const n = node as {
+        properties?: Record<string, unknown>;
+        required?: string[];
+        items?: unknown;
+      };
+      if (n.properties) {
+        expect(n.required?.slice().sort()).toEqual(
+          Object.keys(n.properties).sort(),
+        );
+        Object.values(n.properties).forEach(check);
+      }
+      check(n.items);
+    };
+    check(z.toJSONSchema(Resume, { io: "output", target: "draft-7" }));
+    check(z.toJSONSchema(TailoredSchema, { io: "output", target: "draft-7" }));
   });
 });
