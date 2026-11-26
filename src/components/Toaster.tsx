@@ -7,7 +7,10 @@ export const Toaster = () => (
       style: {
         background: "var(--popover)",
         color: "var(--popover-foreground)",
-        border: "1px solid var(--border)",
+        border: "none",
+        boxShadow: "var(--shadow-pop)",
+        borderRadius: "6px",
+        fontSize: "14px",
       },
     }}
   />

@@ -1,5 +1,5 @@
 import { actions } from "astro:actions";
-import { Check, Printer, Trash2 } from "lucide-react";
+import { Check, ExternalLink, Printer } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
@@ -12,7 +12,6 @@ export default function ResumeToolbar({
   applyUrl,
 }: Props) {
   const [applied, setApplied] = useState(initial);
-  const [confirming, setConfirming] = useState(false);
 
   const toggleApplied = async () => {
     const next = !applied;
@@ -24,22 +23,9 @@ export default function ResumeToolbar({
     }
   };
 
-  const remove = async () => {
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
-    const { error } = await actions.deleteApplication({ id });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    window.location.assign("/resumes");
-  };
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button onClick={() => window.print()}>
+    <div className="grid gap-2">
+      <Button size="lg" onClick={() => window.print()}>
         <Printer /> Download PDF
       </Button>
       {applyUrl && (
@@ -47,7 +33,7 @@ export default function ResumeToolbar({
           variant="outline"
           onClick={() => window.open(applyUrl, "_blank", "noopener")}
         >
-          Open application page
+          <ExternalLink /> Open application page
         </Button>
       )}
       <Button
@@ -56,14 +42,6 @@ export default function ResumeToolbar({
         aria-pressed={applied}
       >
         <Check /> {applied ? "Applied" : "Mark as applied"}
-      </Button>
-      <Button
-        variant="ghost"
-        className="ml-auto text-destructive"
-        onClick={remove}
-        onBlur={() => setConfirming(false)}
-      >
-        <Trash2 /> {confirming ? "Click again to delete" : "Delete"}
       </Button>
     </div>
   );

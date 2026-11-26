@@ -1,0 +1,16 @@
+---
+import type { LucideIcon } from "lucide-react";
+
+type Props = { Icon: LucideIcon; title: string; description?: string };
+const { Icon, title, description } = Astro.props;
+---
+<header class="mb-6 flex items-start gap-3 sm:gap-4">
+  <span class="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground shadow-xs sm:size-11" aria-hidden="true">
+    <Icon className="size-5" strokeWidth={1.75} />
+  </span>
+  <div class="min-w-0">
+    <h1 class="page-title">{title}</h1>
+    {description && <p class="mt-1 max-w-2xl text-[0.9375rem] text-muted-foreground">{description}</p>}
+    <slot />
+  </div>
+</header>

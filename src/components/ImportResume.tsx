@@ -32,11 +32,11 @@ export default function ImportResume() {
         hidden
         onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
       />
-      <Button size="lg" disabled={busy} onClick={() => input.current?.click()}>
+      <Button disabled={busy} onClick={() => input.current?.click()}>
         {busy ? <Spinner /> : <FileUp />}
         {busy ? "Reading your resume…" : "Upload a PDF resume"}
       </Button>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         We read it once to fill in the form. The file itself is not kept.
       </p>
     </div>

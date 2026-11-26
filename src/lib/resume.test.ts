@@ -57,7 +57,14 @@ describe("assemble", () => {
     ],
   });
   const base = {
-    match: { level: "good", reasons: [], gaps: [], blockers: [] },
+    match: {
+      level: "good",
+      roleType: "backend",
+      confidence: "50-60%",
+      reasons: [],
+      gaps: [],
+      blockers: [],
+    },
     summary: "",
     work: [],
     projects: [],
@@ -94,7 +101,7 @@ describe("assemble", () => {
       ["P3", ["new"]],
       ["P1", ["p1"]],
     ]);
-    expect(result.skills.map((s) => s.group)).toEqual(["Tools", "Langs"]);
+    expect(result.skills.map((s) => s.group)).toEqual(["Tools"]);
   });
 });
 

@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, jsonSchema, Output } from "ai";
+import { generateText, jsonSchema, type ModelMessage, Output } from "ai";
 import { z } from "zod";
+import { lineBreakdown, overflow, PAGE_LINES, trimToFit } from "./layout";
 import { importPrompt, type TailorInput, tailorPrompt } from "./prompts";
 import { assemble, Resume, Tailored } from "./resume";
 
@@ -29,13 +30,13 @@ const strictSchema = <T extends z.ZodType>(schema: T) =>
 async function generate<T extends z.ZodType>(
   schema: T,
   system: string,
-  prompt: string,
+  messages: ModelMessage[],
 ) {
   const { output } = await generateText({
     model,
     output: Output.object({ schema: strictSchema(schema) }),
     system,
-    prompt,
+    messages,
     abortSignal: AbortSignal.timeout(90_000),
   });
   return output as z.infer<T>;
@@ -43,15 +44,46 @@ async function generate<T extends z.ZodType>(
 
 export function resumeFromText(text: string) {
   const { system, prompt } = importPrompt(text);
-  return generate(Resume, system, prompt);
+  return generate(Resume, system, [{ role: "user", content: prompt }]);
 }
 
+const MAX_ROUNDS = 3;
+
+const overflowFeedback = (resume: Resume, lines: number) => {
+  const breakdown = Object.entries(lineBreakdown(resume))
+    .map(([name, n]) => `${name} ${Math.round(n)}`)
+    .join(", ");
+  return [
+    `That draft runs about ${lines} lines past one page. The limit is ${PAGE_LINES} lines of body text.`,
+    `Estimated lines per section: ${breakdown}.`,
+    "Return the complete JSON again, shorter. Make bullets one line where you can, drop the weakest bullets and the fourth project, and keep only the most relevant skill groups.",
+    "Keep the strongest verified numbers. Do not change the match, the confidence or the cover letter.",
+  ].join("\n");
+};
+
+/**
+ * Tailors a resume and guarantees it fits one page. If a draft runs long, it is
+ * sent back to the model with the exact overflow; if the model still cannot
+ * fit it, deterministic trimming removes the weakest content.
+ */
 export async function tailorResume(input: TailorInput) {
   const { system, prompt } = tailorPrompt(input);
-  const out = await generate(Tailored, system, prompt);
+  const messages: ModelMessage[] = [{ role: "user", content: prompt }];
+
+  let out = await generate(Tailored, system, messages);
+  let resume = assemble(input.resume, out);
+  for (let round = 1; round < MAX_ROUNDS && overflow(resume) > 0; round++) {
+    messages.push(
+      { role: "assistant", content: JSON.stringify(out) },
+      { role: "user", content: overflowFeedback(resume, overflow(resume)) },
+    );
+    out = await generate(Tailored, system, messages);
+    resume = assemble(input.resume, out);
+  }
+
   return {
     match: out.match,
-    resume: assemble(input.resume, out),
+    resume: trimToFit(resume),
     coverLetter: out.coverLetter,
   };
 }

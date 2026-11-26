@@ -21,14 +21,14 @@ export default function AppliedToggle({
   };
 
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex w-fit items-center gap-2 text-muted-foreground">
       <input
         type="checkbox"
         className="size-4 accent-primary"
         checked={applied}
         onChange={(e) => change(e.target.checked)}
       />
-      Applied
+      <span className="md:sr-only">Applied</span>
     </label>
   );
 }

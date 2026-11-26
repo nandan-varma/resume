@@ -1,0 +1,7 @@
+---
+type Props = { label: string };
+---
+<div class="grid min-h-8 grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-2 text-sm">
+  <dt class="text-muted-foreground">{Astro.props.label}</dt>
+  <dd class="min-w-0"><slot /></dd>
+</div>

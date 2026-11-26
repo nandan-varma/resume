@@ -111,8 +111,8 @@ export const server = {
           company: job.company,
           description: job.description,
         },
-        resume: profile.resume,
-        prefs: profile.prefs,
+        resume: Resume.parse(profile.resume),
+        prefs: Prefs.parse(profile.prefs),
         shorter,
       });
       const { match, resume, coverLetter } = tailored;

@@ -1,0 +1,22 @@
+---
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/cn";
+
+type Props = {
+  Icon?: LucideIcon;
+  tone?: "gray" | "yellow" | "blue" | "green" | "red";
+  class?: string;
+};
+const { Icon, tone = "gray", class: className } = Astro.props;
+const style = {
+  gray: ["bg-callout", "text-muted-foreground"],
+  yellow: ["bg-[var(--callout-yellow)]", "text-[var(--tag-yellow-fg)]"],
+  blue: ["bg-[var(--callout-blue)]", "text-[var(--tag-blue-fg)]"],
+  green: ["bg-[var(--callout-green)]", "text-[var(--tag-green-fg)]"],
+  red: ["bg-[var(--callout-red)]", "text-[var(--tag-red-fg)]"],
+}[tone];
+---
+<div class={cn("flex gap-2.5 rounded-lg p-3 text-sm leading-relaxed", style[0], className)}>
+  {Icon && <Icon className={cn("mt-0.5 size-4 shrink-0", style[1])} strokeWidth={2} aria-hidden="true" />}
+  <div class="min-w-0 flex-1"><slot /></div>
+</div>

@@ -1,12 +1,14 @@
 ---
 import { and, eq } from "drizzle-orm";
-import { ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, FileX, Hand } from "lucide-react";
 import TailorButton from "@/components/TailorButton";
-import Badge from "@/components/ui/Badge.astro";
-import Card from "@/components/ui/Card.astro";
-import { buttonVariants } from "@/components/ui/variants";
+import Callout from "@/components/ui/Callout.astro";
+import Property from "@/components/ui/Property.astro";
+import Tag from "@/components/ui/Tag.astro";
+import { buttonVariants, type TagColor } from "@/components/ui/variants";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
+import { cn } from "@/lib/cn";
 import { hasContent } from "@/lib/resume";
 import { getJob } from "@/lib/tallo";
 
@@ -34,53 +36,61 @@ const existing =
     : undefined;
 const ready = profile ? hasContent(profile.resume) : false;
 const here = encodeURIComponent(Astro.url.pathname);
+const modeColor: Record<string, TagColor> = {
+  remote: "green",
+  hybrid: "blue",
+  onsite: "gray",
+};
 ---
 <Layout title={job?.title ?? "Job not found"}>
   {!job ? (
-    <Card class="mx-auto max-w-xl text-center">
-      <h1 class="text-xl font-semibold">This job is no longer listed</h1>
-      <p class="mt-1 mb-4 text-sm text-muted-foreground">It may have been filled or taken down.</p>
+    <div class="max-w-xl">
+      <span class="mb-3 flex size-10 items-center justify-center rounded-lg border text-muted-foreground"><FileX className="size-5" strokeWidth={1.75} /></span>
+      <h1 class="page-title">This job is no longer listed</h1>
+      <p class="mt-1 mb-5 text-muted-foreground">It may have been filled or taken down.</p>
       <a href="/" class={buttonVariants()}>Back to search</a>
-    </Card>
+    </div>
   ) : (
-    <div class="grid gap-8 lg:grid-cols-[1fr_20rem]">
-      <article>
-        <a href="/" class="text-sm text-muted-foreground hover:text-foreground">← Back to search</a>
-        <h1 class="mt-2 text-balance text-3xl font-semibold tracking-tight">{job.title}</h1>
-        <p class="mt-1 text-lg text-muted-foreground">{job.company}</p>
-        <p class="mt-4 flex flex-wrap gap-2">
-          {job.location && <Badge variant="outline">{job.location}</Badge>}
-          {job.workMode && <Badge variant="success" class="capitalize">{job.workMode}</Badge>}
-          {job.pay && <Badge variant="outline">{job.pay}</Badge>}
-          {job.employmentType && <Badge variant="outline">{job.employmentType}</Badge>}
-          {job.postedAt && <Badge variant="outline">Posted {job.postedAt}</Badge>}
-        </p>
-        <h2 class="mt-8 mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">About the job</h2>
-        <div class="whitespace-pre-wrap text-sm leading-relaxed">{job.description}</div>
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <article class="min-w-0">
+        <a href="/" class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" /> Find jobs</a>
+        <h1 class="page-title mt-3">{job.title}</h1>
+        <p class="mt-1 text-base text-muted-foreground">{job.company}</p>
+        <h2 class="block-heading mt-6">About the job</h2>
+        <div class="max-w-3xl text-[0.9375rem] leading-7 whitespace-pre-wrap">{job.description}</div>
       </article>
 
-      <aside class="lg:sticky lg:top-24 lg:self-start">
-        <Card class="grid gap-3">
-          <h2 class="font-semibold">Apply with a resume made for this job</h2>
+      <aside class="lg:sticky lg:top-8 lg:self-start">
+        <div class="grid gap-4 rounded-lg border p-4">
           {!user ? (
-            <a href={`/login?next=${here}`} class={buttonVariants({ size: "lg" })}>Sign in to start</a>
+            <a href={`/login?next=${here}`} class={cn(buttonVariants({ size: "lg" }), "w-full")}>Sign in to make a resume</a>
           ) : !ready ? (
             <>
-              <p class="text-sm text-muted-foreground">First, tell us about yourself. It takes a minute.</p>
-              <a href="/profile" class={buttonVariants({ size: "lg" })}>Add my details</a>
+              <Callout Icon={Hand} tone="yellow">First, tell us about yourself. It takes a minute.</Callout>
+              <a href="/profile" class={cn(buttonVariants({ size: "lg" }), "w-full")}>Add my details</a>
             </>
           ) : existing ? (
             <>
-              <a href={`/resumes/${existing.id}`} class={buttonVariants({ size: "lg" })}>Open my resume</a>
+              <a href={`/resumes/${existing.id}`} class={cn(buttonVariants({ size: "lg" }), "w-full")}>Open my resume</a>
               <TailorButton client:load talloId={job.id} variant="outline" label="Make a fresh version" />
             </>
           ) : (
             <TailorButton client:load talloId={job.id} />
           )}
-          <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" class={buttonVariants({ variant: "outline" })}>
-            Apply on company site <ExternalLink className="size-4" />
-          </a>
-        </Card>
+          {job.applyUrl && (
+            <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" class={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+              Apply on company site <ExternalLink className="size-4" />
+            </a>
+          )}
+          <dl class="grid gap-1 border-t pt-3">
+            {job.location && <Property label="Location">{job.location}</Property>}
+            {job.workMode && <Property label="Work mode"><Tag color={modeColor[job.workMode] ?? "gray"} class="capitalize">{job.workMode}</Tag></Property>}
+            {job.pay && <Property label="Pay">{job.pay}</Property>}
+            {job.employmentType && <Property label="Type">{job.employmentType}</Property>}
+            {job.department && <Property label="Team">{job.department}</Property>}
+            {job.postedAt && <Property label="Posted">{job.postedAt}</Property>}
+          </dl>
+        </div>
       </aside>
     </div>
   )}

@@ -34,6 +34,11 @@ export const Resume = z.object({
       summary: "",
     })
     .meta({ title: "About you" }),
+  summaries: list("Summary variants").meta({
+    title: "Summary variants",
+    description:
+      "Write a few versions for different kinds of jobs. We pick the closest one and adjust a word or two.",
+  }),
   work: z
     .array(
       z.object({
@@ -65,6 +70,9 @@ export const Resume = z.object({
         url: text("Link"),
         year: text("Year"),
         stack: text("Tools used"),
+        tier: text("Priority (T1 best, T2, T3)"),
+        status: text("Status (Complete, WIP)"),
+        roleFit: text("Best for (e.g. Systems, AI/ML, Backend)"),
         highlights: list("What you achieved"),
       }),
     )
@@ -79,6 +87,22 @@ export const Resume = z.object({
     )
     .default([])
     .meta({ title: "Skills" }),
+  leadership: z
+    .array(
+      z.object({
+        role: text("Role"),
+        org: text("Organization"),
+        dates: text("Dates"),
+        details: text("What you did"),
+      }),
+    )
+    .default([])
+    .meta({ title: "Leadership and activities" }),
+  notes: text("Private notes").meta({
+    title: "Private notes",
+    description:
+      "Only the writer sees this, it is never printed. Work authorization, deal-breakers, anything it should know.",
+  }),
 });
 export type Resume = z.infer<typeof Resume>;
 
@@ -96,6 +120,16 @@ export type Prefs = z.infer<typeof Prefs>;
 
 export const Match = z.object({
   level: z.enum(["strong", "good", "stretch"]),
+  roleType: z
+    .string()
+    .describe(
+      "The kind of role, such as backend, AI/ML, systems, fullstack, native, mobile or devtools.",
+    ),
+  confidence: z
+    .string()
+    .describe(
+      'Honest chance this resume gets a callback, as a range like "55-70%".',
+    ),
   reasons: z
     .array(z.string())
     .describe(
@@ -134,11 +168,15 @@ export const Tailored = z.object({
     ),
   projects: z
     .array(Rewrite)
-    .max(3)
-    .describe("The best three projects for this posting, most relevant first."),
+    .max(4)
+    .describe(
+      "The best three or four projects for this posting, most relevant first.",
+    ),
   skillGroups: z
     .array(z.number().int())
-    .describe("Indexes of skill groups, most relevant first."),
+    .describe(
+      "Indexes of the skill groups worth showing, most relevant first. Leave out irrelevant groups.",
+    ),
   coverLetter: z.string(),
 });
 export type Tailored = z.infer<typeof Tailored>;
@@ -186,10 +224,9 @@ export const assemble = (source: Resume, out: Tailored): Resume => {
     out.projects.map((p) => ({ ...p, index: chosen.indexOf(p.index) })),
   );
   const skillOrder = pick(source.skills, out.skillGroups);
-  const skills = [
-    ...skillOrder,
-    ...source.skills.map((_, i) => i).filter((i) => !skillOrder.includes(i)),
-  ].map((i) => source.skills[i]);
+  const skills = (
+    skillOrder.length > 0 ? skillOrder : source.skills.map((_, i) => i)
+  ).map((i) => source.skills[i]);
 
   return {
     ...source,

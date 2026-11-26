@@ -1,6 +1,5 @@
 ---
 import AuthPanel from "@/components/AuthPanel";
-import Card from "@/components/ui/Card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { enabledProviders } from "@/lib/auth";
 
@@ -13,12 +12,13 @@ if (Astro.locals.user) {
   return Astro.redirect(next);
 }
 ---
-<Layout title="Sign in" width="narrow">
-  <Card class="mt-8">
-    <h1 class="text-2xl font-semibold tracking-tight">Welcome</h1>
-    <p class="mt-1 mb-6 text-sm text-muted-foreground">
-      Sign in to save your details and make resumes. No password to remember.
+<Layout title="Sign in" width="text">
+  <div class="mx-auto mt-6 max-w-sm sm:mt-16">
+    <img src="/brand/icon.svg" alt="" class="mb-6 size-12 rounded-lg" />
+    <h1 class="text-3xl font-bold tracking-tight">Welcome to JobMatch</h1>
+    <p class="mt-2 mb-8 text-base text-muted-foreground">
+      Sign in to save your details and make resumes. There is no password to remember.
     </p>
     <AuthPanel client:load next={next} {...enabledProviders} />
-  </Card>
+  </div>
 </Layout>

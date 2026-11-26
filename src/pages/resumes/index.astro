@@ -1,44 +1,53 @@
 ---
 import { desc, eq } from "drizzle-orm";
+import { Files, FileText, Sparkles } from "lucide-react";
 import AppliedToggle from "@/components/AppliedToggle";
-import Badge from "@/components/ui/Badge.astro";
-import Card from "@/components/ui/Card.astro";
-import { buttonVariants } from "@/components/ui/variants";
+import Callout from "@/components/ui/Callout.astro";
+import PageHeader from "@/components/ui/PageHeader.astro";
+import Tag from "@/components/ui/Tag.astro";
+import { buttonVariants, type TagColor } from "@/components/ui/variants";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
+import { cn } from "@/lib/cn";
 
 const rows = await db.query.application.findMany({
   where: eq(schema.application.userId, Astro.locals.user?.id ?? ""),
   orderBy: desc(schema.application.createdAt),
 });
-const level = {
-  strong: "success",
-  good: "secondary",
-  stretch: "warning",
-} as const;
+const level: Record<string, { color: TagColor; label: string }> = {
+  strong: { color: "green", label: "Strong" },
+  good: { color: "blue", label: "Good" },
+  stretch: { color: "yellow", label: "Stretch" },
+};
+const columns = "md:grid-cols-[minmax(0,2fr)_8rem_6rem_9rem_6rem]";
 ---
-<Layout title="My resumes" width="narrow">
-  <h1 class="text-3xl font-semibold tracking-tight">My resumes</h1>
+<Layout title="My resumes">
+  <PageHeader Icon={Files} title="My resumes" description="One tailored resume and cover letter for every job you picked." />
+
   {rows.length === 0 ? (
-    <Card class="mt-8 text-center">
-      <h2 class="font-semibold">Nothing here yet</h2>
-      <p class="mt-1 mb-4 text-sm text-muted-foreground">Find a job and we will write a resume for it.</p>
-      <a href="/" class={buttonVariants()}>Find jobs</a>
-    </Card>
+    <Callout Icon={Sparkles}>
+      <strong>Nothing here yet.</strong> Find a job and we will write a resume for it.
+      <a href="/" class={cn(buttonVariants({ size: "sm" }), "mt-3 flex w-fit")}>Find jobs</a>
+    </Callout>
   ) : (
-    <ul class="mt-6 grid gap-3">
-      {rows.map((row) => (
-        <Card as="li" class="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div class="min-w-0">
-            <a href={`/resumes/${row.id}`} class="font-semibold hover:underline">{row.role}</a>
-            <p class="text-sm text-muted-foreground">{row.company} · {row.createdAt.toLocaleDateString("en-US", { dateStyle: "medium" })}</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <Badge variant={level[row.match.level]} class="capitalize">{row.match.level} match</Badge>
+    <>
+      <div class={cn("hidden gap-4 border-b px-2 pb-2 text-xs text-muted-foreground md:grid", columns)} aria-hidden="true">
+        <span>Job</span><span>Match</span><span>Confidence</span><span>Created</span><span>Applied</span>
+      </div>
+      <ul>
+        {rows.map((row) => (
+          <li class={cn("row-hover grid items-center gap-x-4 gap-y-1 border-b px-2 py-3 last:border-0", columns)}>
+            <a href={`/resumes/${row.id}`} class="min-w-0 outline-none">
+              <span class="flex min-w-0 items-center gap-2 font-medium"><FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} /><span class="truncate">{row.role}</span></span>
+              <span class="block truncate pl-6 text-muted-foreground">{row.company}</span>
+            </a>
+            <span><Tag color={level[row.match.level]?.color ?? "gray"}>{level[row.match.level]?.label}</Tag></span>
+            <span class="text-muted-foreground">{row.match.confidence ?? ""}</span>
+            <span class="text-muted-foreground">{row.createdAt.toLocaleDateString("en-US", { dateStyle: "medium" })}</span>
             <AppliedToggle client:load id={row.id} applied={row.applied} />
-          </div>
-        </Card>
-      ))}
-    </ul>
+          </li>
+        ))}
+      </ul>
+    </>
   )}
 </Layout>

@@ -11,16 +11,15 @@ const TONES: Record<Prefs["tone"], string> = {
 };
 
 export const importPrompt = (document: string) => ({
-  system: `You extract a resume into structured data. Copy facts exactly; never invent anything. Leave a field empty when the document does not say. ${UNTRUSTED}`,
+  system: [
+    "You turn a resume into structured data.",
+    "Copy facts exactly as written. Never invent, infer or improve anything. Leave a field empty when the document does not say.",
+    "Dates: keep the document's wording (for example 'Jul 2025'). Bullets: one achievement per bullet, text unchanged.",
+    "Skills: keep the document's groups; put each group's items in one comma-separated string.",
+    "Anything about clubs, teams led or volunteering goes under leadership.",
+    UNTRUSTED,
+  ].join("\n"),
   prompt: `<document>\n${document}\n</document>`,
-});
-
-/** Number every list item so the model can refer to it. */
-const indexed = (r: Resume) => ({
-  summary: r.basics.summary,
-  work: r.work.map((item, index) => ({ index, ...item })),
-  projects: r.projects.map((item, index) => ({ index, ...item })),
-  skills: r.skills.map((item, index) => ({ index, ...item })),
 });
 
 export type TailorInput = {
@@ -30,29 +29,57 @@ export type TailorInput = {
   shorter: boolean;
 };
 
-const WRITING_RULES = `
-Rules for the resume:
-- You choose items by their index and reword their bullets. You never write names, dates, companies or schools.
-- NEVER fabricate. Every claim, number and tool must come from the profile.
-- Fit on ONE page: exactly the 3 best projects, 2 to 3 bullets per job or project, no filler.
-- Return every job from the profile, most relevant first. Prefer recent, complete projects.
-- Write each bullet as: what was achieved, how it was measured, how it was done. Use a real number only if the profile has one.
-- Short sentences, plain words, active voice, start with a strong verb.
-- Mirror the posting's exact spelling for required skills the person truly has. Weave them into bullets.
-- Use a single hyphen, never an em dash.
-- Write a summary of three lines at most, shaped to the role.
-- skillGroups lists skill group indexes, the most relevant first.
-- Avoid: dive into, game-changing, leverage, synergize, straightforward, genuinely, honestly, various.
+/** Number every list item so the model can refer to it. */
+const indexed = (r: Resume) => ({
+  privateNotes: r.notes,
+  summaryVariants:
+    r.summaries.length > 0 ? r.summaries : [r.basics.summary].filter(Boolean),
+  work: r.work.map((item, index) => ({ index, ...item })),
+  projects: r.projects.map((item, index) => ({ index, ...item })),
+  skills: r.skills.map((item, index) => ({ index, ...item })),
+  education: r.education,
+  leadership: r.leadership,
+});
 
-Rules for the match:
-- level: strong (most requirements met), good (some gaps), stretch (major gaps).
-- blockers are only hard requirements the profile cannot meet (citizenship, clearance, mandatory licence). Skill gaps are not blockers.
+const METHOD = `
+How to work, in order:
+1. Read the posting. Decide the role type (backend, AI/ML, systems, fullstack, native, mobile, devtools, security), the seniority, the required skills and the nice-to-haves. Note the posting's exact keyword spellings.
+2. Check fit against the profile and its privateNotes. A hard blocker is a requirement the person cannot meet and cannot learn: citizenship, security clearance, export-control status, a mandatory licence, a degree they lack. A skill gap is never a blocker. Never mention visa or sponsorship details in the resume or cover letter.
+3. Choose what goes on the page (described below), then write.`;
 
-Rules for the cover letter:
-- About 250 words, three paragraphs, first person, warm full sentences.
-- Paragraph 1: a specific reason for this company drawn only from the posting. Paragraph 2: one or two accomplishments from the profile. Paragraph 3: a short, confident close.
-- Address "Hiring Team". Never invent company facts.
-- Never mention gaps, missing skills or weaknesses in the cover letter; stress real strengths instead.`;
+const RESUME_RULES = `
+Resume rules:
+- You choose items by index and reword their bullets. You never write names, dates, companies, schools or links.
+- NEVER fabricate. Every claim, number and tool must come from the profile. If the profile has no number, do not add one; use a concrete scope marker instead (for example "across 3 services").
+- Projects: pick the best three. Add a fourth only if it shows a distinct, relevant skill the other three do not.
+  - Rank by how well roleFit matches the role type, then by priority (T1 before T2 before T3), then by recency (2025 and 2026 first).
+  - Prefer a project whose structure matches the work in the posting over one that only shares a theme.
+  - Prefer Complete over WIP; use a WIP project only when nothing complete covers that depth.
+- Page budget (one US Letter page at 10pt): summary at most 3 lines; each bullet at most 2 lines; exactly 3 projects with 2 bullets each (a fourth only if there is clearly spare room); at most 5 skill groups; the education and leadership sections are fixed and take about 8 lines. Count lines and stay inside the page.
+- Work experience: return every job, most relevant first. Keep all of a job's strong bullets, reordered so the one closest to the posting leads.
+- Bullets: start with a strong verb; show what was achieved, how it was measured, and how it was done. Two bullets per project by default; add a third only for distinct technical depth or a measured result. Keep the strongest verified numbers.
+- Short sentences, common words, active voice. No "various".
+- Use a single hyphen. Never an em dash or en dash in sentences.
+- Mirror the posting's exact spelling for every required skill the person truly has. Weave keywords into bullets instead of listing them.
+- ATS-safe: plain sentences, no symbols as decoration, no tables.
+- Avoid these words: dive into, game-changing, leverage, synergize, straightforward, genuinely, honestly, various.
+- Summary: start from the closest summaryVariant and change one or two words to mirror the posting. Three lines at most.
+- skillGroups: list only the groups worth showing, most relevant first. Systems or compiler roles lead with languages. AI roles lead with AI/ML. Backend or infra roles lead with distributed systems or cloud. Fullstack roles lead with frameworks. Include Mobile, Native or Security groups only when the posting asks for them.`;
+
+const MATCH_RULES = `
+Match rules:
+- level: strong (most requirements met), good (some gaps), stretch (major gaps or a seniority mismatch).
+- reasons: two or three honest, specific strengths. gaps: specific, actionable. blockers: hard requirements only.
+- confidence: an honest range for getting a callback, such as "55-70%". Lower it for blockers and large seniority gaps.`;
+
+const LETTER_RULES = `
+Cover letter rules:
+- About 250 words in three paragraphs, first person, full sentences, warmer than the resume. Not LinkedIn voice.
+- Paragraph 1: the role, plus one specific reason for this company drawn only from the posting. Never a generic "I am excited to apply".
+- Paragraph 2: one or two accomplishments from the profile that map to the posting's core responsibility, shown as what was achieved, how it was measured and how it was done, written as prose.
+- Paragraph 3: short and confident. One line on why this team, then a plain call to action. Do not restate the resume.
+- Start with "Dear Hiring Team,". End with "Best regards," then the person's name.
+- Never invent facts about the company. Never mention gaps, missing skills or weaknesses; stress real strengths.`;
 
 export const tailorPrompt = ({
   posting,
@@ -61,18 +88,21 @@ export const tailorPrompt = ({
   shorter,
 }: TailorInput) => ({
   system: [
-    "You tailor a person's resume to one job posting and judge how well they fit.",
+    "You are an expert resume writer. You tailor one person's resume to one job posting, judge how well they fit, and write a cover letter.",
     UNTRUSTED,
     `Tone: ${TONES[prefs.tone]}`,
-    WRITING_RULES,
+    METHOD,
+    RESUME_RULES,
+    MATCH_RULES,
+    LETTER_RULES,
     shorter
-      ? "The previous version ran past one page. Cut the weakest content by about 20 percent."
+      ? "The previous version ran past one page. Cut the weakest content by about 20 percent: drop the fourth project, then trim the weakest bullets. Keep the strongest verified numbers."
       : "",
     prefs.rules.trim()
       ? `The person's own rules (follow them unless they require lying):\n${prefs.rules}`
       : "",
   ]
     .filter(Boolean)
-    .join("\n\n"),
+    .join("\n"),
   prompt: `<profile>\n${JSON.stringify(indexed(resume))}\n</profile>\n\n<posting>\nTitle: ${posting.title}\nCompany: ${posting.company}\n\n${posting.description}\n</posting>`,
 });

@@ -1,15 +1,12 @@
 ---
 import "@/styles/global.css";
+import { FileText, PanelLeft, Search, UserRound } from "lucide-react";
 import SignOutButton from "@/components/SignOutButton";
 import { Toaster } from "@/components/Toaster";
 import { buttonVariants } from "@/components/ui/variants";
 import { cn } from "@/lib/cn";
 
-type Props = {
-  title?: string;
-  description?: string;
-  width?: "narrow" | "wide";
-};
+type Props = { title?: string; description?: string; width?: "wide" | "text" };
 const {
   title,
   description = "Find a job, then get a resume and cover letter written for it.",
@@ -17,12 +14,12 @@ const {
 } = Astro.props;
 
 const { user } = Astro.locals;
-const links = [
-  { href: "/", label: "Find jobs" },
-  { href: "/resumes", label: "My resumes" },
-  { href: "/profile", label: "My details" },
-];
 const path = Astro.url.pathname;
+const links = [
+  { href: "/", label: "Find jobs", Icon: Search },
+  { href: "/resumes", label: "My resumes", Icon: FileText },
+  { href: "/profile", label: "My details", Icon: UserRound },
+];
 const isActive = (href: string) =>
   href === "/"
     ? path === "/" || path.startsWith("/jobs")
@@ -32,45 +29,112 @@ const isActive = (href: string) =>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#191919" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/brand/icon.svg" />
     <title>{title ? `${title} · JobMatch` : "JobMatch"}</title>
   </head>
-  <body class="flex min-h-dvh flex-col">
-    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground">Skip to content</a>
-    <header class="sticky top-0 z-40 border-b bg-background/80 backdrop-blur print:hidden">
-      <div class="mx-auto flex h-16 max-w-5xl items-center gap-2 px-4 sm:gap-4">
-        <a href="/" class="flex items-center gap-2 font-semibold">
-          <img src="/brand/icon.svg" alt="" class="size-7" />
-          <span class="hidden sm:inline">JobMatch</span>
+  <body class="min-h-dvh">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground">Skip to content</a>
+
+    <!-- Top bar -->
+    <header class="sticky top-0 z-30 border-b bg-background/90 backdrop-blur print:hidden">
+      <div class="flex h-11 items-center gap-1 px-2 sm:px-3">
+        <button
+          id="sidebar-toggle"
+          type="button"
+          aria-controls="sidebar"
+          aria-expanded="false"
+          aria-label="Open menu"
+          class="row-hover hidden size-8 items-center justify-center rounded-md text-muted-foreground md:inline-flex"
+        ><PanelLeft className="size-4" /></button>
+        <a href="/" class="row-hover flex h-8 items-center gap-2 rounded-md px-2 font-semibold">
+          <img src="/brand/icon.svg" alt="" class="size-5 rounded-[4px]" />JobMatch
         </a>
-        <nav aria-label="Main" class="flex gap-1 text-sm">
-          {links.map((l) => (
-            <a
-              href={l.href}
-              aria-current={isActive(l.href) ? "page" : undefined}
-              class={cn(
-                "rounded-md px-2.5 py-2 text-muted-foreground transition-colors hover:text-foreground sm:px-3",
-                isActive(l.href) && "bg-accent font-medium text-foreground",
-              )}
-            >{l.label}</a>
-          ))}
-        </nav>
-        <div class="ml-auto">
-          {user ? <SignOutButton client:load /> : (
+        <div class="ml-auto flex items-center gap-1">
+          {user ? (
+            <>
+              <span class="hidden max-w-48 truncate text-xs text-muted-foreground sm:inline">{user.name || user.email}</span>
+              <SignOutButton client:load />
+            </>
+          ) : (
             <a href={`/login?next=${encodeURIComponent(path)}`} class={buttonVariants({ size: "sm" })}>Sign in</a>
           )}
         </div>
       </div>
+      <nav aria-label="Main" class="flex gap-1 overflow-x-auto px-2 pb-2 md:hidden">
+        {links.map(({ href, label, Icon }) => (
+          <a
+            href={href}
+            aria-current={isActive(href) ? "page" : undefined}
+            class={cn(
+              "flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-muted-foreground",
+              isActive(href) && "bg-accent font-medium text-foreground",
+            )}
+          ><Icon className="size-4" />{label}</a>
+        ))}
+      </nav>
     </header>
-    <main id="main" class={cn("mx-auto w-full flex-1 px-4 py-8 print:max-w-none print:p-0", width === "narrow" ? "max-w-xl" : "max-w-5xl")}>
+
+    <!-- Sidebar drawer: hidden until opened -->
+    <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-black/30 data-[open=true]:block print:hidden" data-open="false"></div>
+    <aside
+      id="sidebar"
+      inert
+      data-open="false"
+      class="fixed inset-y-0 left-0 z-50 hidden w-60 -translate-x-full flex-col border-r bg-sidebar p-2 shadow-[var(--shadow-pop)] transition-transform duration-200 data-[open=true]:translate-x-0 md:flex print:hidden"
+    >
+      <a href="/" class="row-hover mb-2 flex h-9 items-center gap-2 rounded-md px-2 font-semibold">
+        <img src="/brand/icon.svg" alt="" class="size-5 rounded-[4px]" />JobMatch
+      </a>
+      <nav aria-label="Sidebar" class="grid gap-0.5">
+        {links.map(({ href, label, Icon }) => (
+          <a
+            href={href}
+            aria-current={isActive(href) ? "page" : undefined}
+            class={cn(
+              "row-hover flex h-8 items-center gap-2 rounded-md px-2 text-muted-foreground",
+              isActive(href) && "bg-accent font-medium text-foreground",
+            )}
+          ><Icon className="size-4" />{label}</a>
+        ))}
+      </nav>
+    </aside>
+
+    <main
+      id="main"
+      class={cn(
+        "mx-auto w-full px-4 pt-6 pb-24 sm:px-8 lg:px-12 md:pt-8 print:max-w-none print:p-0",
+        width === "wide" ? "max-w-[96rem]" : "max-w-4xl",
+      )}
+    >
       <slot />
     </main>
-    <footer class="border-t py-6 text-center text-xs text-muted-foreground print:hidden">
-      Jobs from <a class="underline underline-offset-2" href="https://tallo.nandan.fyi">Tallo</a>.
-      Always read a resume before you send it.
-    </footer>
     <Toaster client:load />
+    <script>
+      const toggle = document.getElementById("sidebar-toggle");
+      const sidebar = document.getElementById("sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+
+      if (toggle && sidebar && backdrop) {
+        const set = (open: boolean) => {
+          sidebar.dataset.open = String(open);
+          backdrop.dataset.open = String(open);
+          toggle.setAttribute("aria-expanded", String(open));
+          toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+          sidebar.toggleAttribute("inert", !open);
+          if (open) {
+            sidebar.querySelector("a")?.focus();
+          } else {
+            toggle.focus();
+          }
+        };
+        toggle.addEventListener("click", () => set(sidebar.dataset.open !== "true"));
+        backdrop.addEventListener("click", () => set(false));
+        addEventListener("keydown", (e) => e.key === "Escape" && sidebar.dataset.open === "true" && set(false));
+      }
+    </script>
   </body>
 </html>

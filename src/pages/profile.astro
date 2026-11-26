@@ -1,8 +1,10 @@
 ---
 import { eq } from "drizzle-orm";
+import { FileUp, IdCard } from "lucide-react";
 import ImportResume from "@/components/ImportResume";
 import SchemaForm from "@/components/SchemaForm";
-import Card from "@/components/ui/Card.astro";
+import Callout from "@/components/ui/Callout.astro";
+import PageHeader from "@/components/ui/PageHeader.astro";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
 import {
@@ -17,35 +19,33 @@ import {
 const profile = await db.query.profile.findFirst({
   where: eq(schema.profile.userId, Astro.locals.user?.id ?? ""),
 });
-const resume = profile?.resume ?? emptyResume();
-const prefs = profile?.prefs ?? defaultPrefs();
+const resume = Resume.parse(profile?.resume ?? emptyResume());
+const prefs = Prefs.parse(profile?.prefs ?? defaultPrefs());
 
+const area = { "ui:widget": "textarea" };
 const resumeUi = {
-  basics: { summary: { "ui:widget": "textarea" } },
-  work: { items: { highlights: { items: { "ui:widget": "textarea" } } } },
-  projects: { items: { highlights: { items: { "ui:widget": "textarea" } } } },
+  basics: { summary: area },
+  summaries: { items: area },
+  work: { items: { highlights: { items: area } } },
+  projects: { items: { highlights: { items: area } } },
+  education: { items: { details: area } },
+  leadership: { items: { details: area } },
+  notes: area,
 };
-const prefsUi = { rules: { "ui:widget": "textarea" } };
+const prefsUi = { rules: area };
 ---
-<Layout title="My details" width="narrow">
-  <h1 class="text-3xl font-semibold tracking-tight">My details</h1>
-  <p class="mt-1 text-muted-foreground">
-    Everything we write comes from here. We never make facts up, so the more you add, the better your resumes.
-  </p>
+<Layout title="My details" width="text">
+  <PageHeader Icon={IdCard} title="My details" description="Everything we write comes from here. We never make facts up, so the more you add, the better your resumes." />
 
-  <Card class="mt-8">
-    <h2 class="mb-1 font-semibold">{hasContent(resume) ? "Start over with a new resume" : "Quick start"}</h2>
-    <p class="mb-4 text-sm text-muted-foreground">Upload an existing resume and we will fill in the form for you.</p>
+  <Callout Icon={FileUp} class="mb-6">
+    <p class="font-medium">{hasContent(resume) ? "Start over from a new resume" : "Quick start"}</p>
+    <p class="mt-1 mb-3 text-muted-foreground">Upload an existing resume and we will fill in the form for you.</p>
     <ImportResume client:load />
-  </Card>
+  </Callout>
 
-  <Card class="mt-6">
-    <h2 class="mb-4 font-semibold">Your information</h2>
-    <SchemaForm client:load schema={toFormSchema(Resume)} uiSchema={resumeUi} data={resume} action="saveResume" field="resume" submitLabel="Save my details" />
-  </Card>
+  <h2 class="block-heading mt-2">Your information</h2>
+  <SchemaForm client:load schema={toFormSchema(Resume)} uiSchema={resumeUi} data={resume} action="saveResume" field="resume" submitLabel="Save my details" />
 
-  <Card class="mt-6">
-    <h2 class="mb-4 font-semibold">How we write</h2>
-    <SchemaForm client:load schema={toFormSchema(Prefs)} uiSchema={prefsUi} data={prefs} action="savePrefs" field="prefs" submitLabel="Save preferences" />
-  </Card>
+  <h2 class="block-heading">How we write</h2>
+  <SchemaForm client:load schema={toFormSchema(Prefs)} uiSchema={prefsUi} data={prefs} action="savePrefs" field="prefs" submitLabel="Save preferences" />
 </Layout>

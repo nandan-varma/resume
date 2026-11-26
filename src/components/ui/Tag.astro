@@ -1,0 +1,8 @@
+---
+import { cn } from "@/lib/cn";
+import type { TagColor } from "./variants";
+
+type Props = { color?: TagColor; class?: string };
+const { color = "gray", class: className } = Astro.props;
+---
+<span class={cn("tag", `tag-${color}`, className)}><slot /></span>
