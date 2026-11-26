@@ -19,19 +19,18 @@ const tallo = createClient<paths>({
 
 export type SearchParams = {
   title: string[];
+  company: string[];
+  /** Place words; "remote" is treated by Tallo as a work-mode filter. */
   location: string[];
+  country: string[];
   postedWithin?: number;
+  sort?: "relevance" | "recent" | "posted" | "added";
   cursor?: string;
 };
 
-export async function searchJobs({
-  title,
-  location,
-  postedWithin,
-  cursor,
-}: SearchParams) {
+export async function searchJobs(params: SearchParams) {
   const { data, error } = await tallo.GET("/v1/search", {
-    params: { query: { title, location, postedWithin, cursor, limit: 20 } },
+    params: { query: { ...params, limit: 20 } },
     querySerializer: { array: { style: "form", explode: true } },
   });
   if (!data) {

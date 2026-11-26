@@ -3,7 +3,7 @@ import { z } from "astro/zod";
 import { and, eq } from "drizzle-orm";
 import { extractText, getDocumentProxy } from "unpdf";
 import { db, schema } from "@/db";
-import { resumeFromText, tailorResume } from "@/lib/ai";
+import { resumeFromText, suggestSearches, tailorResume } from "@/lib/ai";
 import {
   defaultPrefs,
   emptyResume,
@@ -11,6 +11,7 @@ import {
   Prefs,
   Resume,
 } from "@/lib/resume";
+import { fingerprint } from "@/lib/suggestions";
 import { getJob } from "@/lib/tallo";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
@@ -101,6 +102,30 @@ export const server = {
         });
       }
       await saveProfile(user.id, { resume: parsed.data });
+    },
+  }),
+
+  /** Search ideas for the signed-in user, cached until their resume changes. */
+  suggestedSearches: defineAction({
+    input: z.object({ refresh: z.boolean().default(false) }),
+    handler: async ({ refresh }, { locals }) => {
+      const user = requireUser(locals);
+      const profile = await getProfile(user.id);
+      const resume = Resume.parse(profile?.resume ?? {});
+      if (!(profile && hasContent(resume))) {
+        return [];
+      }
+
+      const key = await fingerprint(resume);
+      if (!refresh && profile.suggestions?.key === key) {
+        return profile.suggestions.searches;
+      }
+      const searches = await suggestSearches(resume);
+      await db
+        .update(schema.profile)
+        .set({ suggestions: { key, searches } })
+        .where(eq(schema.profile.userId, user.id));
+      return searches;
     },
   }),
 

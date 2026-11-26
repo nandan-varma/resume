@@ -1,5 +1,5 @@
 ---
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   ArrowRight,
   FileText,
@@ -7,8 +7,8 @@ import {
   Search,
   SearchX,
   TriangleAlert,
-  UserRound,
 } from "lucide-react";
+import SuggestedSearches from "@/components/SuggestedSearches";
 import Callout from "@/components/ui/Callout.astro";
 import PageHeader from "@/components/ui/PageHeader.astro";
 import Tag from "@/components/ui/Tag.astro";
@@ -16,25 +16,25 @@ import { buttonVariants, type TagColor } from "@/components/ui/variants";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
 import { cn } from "@/lib/cn";
+import { hasContent, Resume } from "@/lib/resume";
+import { parseSearch, SORTS, WINDOWS } from "@/lib/search";
 import { searchJobs } from "@/lib/tallo";
 
 const params = Astro.url.searchParams;
-const title = params.get("title")?.trim() ?? "";
-const place = params.get("place")?.trim() ?? "";
-const remote = params.get("remote") === "on";
-const recent = Number(params.get("recent")) || undefined;
-const cursor = params.get("cursor") ?? undefined;
-const searching = title.length >= 2;
+const query = parseSearch(params);
 
 let results: Awaited<ReturnType<typeof searchJobs>> | undefined;
 let failure: string | undefined;
-if (searching) {
+if (query.searchable) {
   try {
     results = await searchJobs({
-      title: [title],
-      location: [place, remote ? "remote" : ""].filter(Boolean),
-      postedWithin: recent,
-      cursor,
+      title: query.title,
+      company: query.company,
+      location: [...query.place, ...(query.remote ? ["remote"] : [])],
+      country: query.country,
+      postedWithin: query.postedWithin,
+      sort: query.sort,
+      cursor: query.cursor,
     });
   } catch (e) {
     failure = e instanceof Error ? e.message : "Search failed.";
@@ -47,6 +47,25 @@ const profile = user
       where: eq(schema.profile.userId, user.id),
     })
   : undefined;
+const ready = profile ? hasContent(Resume.parse(profile.resume)) : false;
+
+// Jobs the user already made a resume for.
+const made = new Map<string, string>();
+if (user && results?.results.length) {
+  const rows = await db.query.application.findMany({
+    where: and(
+      eq(schema.application.userId, user.id),
+      inArray(
+        schema.application.talloId,
+        results.results.map((j) => j.id),
+      ),
+    ),
+    columns: { id: true, talloId: true },
+  });
+  for (const row of rows) {
+    made.set(row.talloId, row.id);
+  }
+}
 
 const nextPage =
   results?.hasMore && results.next
@@ -55,30 +74,6 @@ const nextPage =
         cursor: results.next,
       })
     : undefined;
-const examples = [
-  "Software engineer",
-  "Product designer",
-  "Data analyst",
-  "Nurse",
-  "Marketing manager",
-];
-const steps = [
-  {
-    Icon: UserRound,
-    head: "Tell us about you",
-    body: "Upload a resume or type your details once.",
-  },
-  {
-    Icon: Search,
-    head: "Pick a job",
-    body: "Search real openings from company career pages.",
-  },
-  {
-    Icon: FileText,
-    head: "Get your resume",
-    body: "We write a resume and cover letter for that job.",
-  },
-];
 const modeColor: Record<string, TagColor> = {
   remote: "green",
   hybrid: "blue",
@@ -86,6 +81,7 @@ const modeColor: Record<string, TagColor> = {
 };
 const columns =
   "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_6rem]";
+const value = (list: string[]) => list.join(", ");
 ---
 <Layout title="Find jobs">
   <PageHeader Icon={Search} title="Find jobs" description="Search real openings, then get a resume and cover letter written for the one you pick." />
@@ -97,57 +93,50 @@ const columns =
     </Callout>
   )}
 
-  <form method="get" role="search" class="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_auto] sm:items-end">
+  <form method="get" role="search" class="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
     <label class="grid gap-1 text-xs font-medium text-muted-foreground">
       Job title
-      <input name="title" value={title} required minlength="2" placeholder="e.g. Backend engineer" class="field" />
+      <input name="title" value={value(query.title)} placeholder="e.g. backend engineer, platform engineer" class="field" />
+    </label>
+    <label class="grid gap-1 text-xs font-medium text-muted-foreground">
+      Company
+      <input name="company" value={value(query.company)} placeholder="e.g. Stripe" class="field" />
     </label>
     <label class="grid gap-1 text-xs font-medium text-muted-foreground">
       Where
-      <input name="place" value={place} placeholder="City or country (optional)" class="field" />
+      <input name="place" value={value(query.place)} placeholder="City or region, e.g. Seattle" class="field" />
     </label>
-    <button type="submit" class={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}><Search className="size-4" /> Search</button>
-    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm sm:col-span-3">
-      <label class="flex items-center gap-2"><input type="checkbox" name="remote" checked={remote} class="size-4 accent-primary" /> Include remote jobs</label>
+    <button type="submit" class={cn(buttonVariants({ size: "lg" }), "w-full lg:w-auto")}><Search className="size-4" /> Search</button>
+
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm sm:col-span-2 lg:col-span-4">
+      <label class="flex items-center gap-2"><input type="checkbox" name="remote" checked={query.remote} class="size-4 accent-primary" /> Include remote jobs</label>
+      <label class="flex items-center gap-2 text-muted-foreground">
+        Country
+        <input name="country" value={value(query.country)} placeholder="US, CA" maxlength="20" aria-label="Country codes" class="field h-8 w-24" />
+      </label>
       <label class="flex items-center gap-2 text-muted-foreground">
         Posted
         <select name="recent" class="field h-8 w-auto py-0">
-          <option value="" selected={!recent}>any time</option>
-          <option value="7" selected={recent === 7}>in the last week</option>
-          <option value="30" selected={recent === 30}>in the last month</option>
+          {WINDOWS.map((w) => <option value={w.value} selected={String(query.postedWithin ?? "") === w.value}>{w.label}</option>)}
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-muted-foreground">
+        Sort
+        <select name="sort" class="field h-8 w-auto py-0">
+          {SORTS.map((o) => <option value={o.value} selected={query.sort === o.value}>{o.label}</option>)}
         </select>
       </label>
     </div>
   </form>
 
-  {!searching && (
-    <>
-      <p class="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        Try
-        {examples.map((e) => <a href={`/?title=${encodeURIComponent(e)}`} class="tag tag-gray hover:opacity-80">{e}</a>)}
-      </p>
-      <ol class="mt-8 grid gap-3 md:grid-cols-3">
-        {steps.map(({ Icon, head, body }, i) => (
-          <li class="flex gap-3 rounded-lg border p-4">
-            <span class="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-muted-foreground"><Icon className="size-4" strokeWidth={1.75} /></span>
-            <div>
-              <h2 class="font-semibold"><span class="text-muted-foreground">{i + 1}.</span> {head}</h2>
-              <p class="mt-0.5 text-muted-foreground">{body}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </>
-  )}
+  {!query.searchable && user && ready && <SuggestedSearches client:load />}
 
   {failure && <Callout Icon={TriangleAlert} tone="red" class="mt-5"><span role="alert">{failure} Please try again in a moment.</span></Callout>}
 
   {results && (
     <section class="mt-8" aria-label="Search results">
       {results.results.length === 0 ? (
-        <Callout Icon={SearchX} class="mt-2">
-          <strong>No jobs found.</strong> Try a simpler title, such as "engineer", or remove the place.
-        </Callout>
+        <Callout Icon={SearchX} class="mt-2">No jobs found for this search.</Callout>
       ) : (
         <>
           <div class={cn("hidden gap-4 border-b px-2 pb-2 text-xs text-muted-foreground lg:grid", columns)} aria-hidden="true">
@@ -158,12 +147,19 @@ const columns =
               <li class="border-b last:border-0">
                 <a href={`/jobs/${job.id}`} class={cn("row-hover grid gap-x-4 gap-y-1 rounded-md px-2 py-3 outline-none", columns)}>
                   <span class="min-w-0">
-                    <span class="flex min-w-0 items-center gap-2 font-medium"><FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} /><span class="truncate">{job.title}</span></span>
-                    <span class="block truncate pl-6 text-muted-foreground">{job.company}</span>
+                    <span class="flex min-w-0 items-center gap-2 font-medium">
+                      <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <span class="truncate">{job.title}</span>
+                      {made.has(job.id) && <Tag color="blue" class="shrink-0">Resume made</Tag>}
+                    </span>
+                    <span class="block truncate pl-6 text-muted-foreground">
+                      {job.company}{job.department && ` · ${job.department}`}{job.employmentType && ` · ${job.employmentType}`}
+                    </span>
                   </span>
                   <span class="flex min-w-0 flex-wrap items-center gap-1.5 text-muted-foreground">
                     {job.workMode && <Tag color={modeColor[job.workMode] ?? "gray"} class="capitalize">{job.workMode}</Tag>}
                     <span class="truncate">{job.location}</span>
+                    {job.locations > 1 && <span class="shrink-0 text-xs">+{job.locations - 1} more</span>}
                   </span>
                   <span class="truncate text-muted-foreground">{job.pay}</span>
                   <span class="text-muted-foreground">{job.postedAt}</span>
@@ -173,9 +169,10 @@ const columns =
           </ul>
         </>
       )}
-      {nextPage && (
-        <p class="mt-6"><a href={`/?${nextPage}`} class={buttonVariants({ variant: "outline" })}>Show more jobs</a></p>
-      )}
+      <p class="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
+        {nextPage && <a href={`/?${nextPage}`} class={buttonVariants({ variant: "outline", size: "sm" })}>Next page</a>}
+        {results.capped && <span>Results are capped at 300. Narrow the search to see more.</span>}
+      </p>
     </section>
   )}
 </Layout>

@@ -3,8 +3,14 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, jsonSchema, type ModelMessage, Output } from "ai";
 import { z } from "zod";
 import { lineBreakdown, overflow, PAGE_LINES, trimToFit } from "./layout";
-import { importPrompt, type TailorInput, tailorPrompt } from "./prompts";
+import {
+  importPrompt,
+  suggestPrompt,
+  type TailorInput,
+  tailorPrompt,
+} from "./prompts";
 import { assemble, Resume, Tailored } from "./resume";
+import { Suggestions } from "./suggestions";
 
 const openai = createOpenAI({ apiKey: env.OPENAI_API_KEY });
 const model = openai("gpt-6-luna");
@@ -45,6 +51,14 @@ async function generate<T extends z.ZodType>(
 export function resumeFromText(text: string) {
   const { system, prompt } = importPrompt(text);
   return generate(Resume, system, [{ role: "user", content: prompt }]);
+}
+
+export async function suggestSearches(resume: Resume) {
+  const { system, prompt } = suggestPrompt(resume);
+  const { searches } = await generate(Suggestions, system, [
+    { role: "user", content: prompt },
+  ]);
+  return searches.filter((s) => s.titles.length > 0);
 }
 
 const MAX_ROUNDS = 3;

@@ -22,6 +22,19 @@ export const importPrompt = (document: string) => ({
   prompt: `<document>\n${document}\n</document>`,
 });
 
+export const suggestPrompt = (resume: Resume) => ({
+  system: [
+    "You suggest job searches for one person, based on their profile.",
+    "The job index matches title words only (never descriptions), so use common, realistic job-board titles such as 'backend engineer' or 'machine learning engineer', never creative ones.",
+    "Give four or five searches: the strongest fit first, then adjacent roles, then one reach. Each has one to three titles that mean the same kind of role.",
+    "Match the person's seniority from their experience and privateNotes; for early-career people prefer titles without 'senior', 'staff' or 'lead'.",
+    "Respect privateNotes: skip roles that need citizenship or clearance, and set remote from the person's stated arrangement.",
+    "The 'why' is one plain sentence, addressed to the person as 'you', that points to something real in the profile.",
+    UNTRUSTED,
+  ].join("\n"),
+  prompt: `<profile>\n${JSON.stringify(indexed(resume))}\n</profile>`,
+});
+
 export type TailorInput = {
   posting: { title: string; company: string; description: string };
   resume: Resume;

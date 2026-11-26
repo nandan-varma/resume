@@ -7,6 +7,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import type { Match, Prefs, Resume } from "@/lib/resume";
+import type { Suggestion } from "@/lib/suggestions";
 import { user } from "./auth-schema";
 
 export * from "./auth-schema";
@@ -18,6 +19,11 @@ export const profile = sqliteTable("profile", {
     .references(() => user.id, { onDelete: "cascade" }),
   resume: text("resume", { mode: "json" }).$type<Resume>().notNull(),
   prefs: text("prefs", { mode: "json" }).$type<Prefs>().notNull(),
+  /** Search ideas from the model, cached against a fingerprint of the resume. */
+  suggestions: text("suggestions", { mode: "json" }).$type<{
+    key: string;
+    searches: Suggestion[];
+  }>(),
 });
 
 /** A resume tailored to one job posting. One per (user, posting). */
