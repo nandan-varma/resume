@@ -23,13 +23,19 @@ const resume = Resume.parse(profile?.resume ?? emptyResume());
 const prefs = Prefs.parse(profile?.prefs ?? defaultPrefs());
 
 const area = { "ui:widget": "textarea" };
+// Array rows get a stray "Title-1" label by default; hide it.
+const row = (fields: object = {}) => ({
+  items: { "ui:title": " ", ...fields },
+});
+const bulletRow = { items: { "ui:title": " ", ...area } };
 const resumeUi = {
-  basics: { summary: area },
-  summaries: { items: area },
-  work: { items: { highlights: { items: area } } },
-  projects: { items: { highlights: { items: area } } },
-  education: { items: { details: area } },
-  leadership: { items: { details: area } },
+  basics: { summary: area, links: row() },
+  summaries: bulletRow,
+  work: row({ highlights: bulletRow }),
+  projects: row({ highlights: bulletRow }),
+  education: row({ details: area }),
+  skills: row(),
+  leadership: row({ details: area }),
   notes: area,
 };
 const prefsUi = { rules: area };
