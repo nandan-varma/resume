@@ -6,7 +6,7 @@ Search real jobs, then get a resume and cover letter written for the one you pic
 
 ```bash
 pnpm install
-cp .dev.vars.example .dev.vars   # add OPENCODE_API_KEY and a random BETTER_AUTH_SECRET
+cp .dev.vars.example .dev.vars   # add OPENAI_API_KEY and a random BETTER_AUTH_SECRET
 pnpm db:migrate:local
 pnpm dev                         # http://localhost:4321
 ```
@@ -18,7 +18,7 @@ Locally you can sign in with an email and password. In production, sign-in is Gi
 ```bash
 pnpm exec wrangler d1 create jobmatch      # put the id in wrangler.jsonc
 pnpm db:migrate:remote
-pnpm exec wrangler secret bulk <(echo '{"BETTER_AUTH_SECRET":"…","BETTER_AUTH_URL":"https://your.domain","OPENCODE_API_KEY":"…","GITHUB_CLIENT_ID":"…","GITHUB_CLIENT_SECRET":"…"}')
+pnpm exec wrangler secret bulk <(echo '{"BETTER_AUTH_SECRET":"…","BETTER_AUTH_URL":"https://your.domain","OPENAI_API_KEY":"…","GITHUB_CLIENT_ID":"…","GITHUB_CLIENT_SECRET":"…"}')
 pnpm deploy
 ```
 

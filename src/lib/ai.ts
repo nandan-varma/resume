@@ -1,24 +1,12 @@
 import { env } from "cloudflare:workers";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 import type { z } from "zod";
 import { importPrompt, type TailorInput, tailorPrompt } from "./prompts";
 import { assemble, Resume, Tailored } from "./resume";
 
-const provider = createOpenAICompatible({
-  name: "opencode-go",
-  baseURL: "https://opencode.ai/zen/go/v1",
-  apiKey: env.OPENCODE_API_KEY,
-  supportsStructuredOutputs: true,
-  // OpenCode Go asks clients to identify themselves and send a session id.
-  fetch: (url, init) => {
-    const headers = new Headers(init?.headers);
-    headers.set("user-agent", "jobmatch/1.0");
-    headers.set("x-opencode-session", crypto.randomUUID());
-    return fetch(url, { ...init, headers });
-  },
-});
-const model = provider("deepseek-v4.1-flash");
+const openai = createOpenAI({ apiKey: env.OPENAI_API_KEY });
+const model = openai("gpt-6-luna");
 
 async function generate<T extends z.ZodType>(
   schema: T,
