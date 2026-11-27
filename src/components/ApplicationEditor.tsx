@@ -118,7 +118,7 @@ export default function ApplicationEditor({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:grid-rows-[auto_1fr] print:block">
       {/* The page size of the PDF follows the paper setting. */}
-      <style>{`@page { size: ${paper === "a4" ? "A4" : "letter"}; margin: 0 }`}</style>
+      <style>{`@page { size: ${paper === "a4" ? "A4" : "letter"}${tab === "letter" ? "; margin: 0.9in 1in" : ""} }`}</style>
       {/* Actions */}
       <div className="grid content-start gap-2 lg:col-start-2 lg:row-start-1 print:hidden">
         <Button size="lg" onClick={() => window.print()}>

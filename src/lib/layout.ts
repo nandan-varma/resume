@@ -9,43 +9,97 @@ export const DEFAULT_PAPER: Paper = "a4";
 
 /**
  * A page-fit model for the printable resume (10pt Arial, 0.55in side and 0.42in
- * top and bottom margins). The server cannot measure a DOM, so it counts text
- * lines instead. One "line" is one line of body text; headings and gaps are
- * expressed in lines. Calibrated against the real rendering (layout.test.ts).
- * It leans a little pessimistic: a resume it says fits, fits.
+ * top and bottom margins). The server cannot measure a DOM, so it simulates
+ * word wrapping with Arial's real character widths and counts lines. One
+ * "line" is one line of body text (13.2pt); headings and gaps are expressed in
+ * lines. Calibrated against the real renderer (layout.test.ts).
  */
-const LETTER_TEXT_WIDTH = 8.5 - 1.1;
-const CHARS_PER_LINE = 112;
-const BULLET_CHARS_PER_LINE = 108;
 const LINE_PT = 13.2;
+const MARGIN_X_IN = 1.1;
+const MARGIN_Y_IN = 0.84;
 
-const widthScale = (paper: Paper) =>
-  (PAPERS[paper].w - 1.1) / LETTER_TEXT_WIDTH;
+/** Helvetica/Arial advance widths per 1000 em for printable ASCII (space to tilde). */
+const WIDTHS = [
+  278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278,
+  278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584,
+  584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556,
+  833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278,
+  278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222,
+  500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500,
+  500, 334, 260, 334, 584,
+];
+
+const charWidth = (c: string) => {
+  const code = c.charCodeAt(0);
+  return code >= 32 && code <= 126 ? WIDTHS[code - 32] : 556;
+};
+
+/** Width of text in points at a font size (bold runs about 7% wider). */
+const textWidth = (text: string, pt: number, bold = false) => {
+  let sum = 0;
+  for (const c of text) {
+    sum += charWidth(c);
+  }
+  return (sum / 1000) * pt * (bold ? 1.07 : 1);
+};
+
+/** How many lines text takes when wrapped greedily at word breaks into a column. */
+const wrapLines = (text: string, widthPt: number, pt = 10) => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return 1;
+  }
+  const space = textWidth(" ", pt);
+  let lines = 1;
+  let used = 0;
+  for (const word of words) {
+    const w = textWidth(word, pt);
+    if (used === 0) {
+      used = w;
+    } else if (used + space + w <= widthPt) {
+      used += space + w;
+    } else {
+      lines += 1;
+      used = w;
+    }
+    // A single word wider than the column breaks onto further lines.
+    while (used > widthPt) {
+      lines += 1;
+      used -= widthPt;
+    }
+  }
+  return lines;
+};
 
 /** Lines of body text that fit on one page. */
 export const pageLines = (paper: Paper = DEFAULT_PAPER) =>
-  Math.floor(((PAPERS[paper].h - 0.84) * 72) / LINE_PT);
+  Math.floor(((PAPERS[paper].h - MARGIN_Y_IN) * 72) / LINE_PT);
 
-const wrap = (text: string, width: number) =>
-  Math.max(1, Math.ceil(text.trim().length / width));
+const textWidthPt = (paper: Paper) => (PAPERS[paper].w - MARGIN_X_IN) * 72;
 
 const HEADING = 1.95;
 const GAP = 0.25;
+const BULLET_INDENT_PT = 11;
+const DATE_GAP_PT = 14;
 
 /** Estimated lines per section, so feedback can say where the space went. */
 export const lineBreakdown = (r: Resume, paper: Paper = DEFAULT_PAPER) => {
-  const scale = widthScale(paper);
-  const para = CHARS_PER_LINE * scale;
-  const bullet = BULLET_CHARS_PER_LINE * scale;
+  const width = textWidthPt(paper);
   const { basics, work, education, projects, skills, leadership } = r;
   const bullets = (items: string[]) =>
-    items.reduce((sum, h) => sum + wrap(h, bullet), 0);
+    items.reduce((sum, h) => sum + wrapLines(h, width - BULLET_INDENT_PT), 0);
   const section = (present: boolean, body: () => number) =>
     present ? HEADING + body() : 0;
+  /** A title line with a date on the right: the title wraps if it would touch the date. */
+  const titleRow = (left: string, date: string) =>
+    wrapLines(left, width - textWidth(date, 9.5) - DATE_GAP_PT);
 
   // Skill items sit beside the widest group name.
-  const widest = skills.reduce((m, s) => Math.max(m, s.group.length), 0);
-  const skillWidth = Math.max(40, para - widest * 1.15 - 3);
+  const groupWidth = skills.reduce(
+    (m, s) => Math.max(m, textWidth(s.group, 10, true)),
+    0,
+  );
+  const skillWidth = width - groupWidth - 9;
   const contact = [
     basics.email,
     basics.phone,
@@ -54,37 +108,59 @@ export const lineBreakdown = (r: Resume, paper: Paper = DEFAULT_PAPER) => {
   ]
     .filter(Boolean)
     .join(" · ");
+  // name 22pt + headline + contact + 7pt gap, in lines of 13.2pt
+  const header =
+    22 / LINE_PT +
+    (basics.headline ? (2 + 11 * 1.32) / LINE_PT : 0) +
+    (contact ? (2 + 9 * 1.32 * wrapLines(contact, width, 9)) / LINE_PT : 0) +
+    7 / LINE_PT;
 
   return {
-    header:
-      3.3 +
-      (basics.headline ? 1.25 : 0) +
-      (contact.length > 112 * scale ? 1 : 0),
+    header,
     summary: section(basics.summary.trim() !== "", () =>
-      wrap(basics.summary, para),
+      wrapLines(basics.summary, width),
     ),
     experience: section(work.length > 0, () =>
-      work.reduce((sum, job) => sum + 1 + GAP + bullets(job.highlights), 0),
+      work.reduce(
+        (sum, job) =>
+          sum +
+          titleRow(
+            `${job.position}, ${job.company} · ${job.location}`,
+            `${job.start} – ${job.end}`,
+          ) +
+          GAP +
+          bullets(job.highlights),
+        0,
+      ),
     ),
     projects: section(projects.length > 0, () =>
       projects.reduce(
-        (sum, p) => sum + 1 + (p.stack ? 1 : 0) + GAP + bullets(p.highlights),
+        (sum, p) =>
+          sum +
+          titleRow(`${p.name} · ${p.url}`, p.year) +
+          (p.stack ? (9.5 * 1.32) / LINE_PT : 0) +
+          GAP +
+          bullets(p.highlights),
         0,
       ),
     ),
     skills: section(skills.length > 0, () =>
-      skills.reduce((sum, s) => sum + wrap(s.items, skillWidth), 0),
+      skills.reduce((sum, s) => sum + wrapLines(s.items, skillWidth), 0),
     ),
     leadership: section(leadership.length > 0, () =>
       leadership.reduce(
         (sum, l) =>
-          sum + wrap(`${l.role}, ${l.org} · ${l.dates}. ${l.details}`, para),
+          sum +
+          wrapLines(`${l.role}, ${l.org} · ${l.dates}. ${l.details}`, width),
         0,
       ),
     ),
     education: section(education.length > 0, () =>
       education.reduce(
-        (sum, e) => sum + 1 + wrap(`${e.degree} · ${e.details}`, para),
+        (sum, e) =>
+          sum +
+          titleRow(e.school, e.end) +
+          wrapLines(`${e.degree} · ${e.details}`, width),
         0,
       ),
     ),

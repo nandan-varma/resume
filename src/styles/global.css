@@ -382,6 +382,12 @@
 .resume-sheet dl {
   margin: 0;
 }
+/* No single word left alone on the last line. */
+.resume-sheet p,
+.resume-sheet li,
+.resume-sheet dd {
+  text-wrap: pretty;
+}
 .resume-sheet .rs-head {
   margin-bottom: 7pt;
   text-align: center;
@@ -781,13 +787,16 @@
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    padding: 0.9in 1in !important;
+    padding: 0 !important;
   }
+  /* Page margins belong to the page, so a second page has them too. */
   @page {
-    margin: 0;
+    margin: 0.42in 0.55in;
   }
+  html,
   body {
-    background: #fff;
+    background: #fff !important;
+    color-scheme: light;
   }
   .rs-np,
   .rs-ghost {
@@ -819,9 +828,21 @@
     margin-left: 0 !important;
     box-shadow: none;
     border: 0;
+    /* The same text width as on screen, but never cut off: extra lines flow to a second page. */
+    width: calc(var(--paper-w) - 1.1in) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
-  .resume-sheet[data-mode="flow"] {
-    height: auto;
+  .resume-sheet article,
+  .resume-sheet li,
+  .resume-sheet .lead,
+  .resume-sheet .skill-row {
+    break-inside: avoid;
+  }
+  .resume-sheet h2 {
+    break-after: avoid;
   }
   /*
    * Plain document order in the PDF. Positioned elements are painted after the

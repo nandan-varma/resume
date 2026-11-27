@@ -1040,6 +1040,10 @@ function Frame({
         height: view.height || undefined,
       }}
     >
+      {/* A printed page-mode sheet always gets its own paper size. */}
+      {mode === "page" && (
+        <style>{`@page { size: ${size === "a4" ? "A4" : "letter"} }`}</style>
+      )}
       <div
         ref={sheet}
         id="resume-sheet"

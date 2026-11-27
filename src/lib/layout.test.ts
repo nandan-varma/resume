@@ -51,7 +51,7 @@ describe("page fit", () => {
   });
 
   it("matches the real renderer on a calibration resume", () => {
-    // Measured in Chrome at 10pt Arial on US Letter: 37.8 lines of content.
+    // Measured in Chrome at 10pt Arial: 36.76 lines of content on both A4 and Letter.
     const sample = Resume.parse({
       basics: {
         name: "N",
@@ -120,8 +120,11 @@ describe("page fit", () => {
     });
     const estimate = estimateLines(sample, "letter");
     // Never below the real height (it must not say "fits" when it does not), and close to it.
-    expect(estimate).toBeGreaterThanOrEqual(37.8);
-    expect(estimate).toBeLessThanOrEqual(41);
+    expect(estimate).toBeGreaterThanOrEqual(36.76);
+    expect(estimate).toBeLessThanOrEqual(37.9);
+    const a4 = estimateLines(sample, "a4");
+    expect(a4).toBeGreaterThanOrEqual(36.76);
+    expect(a4).toBeLessThanOrEqual(37.9);
   });
 
   it("leaves a resume that already fits untouched", () => {
