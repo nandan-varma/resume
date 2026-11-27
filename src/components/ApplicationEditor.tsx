@@ -65,6 +65,10 @@ export default function ApplicationEditor({
   useEffect(() => {
     if (isNew) {
       toast.success("Your resume is ready. Click any line to edit it.");
+      // So a reload does not repeat the welcome.
+      const url = new URL(location.href);
+      url.searchParams.delete("new");
+      history.replaceState(history.state, "", url);
     }
   }, [isNew]);
 
@@ -290,16 +294,16 @@ export default function ApplicationEditor({
             ) : (
               <li>Kept every bullet as you wrote it.</li>
             )}
-            {changes.projectsTotal > 0 && (
+            {changes.projectsTotal > changes.projects.length && (
               <li>
-                Showing {changes.projects.length} of {changes.projectsTotal}{" "}
-                projects: {changes.projects.join(", ")}.
+                Picked the {changes.projects.length} best of your{" "}
+                {changes.projectsTotal} projects: {changes.projects.join(", ")}.
               </li>
             )}
-            {changes.skillGroupsTotal > 0 && (
+            {changes.skillGroupsTotal > changes.skillGroups && (
               <li>
-                Showing {changes.skillGroups} of {changes.skillGroupsTotal}{" "}
-                skill groups.
+                Showing the {changes.skillGroups} most relevant of{" "}
+                {changes.skillGroupsTotal} skill groups.
               </li>
             )}
           </ul>

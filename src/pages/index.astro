@@ -208,6 +208,21 @@ const steps = [
 </Layout>
 
 <script>
+  // Keep the address tidy: leave out empty boxes and default choices.
+  // Capture on window so this runs before the page-transition router reads the form.
+  window.addEventListener("submit", (e) => {
+    const form = e.target as HTMLFormElement;
+    if (form.id !== "search") return;
+    const off: (HTMLInputElement | HTMLSelectElement)[] = [];
+    for (const el of Array.from(form.elements)) {
+      if (el instanceof HTMLInputElement && el.name && el.type !== "checkbox" && el.value.trim() === "") off.push(el);
+      if (el instanceof HTMLSelectElement && el.name && el.selectedIndex === 0) off.push(el);
+    }
+    for (const el of off) el.disabled = true;
+    // If the page is restored from history the form comes back with these off.
+    addEventListener("pageshow", () => { for (const el of off) el.disabled = false; }, { once: true });
+  }, true);
+
   // Selects and the remote box apply as soon as you change them.
   document.addEventListener("change", (e) => {
     const t = e.target as HTMLElement;
