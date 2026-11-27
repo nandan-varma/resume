@@ -24,7 +24,7 @@ const row = await db.query.application.findFirst({
   ),
 });
 if (!row) {
-  return new Response("Not found", { status: 404 });
+  return Astro.rewrite("/404");
 }
 const profile = await db.query.profile.findFirst({
   where: eq(schema.profile.userId, userId),

@@ -1,0 +1,19 @@
+---
+import { Compass } from "lucide-react";
+import { buttonVariants } from "@/components/ui/variants";
+import Layout from "@/layouts/Layout.astro";
+import { cn } from "@/lib/cn";
+
+Astro.response.status = 404;
+---
+<Layout title="Page not found">
+  <div class="mx-auto mt-16 flex max-w-sm flex-col items-center gap-3 text-center [animation:rise_0.4s_backwards]">
+    <span class="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground"><Compass className="size-6" /></span>
+    <h1 class="text-xl font-semibold tracking-tight">We can't find that page</h1>
+    <p class="text-muted-foreground">It may have been deleted, or the link is not quite right.</p>
+    <div class="mt-2 flex gap-2">
+      <a href="/" class={buttonVariants({ size: "lg" })}>Find jobs</a>
+      <a href="/resumes" class={cn(buttonVariants({ size: "lg", variant: "outline" }))}>My resumes</a>
+    </div>
+  </div>
+</Layout>
