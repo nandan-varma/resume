@@ -984,7 +984,7 @@ function Frame({
     }
     const fit = () => {
       const scale = Math.min(
-        Math.max(el.clientWidth / paper.offsetWidth, 0.55),
+        Math.max(el.clientWidth / paper.offsetWidth, 0.3),
         1.15,
       );
       setView({
