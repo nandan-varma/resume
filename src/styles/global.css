@@ -505,6 +505,16 @@
   letter-spacing: 0;
   text-transform: none;
 }
+/* The editable text is replaced by a real link in the PDF (and when measuring the page). */
+.rs-print-link {
+  display: none;
+}
+.resume-sheet.rs-measure .rs-link-source {
+  display: none !important;
+}
+.resume-sheet.rs-measure .rs-print-link {
+  display: inline !important;
+}
 .resume-sheet .rs-sep {
   white-space: pre;
 }
@@ -801,6 +811,14 @@
   .rs-np,
   .rs-ghost {
     display: none !important;
+  }
+  .rs-link-source {
+    display: none !important;
+  }
+  .rs-print-link {
+    display: inline !important;
+    color: inherit;
+    text-decoration: none;
   }
   .rs-ed[data-optional]:empty {
     display: inline-block !important;

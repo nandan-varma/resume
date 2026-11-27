@@ -126,7 +126,8 @@ export default function ApplicationEditor({
           PDF
         </Button>
         <p className="-mt-0.5 text-xs text-muted-foreground">
-          In the window that opens, choose “Save as PDF”.
+          In the window that opens, choose “Save as PDF”. Links and email are
+          clickable.
         </p>
         {applyUrl && (
           <a

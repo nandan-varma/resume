@@ -2,6 +2,7 @@ import { ArrowRight, Check, ExternalLink, Hand, Minus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { JobDetail as Data } from "@/lib/job-detail";
 import TailorButton from "./TailorButton";
+import CompanyAvatar from "./ui/CompanyAvatar";
 import { buttonVariants } from "./ui/variants";
 
 const modeTag = {
@@ -31,8 +32,13 @@ export default function JobDetail({
 
   return (
     <article className="[animation:rise_0.3s_backwards]">
-      <H className="page-title">{job.title}</H>
-      <p className="mt-1 text-base text-muted-foreground">{job.company}</p>
+      <div className="flex items-start gap-3">
+        <CompanyAvatar name={job.company} className="mt-1 size-11 text-base" />
+        <div className="min-w-0">
+          <H className="page-title">{job.title}</H>
+          <p className="mt-1 text-base text-muted-foreground">{job.company}</p>
+        </div>
+      </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-muted-foreground">
         {job.workMode && (
           <span className={cn("tag capitalize", modeTag[job.workMode])}>

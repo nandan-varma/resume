@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import type { JobDetail as Data } from "@/lib/job-detail";
 import JobDetail, { JobDetailSkeleton } from "./JobDetail";
+import CompanyAvatar from "./ui/CompanyAvatar";
 
 export type Row = {
   id: string;
@@ -100,11 +101,14 @@ export default function ResultsBrowser({ jobs, made, next, capped }: Props) {
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-8">
       <div>
-        <ul className="grid gap-1.5" aria-label="Search results">
+        <ul
+          className="grid grid-cols-[minmax(0,1fr)] gap-1.5"
+          aria-label="Search results"
+        >
           {jobs.map((job, i) => (
             <li
               key={job.id}
-              className="stagger"
+              className="stagger min-w-0"
               style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
             >
               <a
@@ -117,47 +121,50 @@ export default function ResultsBrowser({ jobs, made, next, capped }: Props) {
                   }
                 }}
                 className={cn(
-                  "lift block rounded-lg border bg-card px-3.5 py-3 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30",
+                  "lift flex gap-3 rounded-lg border bg-card px-3.5 py-3 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30",
                   wide &&
                     selected === job.id &&
                     "border-primary bg-[color-mix(in_srgb,var(--primary)_6%,var(--card))] shadow-[0_0_0_1px_var(--primary)]",
                 )}
               >
-                <span className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 font-medium">{job.title}</span>
-                  {made.includes(job.id) && (
-                    <span className="tag tag-blue shrink-0 gap-1">
-                      <Check className="size-3" strokeWidth={3} />
-                      Resume
-                    </span>
-                  )}
-                </span>
-                <span className="block truncate text-muted-foreground">
-                  {job.company}
-                  {job.employmentType && ` · ${job.employmentType}`}
-                </span>
-                <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-                  {job.workMode && (
-                    <span
-                      className={cn("tag capitalize", modeTag[job.workMode])}
-                    >
-                      {job.workMode}
-                    </span>
-                  )}
-                  {job.location && (
-                    <span className="truncate">
-                      {job.location}
-                      {job.locations > 1 && ` +${job.locations - 1}`}
-                    </span>
-                  )}
-                  {job.pay && (
-                    <span className="truncate font-medium text-foreground/80">
-                      {job.pay}
-                    </span>
-                  )}
-                  {job.postedAt && (
-                    <span className="ml-auto text-xs">{job.postedAt}</span>
-                  )}
+                <CompanyAvatar name={job.company} className="mt-0.5" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 font-medium">{job.title}</span>
+                    {made.includes(job.id) && (
+                      <span className="tag tag-blue shrink-0 gap-1">
+                        <Check className="size-3" strokeWidth={3} />
+                        Resume
+                      </span>
+                    )}
+                  </span>
+                  <span className="block truncate text-muted-foreground">
+                    {job.company}
+                    {job.employmentType && ` · ${job.employmentType}`}
+                  </span>
+                  <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+                    {job.workMode && (
+                      <span
+                        className={cn("tag capitalize", modeTag[job.workMode])}
+                      >
+                        {job.workMode}
+                      </span>
+                    )}
+                    {job.location && (
+                      <span className="truncate">
+                        {job.location}
+                        {job.locations > 1 && ` +${job.locations - 1}`}
+                      </span>
+                    )}
+                    {job.pay && (
+                      <span className="truncate font-medium text-foreground/80">
+                        {job.pay}
+                      </span>
+                    )}
+                    {job.postedAt && (
+                      <span className="ml-auto text-xs">{job.postedAt}</span>
+                    )}
+                  </span>
                 </span>
               </a>
             </li>

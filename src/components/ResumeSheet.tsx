@@ -15,6 +15,7 @@ import {
 } from "react";
 import { cn } from "@/lib/cn";
 import type { Paper } from "@/lib/layout";
+import { hrefFor } from "@/lib/links";
 import { Resume } from "@/lib/resume";
 import { isReworded, originalProject, originalWork } from "@/lib/resume-diff";
 import { caretOffset, Editable, setCaret } from "./Editable";
@@ -252,25 +253,40 @@ export default function ResumeSheet({
     }
   };
 
-  /** A text field wired to one place in the resume. */
+  /**
+   * A text field wired to one place in the resume. With `linkify`, an email,
+   * phone number or web address also becomes a link in the PDF: the editable
+   * text is what you see and edit, and a plain link takes its place in print.
+   */
   const field = (
     key: string,
     value: string,
     set: (r: Resume, v: string) => void,
     label: string,
     className?: string,
-  ) => (
-    <Editable
-      fk={key}
-      label={label}
-      className={className}
-      value={value}
-      optional={OPTIONAL.test(key)}
-      onChange={(v) => edit(key, (r) => set(r, v))}
-      onFocus={() => reveal(key, true)}
-      onBlur={() => reveal(key, false, value)}
-    />
-  );
+    linkify = false,
+  ) => {
+    const href = linkify ? hrefFor(value) : undefined;
+    return (
+      <>
+        <Editable
+          fk={key}
+          label={label}
+          className={cn(className, href && "rs-link-source")}
+          value={value}
+          optional={OPTIONAL.test(key)}
+          onChange={(v) => edit(key, (r) => set(r, v))}
+          onFocus={() => reveal(key, true)}
+          onBlur={() => reveal(key, false, value)}
+        />
+        {href && (
+          <a className="rs-print-link" href={href} tabIndex={-1}>
+            {value.trim()}
+          </a>
+        )}
+      </>
+    );
+  };
 
   const bullets = (kind: "work" | "projects", i: number, lines: string[]) => (
     <ul>
@@ -472,6 +488,8 @@ export default function ResumeSheet({
                     basics.email,
                     (r, v) => (r.basics.email = v),
                     "Email",
+                    undefined,
+                    true,
                   ),
                 },
                 {
@@ -482,6 +500,8 @@ export default function ResumeSheet({
                     basics.phone,
                     (r, v) => (r.basics.phone = v),
                     "Phone",
+                    undefined,
+                    true,
                   ),
                 },
                 {
@@ -504,6 +524,8 @@ export default function ResumeSheet({
                         l.url,
                         (r, v) => (r.basics.links[i].url = v),
                         "Link, e.g. github.com/you",
+                        undefined,
+                        true,
                       )}
                       <button
                         type="button"
@@ -710,6 +732,8 @@ export default function ResumeSheet({
                                   p.url,
                                   (r, v) => (r.projects[i].url = v),
                                   "Link",
+                                  undefined,
+                                  true,
                                 )}
                               </span>
                             ),

@@ -2,6 +2,7 @@
 import { desc, eq } from "drizzle-orm";
 import { Files, Search, Sparkles } from "lucide-react";
 import AppliedToggle from "@/components/AppliedToggle";
+import CompanyAvatar from "@/components/ui/CompanyAvatar.astro";
 import PageHeader from "@/components/ui/PageHeader.astro";
 import Tag from "@/components/ui/Tag.astro";
 import { buttonVariants, type TagColor } from "@/components/ui/variants";
@@ -35,9 +36,12 @@ const applied = rows.filter((r) => r.applied).length;
       {rows.map((row, i) => (
         <li class="stagger lift relative flex flex-col gap-3 rounded-xl border bg-card p-4" style={`--i:${Math.min(i, 8)}`}>
           <a href={`/resumes/${row.id}`} class="absolute inset-0 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30" aria-label={`Open ${row.role} at ${row.company}`}></a>
-          <div class="min-w-0">
-            <p class="truncate font-semibold">{row.role}</p>
-            <p class="truncate text-muted-foreground">{row.company}</p>
+          <div class="flex min-w-0 items-center gap-3">
+            <CompanyAvatar name={row.company} />
+            <div class="min-w-0">
+              <p class="truncate font-semibold">{row.role}</p>
+              <p class="truncate text-muted-foreground">{row.company}</p>
+            </div>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <Tag color={level[row.match.level]?.color ?? "gray"}>{level[row.match.level]?.label}</Tag>
