@@ -1,7 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { auth } from "@/lib/auth";
 
-const PROTECTED = ["/profile", "/resumes"];
+const PROTECTED = ["/profile", "/resumes", "/settings"];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const session = await auth.api.getSession({

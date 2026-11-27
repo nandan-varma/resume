@@ -1,7 +1,7 @@
 ---
 import "@/styles/global.css";
 import { ClientRouter } from "astro:transitions";
-import { FileText, Search, UserRound } from "lucide-react";
+import { FileText, Search, Settings, UserRound } from "lucide-react";
 import CommandPalette from "@/components/CommandPalette";
 import SignOutButton from "@/components/SignOutButton";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -86,7 +86,19 @@ const isActive = (href: string) =>
           <ThemeToggle client:load />
           {user ? (
             <>
-              <span class="hidden max-w-48 truncate text-xs text-muted-foreground sm:inline">{user.name || user.email}</span>
+              <a
+                href="/settings"
+                aria-label="Settings"
+                title="Settings"
+                aria-current={path.startsWith("/settings") ? "page" : undefined}
+                class={cn(
+                  "row-hover flex h-8 items-center gap-2 rounded-md px-2 text-muted-foreground",
+                  path.startsWith("/settings") && "bg-accent text-foreground",
+                )}
+              >
+                <Settings className="size-4" />
+                <span class="hidden max-w-40 truncate text-xs lg:inline">{user.name || user.email}</span>
+              </a>
               <SignOutButton client:load />
             </>
           ) : (

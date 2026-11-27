@@ -137,6 +137,62 @@ export const server = {
     },
   }),
 
+  /** Everything we hold about the user, as one file they can keep. */
+  exportData: defineAction({
+    handler: async (_input, { locals }) => {
+      const user = requireUser(locals);
+      const profile = await getProfile(user.id);
+      const applications = await db.query.application.findMany({
+        where: eq(schema.application.userId, user.id),
+        orderBy: desc(schema.application.createdAt),
+      });
+      return {
+        exportedAt: new Date().toISOString(),
+        account: { name: user.name, email: user.email },
+        profile: profile
+          ? {
+              resume: Resume.parse(profile.resume),
+              preferences: Prefs.parse(profile.prefs),
+            }
+          : null,
+        resumes: applications.map((a) => ({
+          role: a.role,
+          company: a.company,
+          applyUrl: a.applyUrl,
+          applied: a.applied,
+          createdAt: a.createdAt.toISOString(),
+          match: a.match,
+          resume: Resume.parse(a.resume),
+          coverLetter: a.coverLetter,
+        })),
+      };
+    },
+  }),
+
+  /** Permanently deletes the account and everything in it. The user must type their email. */
+  deleteAccount: defineAction({
+    input: z.object({ confirm: z.string() }),
+    handler: async ({ confirm }, { locals }) => {
+      const user = requireUser(locals);
+      if (confirm.trim().toLowerCase() !== user.email.toLowerCase()) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "That does not match your email, so nothing was deleted.",
+        });
+      }
+      await db
+        .delete(schema.application)
+        .where(eq(schema.application.userId, user.id));
+      await db.delete(schema.profile).where(eq(schema.profile.userId, user.id));
+      await db.delete(schema.session).where(eq(schema.session.userId, user.id));
+      await db.delete(schema.account).where(eq(schema.account.userId, user.id));
+      await db
+        .delete(schema.verification)
+        .where(eq(schema.verification.identifier, user.email));
+      await db.delete(schema.user).where(eq(schema.user.id, user.id));
+    },
+  }),
+
   /** Short list of the user's resumes, for quick jump. */
   listResumes: defineAction({
     handler: async (_input, { locals }) => {

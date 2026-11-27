@@ -1,6 +1,6 @@
 import { actions } from "astro:actions";
 import { navigate } from "astro:transitions/client";
-import { FileText, Search, UserRound } from "lucide-react";
+import { FileText, Search, Settings, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
@@ -15,6 +15,7 @@ const PAGES: Item[] = [
   { href: "/", label: "Find jobs", kind: "page" },
   { href: "/resumes", label: "My resumes", kind: "page" },
   { href: "/profile", label: "Profile", kind: "page" },
+  { href: "/settings", label: "Settings", kind: "page" },
 ];
 
 /** ⌘K (or Ctrl+K): jump to a page or to one of your resumes. */
@@ -140,6 +141,8 @@ export default function CommandPalette({ signedIn }: { signedIn: boolean }) {
                 <FileText className="size-4 text-muted-foreground" />
               ) : item.label === "Profile" ? (
                 <UserRound className="size-4 text-muted-foreground" />
+              ) : item.label === "Settings" ? (
+                <Settings className="size-4 text-muted-foreground" />
               ) : (
                 <Search className="size-4 text-muted-foreground" />
               )}

@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/cn";
+import { stripUnsafe } from "@/lib/text";
 
 /** No single line of a resume needs more than this; it also keeps a runaway paste from bloating the saved row. */
 const MAX_LENGTH = 2000;
@@ -44,9 +45,9 @@ export function caretOffset(el: HTMLElement) {
   return before.toString().length;
 }
 
-/** One line only: line breaks and non-breaking spaces become plain spaces. */
+/** One line only: line breaks and non-breaking spaces become plain spaces; emoji and invisible characters are dropped. */
 const oneLine = (text: string) =>
-  text.replace(/\s*[\r\n]+\s*/g, " ").replace(/ /g, " ");
+  stripUnsafe(text.replace(/\s*[\r\n]+\s*/g, " ").replace(/\u00a0/g, " "));
 
 type Props = {
   value: string;

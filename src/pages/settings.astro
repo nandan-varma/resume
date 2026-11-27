@@ -1,0 +1,28 @@
+---
+import { count, eq } from "drizzle-orm";
+import { Settings } from "lucide-react";
+import SettingsPage from "@/components/SettingsPage";
+import PageHeader from "@/components/ui/PageHeader.astro";
+import { db, schema } from "@/db";
+import Layout from "@/layouts/Layout.astro";
+import { Prefs } from "@/lib/resume";
+
+const user = Astro.locals.user;
+const userId = user?.id ?? "";
+const profile = await db.query.profile.findFirst({
+  where: eq(schema.profile.userId, userId),
+});
+const [{ value: resumes }] = await db
+  .select({ value: count() })
+  .from(schema.application)
+  .where(eq(schema.application.userId, userId));
+---
+<Layout title="Settings" width="text">
+  <PageHeader Icon={Settings} title="Settings" description="Changes save as you make them." />
+  <SettingsPage
+    client:load
+    prefs={Prefs.parse(profile?.prefs ?? {})}
+    user={{ name: user?.name ?? "", email: user?.email ?? "" }}
+    resumes={resumes}
+  />
+</Layout>

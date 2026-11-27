@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cleanLine, stripUnsafe } from "./text";
 
 /** Blank string by default, so forms can leave fields empty. */
 const text = (title: string) => z.string().default("").meta({ title });
@@ -107,16 +108,17 @@ export type Resume = z.infer<typeof Resume>;
 
 export const PaperSize = z.enum(["a4", "letter"]);
 
+/** Longest set of personal rules we send to the model. */
+export const RULES_MAX = 600;
+
 export const Prefs = z.object({
-  paper: PaperSize.default("a4").meta({ title: "Paper size" }),
-  tone: z
-    .enum(["plain", "confident", "warm"])
-    .default("plain")
-    .meta({ title: "How should it sound?" }),
-  rules: text("Your own rules (optional)").meta({
-    title: "Your own rules (optional)",
-    description: 'For example: "Never mention my first internship."',
-  }),
+  paper: PaperSize.default("a4"),
+  tone: z.enum(["plain", "confident", "warm"]).default("plain"),
+  // Cut to size rather than rejected, so an old or edited value never breaks a page.
+  rules: z
+    .string()
+    .default("")
+    .transform((v) => stripUnsafe(v, true).slice(0, RULES_MAX)),
 });
 export type Prefs = z.infer<typeof Prefs>;
 
@@ -273,7 +275,7 @@ export const completeness = (r: Resume) => {
   return { steps, done: steps.filter((s) => s.done).length };
 };
 
-const squash = (s: string) => s.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+const squash = cleanLine;
 
 const blank = (values: string[]) => values.every((v) => v === "");
 

@@ -1,39 +1,34 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { applyTheme } from "@/lib/theme";
 import { Button } from "./ui/button";
 
-/** Light or dark. The page sets the first value before it paints (see the layout). */
+/** Light or dark in one click. (Settings also offers "match my device".) */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    setTheme(
-      document.documentElement.dataset.theme === "dark" ? "dark" : "light",
-    );
+    const read = () =>
+      setDark(document.documentElement.dataset.theme === "dark");
+    read();
+    // Settings changes the theme without going through this button.
+    const watch = new MutationObserver(read);
+    watch.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => watch.disconnect();
   }, []);
-
-  const toggle = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem("theme", next);
-    } catch {
-      // Private browsing: the choice just lasts for this visit.
-    }
-  };
 
   return (
     <Button
       variant="ghost"
       size="sm"
-      onClick={toggle}
-      aria-label={
-        theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-      }
-      title={theme === "dark" ? "Light mode" : "Dark mode"}
+      onClick={() => applyTheme(dark ? "light" : "dark")}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={dark ? "Light mode" : "Dark mode"}
     >
-      {theme === "dark" ? <Sun /> : <Moon />}
+      {dark ? <Sun /> : <Moon />}
     </Button>
   );
 }

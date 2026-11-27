@@ -22,11 +22,11 @@ import WorkOverlay, { IMPORT_STEPS } from "./WorkOverlay";
 
 type Props = { resume: Resume; prefs: Prefs; welcome: boolean };
 
-const TONES = [
-  { value: "plain", label: "Plain", hint: "Clear and direct" },
-  { value: "confident", label: "Confident", hint: "Bold and assured" },
-  { value: "warm", label: "Warm", hint: "Friendly and human" },
-] as const;
+const TONE_LABEL = {
+  plain: "Plain",
+  confident: "Confident",
+  warm: "Warm",
+} as const;
 
 const Panel = ({
   title,
@@ -51,10 +51,6 @@ const area =
 export default function ProfileEditor({ resume, prefs, welcome }: Props) {
   const master = useDoc(resume, async (r) => {
     const { error } = await actions.saveResume({ resume: r });
-    return error?.message ?? null;
-  });
-  const style = useDoc(prefs, async (p) => {
-    const { error } = await actions.savePrefs({ prefs: p });
     return error?.message ?? null;
   });
 
@@ -392,52 +388,22 @@ export default function ProfileEditor({ resume, prefs, welcome }: Props) {
           </a>
         </Panel>
 
-        <Panel
-          title="How should it sound?"
-          hint="Used whenever we write for you."
+        <a
+          href="/settings"
+          className="lift group flex items-center gap-3 rounded-xl border bg-card p-4"
         >
-          <fieldset className="m-0 grid min-w-0 grid-cols-3 gap-1 rounded-lg border-0 bg-muted p-1">
-            <legend className="sr-only">Tone</legend>
-            {TONES.map((t) => (
-              <label
-                key={t.value}
-                title={t.hint}
-                className={cn(
-                  "cursor-pointer rounded-md py-1.5 text-center text-sm font-medium transition-all duration-200 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-primary/30",
-                  style.doc.tone === t.value
-                    ? "bg-card shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="tone"
-                  value={t.value}
-                  checked={style.doc.tone === t.value}
-                  onChange={() => style.edit("tone", (d) => (d.tone = t.value))}
-                  className="sr-only"
-                />
-                {t.label}
-              </label>
-            ))}
-          </fieldset>
-          <textarea
-            value={style.doc.rules}
-            onChange={(e) =>
-              style.edit("rules", (d) => (d.rules = e.target.value))
-            }
-            placeholder='Your own rules, e.g. "Never mention my first internship."'
-            aria-label="Your own rules"
-            className={cn(area, "mt-3")}
-          />
-          <div className="mt-1 flex justify-end">
-            <SaveBadge
-              status={style.status}
-              error={style.error}
-              retry={style.retry}
-            />
-          </div>
-        </Panel>
+          <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <PenLine className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Writing style</span>
+            <span className="block truncate text-muted-foreground">
+              {TONE_LABEL[prefs.tone]}
+              {prefs.rules ? " · your own rules" : ""} · change in Settings
+            </span>
+          </span>
+          <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </a>
 
         <Panel
           title="Summary options"
