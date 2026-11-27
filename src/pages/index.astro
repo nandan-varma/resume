@@ -223,6 +223,18 @@ const steps = [
     addEventListener("pageshow", () => { for (const el of off) el.disabled = false; }, { once: true });
   }, true);
 
+  // Remember the search so a job page can lead back to it.
+  document.addEventListener("astro:page-load", () => {
+    if (location.pathname !== "/") return;
+    const params = new URLSearchParams(location.search);
+    params.delete("job");
+    try {
+      sessionStorage.setItem("lastSearch", params.toString());
+    } catch {
+      // Private mode: the back link just goes to a blank search.
+    }
+  });
+
   // Selects and the remote box apply as soon as you change them.
   document.addEventListener("change", (e) => {
     const t = e.target as HTMLElement;

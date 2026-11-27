@@ -38,16 +38,23 @@ export default function SuggestedSearches() {
           <RefreshCw className={loading ? "animate-spin" : ""} /> Refresh
         </Button>
       </div>
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <ul
+        className={`grid gap-3 transition-opacity duration-300 sm:grid-cols-2 xl:grid-cols-3 ${loading && searches?.length ? "opacity-50" : ""}`}
+        aria-busy={loading}
+      >
         {loading && !searches?.length
           ? ["a", "b", "c"].map((k) => (
-              <li key={k} className="h-28 animate-pulse rounded-lg bg-accent" />
+              <li key={k} className="skeleton h-28 rounded-xl" />
             ))
-          : searches?.map((s) => (
-              <li key={s.label}>
+          : searches?.map((s, i) => (
+              <li
+                key={s.label}
+                className="stagger"
+                style={{ "--i": i } as React.CSSProperties}
+              >
                 <a
                   href={suggestionUrl(s)}
-                  className="row-hover flex h-full flex-col gap-1 rounded-lg border p-4 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30"
+                  className="lift flex h-full flex-col gap-1 rounded-xl border bg-card p-4 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30"
                 >
                   <span className="font-medium">{s.label}</span>
                   <span className="text-xs text-muted-foreground">

@@ -23,8 +23,22 @@ if (!data) {
     </div>
   ) : (
     <>
-      <a href="/" class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" /> Find jobs</a>
+      <a id="back-to-search" href="/" class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" /> Back to results</a>
       <div class="mt-3"><JobDetail client:load data={data} /></div>
     </>
   )}
 </Layout>
+
+<script>
+  // Lead back to the search you came from.
+  document.addEventListener("astro:page-load", () => {
+    const back = document.getElementById("back-to-search");
+    if (!back) return;
+    try {
+      const last = sessionStorage.getItem("lastSearch");
+      if (last) back.setAttribute("href", `/?${last}`);
+    } catch {
+      // Private mode: keep the plain link.
+    }
+  });
+</script>
