@@ -3,16 +3,18 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   ArrowRight,
   FileText,
-  Hand,
   Search,
-  SearchX,
+  SlidersHorizontal,
+  Sparkles,
   TriangleAlert,
+  UserRound,
+  X,
 } from "lucide-react";
+import ResultsBrowser from "@/components/ResultsBrowser";
 import SuggestedSearches from "@/components/SuggestedSearches";
 import Callout from "@/components/ui/Callout.astro";
 import PageHeader from "@/components/ui/PageHeader.astro";
-import Tag from "@/components/ui/Tag.astro";
-import { buttonVariants, type TagColor } from "@/components/ui/variants";
+import { buttonVariants } from "@/components/ui/variants";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
 import { cn } from "@/lib/cn";
@@ -50,7 +52,7 @@ const profile = user
 const ready = profile ? hasContent(Resume.parse(profile.resume)) : false;
 
 // Jobs the user already made a resume for.
-const made = new Map<string, string>();
+const made: string[] = [];
 if (user && results?.results.length) {
   const rows = await db.query.application.findMany({
     where: and(
@@ -60,119 +62,158 @@ if (user && results?.results.length) {
         results.results.map((j) => j.id),
       ),
     ),
-    columns: { id: true, talloId: true },
+    columns: { talloId: true },
   });
-  for (const row of rows) {
-    made.set(row.talloId, row.id);
-  }
+  made.push(...rows.map((r) => r.talloId));
 }
 
 const nextPage =
   results?.hasMore && results.next
-    ? new URLSearchParams({
+    ? `/?${new URLSearchParams({
         ...Object.fromEntries(params),
         cursor: results.next,
-      })
+      })}`
     : undefined;
-const modeColor: Record<string, TagColor> = {
-  remote: "green",
-  hybrid: "blue",
-  onsite: "gray",
-};
-const columns =
-  "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_6rem]";
+
 const value = (list: string[]) => list.join(", ");
+
+// Filters that live under "More filters", shown as chips you can remove with one click.
+const without = (key: string) => {
+  const next = new URLSearchParams(params);
+  next.delete(key);
+  next.delete("cursor");
+  next.delete("job");
+  return `/?${next}`;
+};
+const windowLabel = WINDOWS.find(
+  (w) => w.value === String(query.postedWithin ?? ""),
+)?.label;
+const chips = [
+  query.company.length > 0 && {
+    label: `Company: ${value(query.company)}`,
+    href: without("company"),
+  },
+  query.country.length > 0 && {
+    label: `Country: ${value(query.country)}`,
+    href: without("country"),
+  },
+  query.postedWithin && {
+    label: windowLabel ?? "Recent",
+    href: without("recent"),
+  },
+  query.sort !== "relevance" && {
+    label: `Sort: ${SORTS.find((s) => s.value === query.sort)?.label}`,
+    href: without("sort"),
+  },
+].filter(Boolean) as { label: string; href: string }[];
+
+const steps = [
+  {
+    Icon: UserRound,
+    title: "Tell us about you",
+    text: "Upload your resume once. We never invent facts, so everything we write comes from you.",
+  },
+  {
+    Icon: Search,
+    title: "Pick a real job",
+    text: "Search live openings and see how your skills line up before you spend any time.",
+  },
+  {
+    Icon: FileText,
+    title: "Get your resume",
+    text: "A one-page resume and cover letter written for that job. Edit anything, then save as PDF.",
+  },
+];
 ---
 <Layout title="Find jobs">
   <PageHeader Icon={Search} title="Find jobs" description="Search real openings, then get a resume and cover letter written for the one you pick." />
 
   {user && !profile && (
-    <Callout Icon={Hand} tone="yellow" class="mb-5">
-      <strong>Start here.</strong> Add your details so we can write your resumes.
-      <a href="/profile" class="ml-1 inline-flex items-center gap-1 font-medium underline underline-offset-2">Add my details <ArrowRight className="size-3.5" /></a>
-    </Callout>
+    <a href="/profile" class="lift group mb-5 flex items-center gap-4 rounded-xl border border-primary/40 bg-[color-mix(in_srgb,var(--primary)_7%,var(--card))] p-4">
+      <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Sparkles className="size-5" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block font-semibold">Start here: add your details (about a minute)</span>
+        <span class="block text-muted-foreground">Upload your resume and we fill in the rest. Then every job is one click from a tailored resume.</span>
+      </span>
+      <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-1" />
+    </a>
   )}
 
-  <form method="get" role="search" class="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
-    <label class="grid gap-1 text-xs font-medium text-muted-foreground">
-      Job title
-      <input name="title" value={value(query.title)} placeholder="e.g. backend engineer, platform engineer" class="field" />
-    </label>
-    <label class="grid gap-1 text-xs font-medium text-muted-foreground">
-      Company
-      <input name="company" value={value(query.company)} placeholder="e.g. Stripe" class="field" />
-    </label>
-    <label class="grid gap-1 text-xs font-medium text-muted-foreground">
-      Where
-      <input name="place" value={value(query.place)} placeholder="City or region, e.g. Seattle" class="field" />
-    </label>
-    <button type="submit" class={cn(buttonVariants({ size: "lg" }), "w-full lg:w-auto")}><Search className="size-4" /> Search</button>
-
-    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm sm:col-span-2 lg:col-span-4">
-      <label class="flex items-center gap-2"><input type="checkbox" name="remote" checked={query.remote} class="size-4 accent-primary" /> Include remote jobs</label>
-      <label class="flex items-center gap-2 text-muted-foreground">
-        Country
-        <input name="country" value={value(query.country)} placeholder="US, CA" maxlength="20" aria-label="Country codes" class="field h-8 w-24" />
+  <form id="search" method="get" role="search" class="rounded-xl border bg-card p-3 shadow-xs">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto] lg:items-end">
+      <label class="grid gap-1 text-xs font-medium text-muted-foreground">
+        Job title or keyword
+        <input name="title" value={value(query.title)} placeholder="e.g. backend engineer" class="field" autocomplete="off" />
       </label>
-      <label class="flex items-center gap-2 text-muted-foreground">
-        Posted
-        <select name="recent" class="field h-8 w-auto py-0">
-          {WINDOWS.map((w) => <option value={w.value} selected={String(query.postedWithin ?? "") === w.value}>{w.label}</option>)}
-        </select>
+      <label class="grid gap-1 text-xs font-medium text-muted-foreground">
+        Where
+        <input name="place" value={value(query.place)} placeholder="City or region" class="field" autocomplete="off" />
       </label>
-      <label class="flex items-center gap-2 text-muted-foreground">
-        Sort
-        <select name="sort" class="field h-8 w-auto py-0">
-          {SORTS.map((o) => <option value={o.value} selected={query.sort === o.value}>{o.label}</option>)}
-        </select>
-      </label>
+      <label class="flex h-9 items-center gap-2 text-sm"><input type="checkbox" name="remote" checked={query.remote} class="size-4 accent-primary" /> Remote too</label>
+      <button type="submit" class={cn(buttonVariants({ size: "lg" }), "w-full lg:w-auto")}><Search className="size-4" /> Search</button>
     </div>
+
+    <details class="group mt-3 border-t pt-2" open={chips.length > 0}>
+      <summary class="row-hover inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-muted-foreground select-none">
+        <SlidersHorizontal className="size-3.5" /> More filters
+      </summary>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label class="grid gap-1 text-xs font-medium text-muted-foreground">Company
+          <input name="company" value={value(query.company)} placeholder="e.g. Stripe" class="field" />
+        </label>
+        <label class="grid gap-1 text-xs font-medium text-muted-foreground">Country codes
+          <input name="country" value={value(query.country)} placeholder="US, CA" maxlength="20" class="field" />
+        </label>
+        <label class="grid gap-1 text-xs font-medium text-muted-foreground">Posted
+          <select name="recent" class="field">
+            {WINDOWS.map((w) => <option value={w.value} selected={String(query.postedWithin ?? "") === w.value}>{w.label}</option>)}
+          </select>
+        </label>
+        <label class="grid gap-1 text-xs font-medium text-muted-foreground">Sort by
+          <select name="sort" class="field">
+            {SORTS.map((o) => <option value={o.value} selected={query.sort === o.value}>{o.label}</option>)}
+          </select>
+        </label>
+      </div>
+    </details>
   </form>
+
+  {chips.length > 0 && (
+    <div class="mt-3 flex flex-wrap gap-2" aria-label="Active filters">
+      {chips.map((c) => (
+        <a href={c.href} class="press inline-flex h-7 items-center gap-1 rounded-full border bg-card px-2.5 text-xs transition-colors hover:bg-accent" aria-label={`Remove filter: ${c.label}`}>
+          {c.label}<X className="size-3 text-muted-foreground" />
+        </a>
+      ))}
+    </div>
+  )}
 
   {!query.searchable && user && ready && <SuggestedSearches client:load />}
 
+  {!query.searchable && !(user && ready) && (
+    <ol class="mt-8 grid gap-3 md:grid-cols-3" aria-label="How it works">
+      {steps.map(({ Icon, title, text }, i) => (
+        <li class="stagger rounded-xl border bg-card p-4" style={`--i:${i + 1}`}>
+          <span class="mb-3 flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground"><Icon className="size-4.5" /></span>
+          <p class="font-semibold">{i + 1}. {title}</p>
+          <p class="mt-1 text-muted-foreground">{text}</p>
+        </li>
+      ))}
+    </ol>
+  )}
+
   {failure && <Callout Icon={TriangleAlert} tone="red" class="mt-5"><span role="alert">{failure} Please try again in a moment.</span></Callout>}
 
-  {results && (
-    <section class="mt-8" aria-label="Search results">
-      {results.results.length === 0 ? (
-        <Callout Icon={SearchX} class="mt-2">No jobs found for this search.</Callout>
-      ) : (
-        <>
-          <div class={cn("hidden gap-4 border-b px-2 pb-2 text-xs text-muted-foreground lg:grid", columns)} aria-hidden="true">
-            <span>Job</span><span>Where</span><span>Pay</span><span>Posted</span>
-          </div>
-          <ul>
-            {results.results.map((job) => (
-              <li class="border-b last:border-0">
-                <a href={`/jobs/${job.id}`} class={cn("row-hover grid gap-x-4 gap-y-1 rounded-md px-2 py-3 outline-none", columns)}>
-                  <span class="min-w-0">
-                    <span class="flex min-w-0 items-center gap-2 font-medium">
-                      <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                      <span class="truncate">{job.title}</span>
-                      {made.has(job.id) && <Tag color="blue" class="shrink-0">Resume made</Tag>}
-                    </span>
-                    <span class="block truncate pl-6 text-muted-foreground">
-                      {job.company}{job.department && ` · ${job.department}`}{job.employmentType && ` · ${job.employmentType}`}
-                    </span>
-                  </span>
-                  <span class="flex min-w-0 flex-wrap items-center gap-1.5 text-muted-foreground">
-                    {job.workMode && <Tag color={modeColor[job.workMode] ?? "gray"} class="capitalize">{job.workMode}</Tag>}
-                    <span class="truncate">{job.location}</span>
-                    {job.locations > 1 && <span class="shrink-0 text-xs">+{job.locations - 1} more</span>}
-                  </span>
-                  <span class="truncate text-muted-foreground">{job.pay}</span>
-                  <span class="text-muted-foreground">{job.postedAt}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      <p class="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
-        {nextPage && <a href={`/?${nextPage}`} class={buttonVariants({ variant: "outline", size: "sm" })}>Next page</a>}
-        {results.capped && <span>Results are capped at 300. Narrow the search to see more.</span>}
-      </p>
-    </section>
-  )}
+  {results && <ResultsBrowser client:load jobs={results.results} made={made} next={nextPage} capped={results.capped} />}
 </Layout>
+
+<script>
+  // Selects and the remote box apply as soon as you change them.
+  document.addEventListener("change", (e) => {
+    const t = e.target as HTMLElement;
+    const form = t.closest<HTMLFormElement>("form#search");
+    if (form && (t instanceof HTMLSelectElement || (t instanceof HTMLInputElement && t.type === "checkbox"))) {
+      form.requestSubmit();
+    }
+  });
+</script>

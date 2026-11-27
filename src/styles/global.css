@@ -1,7 +1,6 @@
 @import "tailwindcss";
-@source "../../node_modules/@rjsf/shadcn/src";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
  * Notion-inspired tokens. Names follow shadcn/ui so shadcn-style components
@@ -61,55 +60,54 @@
   --callout-red: #fbe4e4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #191919;
-    --foreground: #d4d4d4;
-    --sidebar: #202020;
-    --card: #191919;
-    --card-foreground: #d4d4d4;
-    --popover: #252525;
-    --popover-foreground: #d4d4d4;
-    --primary: #2383e2;
-    --secondary: #2b2b2b;
-    --secondary-foreground: #d4d4d4;
-    --muted: #2b2b2b;
-    --muted-foreground: #9b9b9b;
-    --accent: #2f2f2f;
-    --accent-foreground: #d4d4d4;
-    --destructive: #ff7369;
-    --border: #2f2f2f;
-    --input: #373737;
+/* The theme is set on <html> by a small script in the layout (saved choice, else the system setting). */
+:root[data-theme="dark"] {
+  --background: #191919;
+  --foreground: #d4d4d4;
+  --sidebar: #202020;
+  --card: #191919;
+  --card-foreground: #d4d4d4;
+  --popover: #252525;
+  --popover-foreground: #d4d4d4;
+  --primary: #2383e2;
+  --secondary: #2b2b2b;
+  --secondary-foreground: #d4d4d4;
+  --muted: #2b2b2b;
+  --muted-foreground: #9b9b9b;
+  --accent: #2f2f2f;
+  --accent-foreground: #d4d4d4;
+  --destructive: #ff7369;
+  --border: #2f2f2f;
+  --input: #373737;
 
-    --callout: #252525;
-    --shadow-pop:
-      rgba(15, 15, 15, 0.1) 0 0 0 1px, rgba(15, 15, 15, 0.2) 0 3px 6px,
-      rgba(15, 15, 15, 0.4) 0 9px 24px;
+  --callout: #252525;
+  --shadow-pop:
+    rgba(15, 15, 15, 0.1) 0 0 0 1px, rgba(15, 15, 15, 0.2) 0 3px 6px,
+    rgba(15, 15, 15, 0.4) 0 9px 24px;
 
-    --tag-gray-bg: #454b4e;
-    --tag-gray-fg: #e6e6e5;
-    --tag-brown-bg: #603b2c;
-    --tag-brown-fg: #f1e3dc;
-    --tag-orange-bg: #594a3a;
-    --tag-orange-fg: #f6e3cf;
-    --tag-yellow-bg: #56452f;
-    --tag-yellow-fg: #f6ead2;
-    --tag-green-bg: #2b593f;
-    --tag-green-fg: #dcf1e2;
-    --tag-blue-bg: #28456c;
-    --tag-blue-fg: #d9e8f8;
-    --tag-purple-bg: #492f64;
-    --tag-purple-fg: #ecdff6;
-    --tag-pink-bg: #69314c;
-    --tag-pink-fg: #f8dfeb;
-    --tag-red-bg: #6e3630;
-    --tag-red-fg: #fbe0dc;
+  --tag-gray-bg: #454b4e;
+  --tag-gray-fg: #e6e6e5;
+  --tag-brown-bg: #603b2c;
+  --tag-brown-fg: #f1e3dc;
+  --tag-orange-bg: #594a3a;
+  --tag-orange-fg: #f6e3cf;
+  --tag-yellow-bg: #56452f;
+  --tag-yellow-fg: #f6ead2;
+  --tag-green-bg: #2b593f;
+  --tag-green-fg: #dcf1e2;
+  --tag-blue-bg: #28456c;
+  --tag-blue-fg: #d9e8f8;
+  --tag-purple-bg: #492f64;
+  --tag-purple-fg: #ecdff6;
+  --tag-pink-bg: #69314c;
+  --tag-pink-fg: #f8dfeb;
+  --tag-red-bg: #6e3630;
+  --tag-red-fg: #fbe0dc;
 
-    --callout-yellow: #3b3224;
-    --callout-blue: #1f3347;
-    --callout-green: #1f3a30;
-    --callout-red: #442a28;
-  }
+  --callout-yellow: #3b3224;
+  --callout-blue: #1f3347;
+  --callout-green: #1f3a30;
+  --callout-red: #442a28;
 }
 
 @theme inline {
@@ -143,17 +141,91 @@
   --radius-xl: 0.75rem;
 }
 
+/* ---- Motion. Short, soft, and switched off for people who ask for less. ---- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position-x: -200%;
+  }
+}
+@keyframes write {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+}
+@keyframes breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+::view-transition-old(root) {
+  animation: 140ms ease-in both fade-out;
+}
+::view-transition-new(root) {
+  animation: 220ms ease-out 60ms both fade-in;
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   html {
-    color-scheme: light dark;
+    color-scheme: light;
     -webkit-text-size-adjust: 100%;
   }
   body {
     @apply bg-background font-sans text-sm text-foreground antialiased;
     font-feature-settings: "calt", "kern";
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
   }
   ::selection {
     background: color-mix(in srgb, var(--primary) 28%, transparent);
@@ -166,6 +238,43 @@
 }
 
 @layer components {
+  .page-in {
+    animation: rise 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  }
+  /* Children appear one after another: set --i on each. */
+  .stagger {
+    animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+  .skeleton {
+    border-radius: 6px;
+    background: linear-gradient(
+      100deg,
+      var(--muted) 30%,
+      var(--accent) 50%,
+      var(--muted) 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  /* Cards that lift a little when you point at them. */
+  .lift {
+    transition:
+      transform 0.18s,
+      box-shadow 0.18s,
+      border-color 0.18s;
+  }
+  .lift:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-pop);
+  }
+  .press {
+    transition: transform 0.12s;
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+
   /* Notion's tag colors. */
   .tag {
     @apply inline-flex h-5 items-center rounded-sm px-1.5 text-xs leading-none font-medium whitespace-nowrap;
@@ -253,6 +362,12 @@
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+/* The master resume has no page limit, so it grows with its content. */
+.resume-sheet[data-mode="flow"] {
+  height: auto;
+  min-height: 11in;
+  overflow: visible;
+}
 .resume-sheet p,
 .resume-sheet ul,
 .resume-sheet dl {
@@ -332,11 +447,225 @@
 .resume-sheet .skills dd {
   margin: 0;
 }
+.resume-sheet .skill-row {
+  display: contents;
+}
 .resume-sheet .lead + .lead {
   margin-top: 1.5pt;
 }
 
+/* ---- Editing the sheet in place. None of this prints. ---- */
+.sheet-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  box-shadow: var(--shadow-pop);
+}
+.rs-ed {
+  border-radius: 2px;
+  cursor: text;
+  outline: none;
+  transition: background-color 0.12s;
+}
+.rs-ed:hover {
+  background: rgba(35, 131, 226, 0.09);
+}
+.rs-ed:focus {
+  background: rgba(35, 131, 226, 0.13);
+  box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.4);
+}
+.rs-ed:empty {
+  display: inline-block;
+  min-width: 3ch;
+}
+.rs-ed:empty::before {
+  content: attr(data-placeholder);
+  color: #9b9b9b;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.resume-sheet .rs-sep {
+  white-space: pre;
+}
+.resume-sheet h2 {
+  position: relative;
+}
+.resume-sheet article,
+.resume-sheet .rs-item {
+  position: relative;
+}
+.resume-sheet article[data-changed]::before {
+  content: "";
+  position: absolute;
+  top: 0.45em;
+  left: -0.3in;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #2383e2;
+}
+
+/* Buttons in the page margin */
+.rs-tools {
+  position: absolute;
+  top: 0;
+  right: -0.5in;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.resume-sheet dd {
+  position: relative;
+}
+.resume-sheet article:hover > .rs-tools,
+.resume-sheet article:focus-within > .rs-tools,
+.resume-sheet .rs-item:hover > .rs-tools,
+.resume-sheet .rs-item:focus-within > .rs-tools,
+.resume-sheet .skill-row:hover .rs-tools,
+.resume-sheet .skill-row:focus-within .rs-tools,
+.rs-tools:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rs-tool,
+.rs-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 4px;
+  background: #f1f1ef;
+  color: #55534e;
+}
+.rs-link {
+  position: relative;
+}
+.rs-tool:hover,
+.rs-x:hover {
+  background: #e3e2e0;
+  color: #111;
+}
+.rs-tool svg,
+.rs-x svg {
+  width: 13px;
+  height: 13px;
+}
+.rs-x {
+  position: absolute;
+  top: 50%;
+  right: -16px;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  opacity: 0;
+}
+.rs-link:hover .rs-x,
+.rs-link:focus-within .rs-x {
+  opacity: 1;
+}
+.rs-x svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* "+ Add job" on the section heading, and "+ Link" after the contact line */
+.rs-add,
+.rs-add-link,
+.rs-sections button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #2383e2;
+  font-size: 8pt;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.rs-add {
+  position: absolute;
+  right: 0;
+  bottom: 2pt;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.rs-section:hover .rs-add,
+.rs-add:focus-visible {
+  opacity: 1;
+}
+.rs-add:hover,
+.rs-add-link:hover,
+.rs-sections button:hover {
+  background: rgba(35, 131, 226, 0.1);
+}
+.rs-add svg,
+.rs-add-link svg,
+.rs-sections svg {
+  width: 11px;
+  height: 11px;
+}
+.rs-add-link {
+  margin-left: 6px;
+  opacity: 0.55;
+}
+.rs-sections {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 10pt;
+  padding-top: 6pt;
+  border-top: 1px dashed #d4d4d4;
+  color: #787774;
+  font-size: 8pt;
+}
+.rs-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2pt 14pt;
+  margin-top: 2pt;
+  color: #787774;
+  font-size: 8pt;
+}
+@media (hover: none) {
+  .rs-add {
+    opacity: 0.7;
+  }
+  .rs-tools {
+    opacity: 0.7;
+    pointer-events: auto;
+  }
+}
+
+/* Aids are hidden while measuring the page and when printing. */
+.resume-sheet.rs-measure .rs-np {
+  display: none !important;
+}
+
+.letter-sheet textarea {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 @media print {
+  .letter-sheet {
+    max-width: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0.9in 1in !important;
+  }
   @page {
     size: letter;
     margin: 0;
@@ -344,8 +673,34 @@
   body {
     background: #fff;
   }
+  .rs-np {
+    display: none !important;
+  }
+  .sheet-wrap {
+    height: auto !important;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .resume-sheet {
+    transform: none !important;
+    margin-left: 0 !important;
     box-shadow: none;
     border: 0;
+  }
+  .resume-sheet[data-mode="flow"] {
+    height: auto;
+  }
+  .rs-ed:hover,
+  .rs-ed:focus {
+    background: none;
+    box-shadow: none;
+  }
+  .rs-ed:empty::before {
+    content: none;
+  }
+  .resume-sheet article[data-changed]::before {
+    display: none;
   }
 }

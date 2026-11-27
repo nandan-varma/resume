@@ -1,4 +1,3 @@
-import type { RJSFSchema } from "@rjsf/utils";
 import { z } from "zod";
 
 /** Blank string by default, so forms can leave fields empty. */
@@ -7,7 +6,7 @@ const list = (title: string) => z.array(z.string()).default([]).meta({ title });
 
 /**
  * The single source of truth for a resume. The same schema validates AI
- * output, validates saved forms, and (as JSON Schema) generates the editor.
+ * output and everything the editor saves.
  * Shaped after the open JSON Resume standard.
  */
 export const Resume = z.object({
@@ -243,15 +242,30 @@ export const assemble = (source: Resume, out: Tailored): Resume => {
 export const emptyResume = (): Resume => Resume.parse({});
 export const defaultPrefs = (): Prefs => Prefs.parse({});
 
-/** JSON Schema for the editor form. `input` mode keeps defaulted fields optional. */
-export const toFormSchema = (schema: z.ZodType): RJSFSchema => {
-  const { $schema: _ignored, ...jsonSchema } = z.toJSONSchema(schema, {
-    target: "draft-7",
-    io: "input",
-  });
-  return jsonSchema as RJSFSchema;
-};
-
 export const hasContent = (r: Resume) =>
   r.basics.name.trim() !== "" &&
   (r.work.length > 0 || r.projects.length > 0 || r.education.length > 0);
+
+/** What a profile still needs, so the first run can show clear next steps. */
+export const completeness = (r: Resume) => {
+  const steps = [
+    {
+      id: "contact",
+      label: "Name and email",
+      done: r.basics.name.trim() !== "" && r.basics.email.trim() !== "",
+    },
+    {
+      id: "work",
+      label: "Work or education",
+      done: r.work.length > 0 || r.education.length > 0,
+    },
+    { id: "projects", label: "A project", done: r.projects.length > 0 },
+    { id: "skills", label: "Skills", done: r.skills.length > 0 },
+    {
+      id: "summary",
+      label: "A short summary",
+      done: r.basics.summary.trim() !== "" || r.summaries.length > 0,
+    },
+  ];
+  return { steps, done: steps.filter((s) => s.done).length };
+};

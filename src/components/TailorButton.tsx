@@ -1,67 +1,77 @@
 import { actions } from "astro:actions";
+import { navigate } from "astro:transitions/client";
 import { Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
-import { Spinner } from "./ui/Spinner";
+import WorkOverlay, { TAILOR_STEPS } from "./WorkOverlay";
 
 type Props = {
   talloId: string;
   shorter?: boolean;
   label?: string;
   variant?: "default" | "outline";
+  /** Writing again replaces what is saved, so ask first. */
+  confirm?: boolean;
 };
-
-const STEPS = [
-  "Reading the job…",
-  "Matching it to your details…",
-  "Writing your resume…",
-  "Almost there…",
-];
 
 export default function TailorButton({
   talloId,
   shorter = false,
   label = "Make my resume",
   variant = "default",
+  confirm = false,
 }: Props) {
-  const [step, setStep] = useState<number | null>(null);
-
-  const running = step !== null;
-  useEffect(() => {
-    if (!running) {
-      return;
-    }
-    const timer = setInterval(
-      () =>
-        setStep((s) => (s === null ? s : Math.min(s + 1, STEPS.length - 1))),
-      7000,
-    );
-    return () => clearInterval(timer);
-  }, [running]);
+  const [phase, setPhase] = useState<"idle" | "asking" | "working" | "done">(
+    "idle",
+  );
+  const [target, setTarget] = useState<string>();
 
   const run = async () => {
-    setStep(0);
+    setPhase("working");
     const { data, error } = await actions.tailor({ talloId, shorter });
     if (error) {
       toast.error(error.message || "Something went wrong. Please try again.");
-      setStep(null);
+      setPhase("idle");
       return;
     }
-    window.location.assign(`/resumes/${data.id}`);
+    setTarget(`/resumes/${data.id}?new=1`);
+    setPhase("done");
   };
 
+  if (phase === "asking") {
+    return (
+      <div className="grid gap-2 rounded-lg border bg-callout p-3 [animation:pop_0.2s_backwards]">
+        <p>This replaces your saved resume and any edits you made.</p>
+        <div className="flex gap-2">
+          <Button onClick={run}>Yes, write a new one</Button>
+          <Button variant="ghost" onClick={() => setPhase("idle")}>
+            Keep mine
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Button
-      size="lg"
-      variant={variant}
-      className="w-full"
-      disabled={step !== null}
-      onClick={run}
-      aria-live="polite"
-    >
-      {step === null ? <Sparkles /> : <Spinner />}
-      {step === null ? label : STEPS[step]}
-    </Button>
+    <>
+      <Button
+        size="lg"
+        variant={variant}
+        className="w-full"
+        onClick={() => (confirm ? setPhase("asking") : run())}
+      >
+        <Sparkles /> {label}
+      </Button>
+      {(phase === "working" || phase === "done") && (
+        <WorkOverlay
+          title={shorter ? "Tightening your resume" : "Writing your resume"}
+          hint="This usually takes 30 to 60 seconds. You can't break anything: your profile stays as it is."
+          steps={TAILOR_STEPS}
+          done={phase === "done"}
+          onDone={() => target && navigate(target)}
+        />
+      )}
+    </>
   );
 }

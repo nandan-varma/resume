@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   assemble,
+  completeness,
   defaultPrefs,
   emptyResume,
   hasContent,
   Resume,
   type Tailored,
   Tailored as TailoredSchema,
-  toFormSchema,
 } from "./resume";
 
 describe("Resume", () => {
@@ -27,10 +27,15 @@ describe("Resume", () => {
     expect(hasContent(filled)).toBe(true);
   });
 
-  it("builds a form schema where nothing is required", () => {
-    const schema = toFormSchema(Resume);
-    expect(schema).not.toHaveProperty("$schema");
-    expect(schema.required ?? []).toEqual([]);
+  it("lists what a profile still needs", () => {
+    expect(completeness(emptyResume()).done).toBe(0);
+    const filled = Resume.parse({
+      basics: { name: "Ada", email: "ada@example.com" },
+      work: [{ company: "A" }],
+    });
+    const { steps, done } = completeness(filled);
+    expect(done).toBe(2);
+    expect(steps.find((s) => s.id === "skills")?.done).toBe(false);
   });
 
   it("has a default writing tone", () => {

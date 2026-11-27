@@ -1,7 +1,10 @@
 ---
 import "@/styles/global.css";
-import { FileText, PanelLeft, Search, UserRound } from "lucide-react";
+import { ClientRouter } from "astro:transitions";
+import { FileText, Search, UserRound } from "lucide-react";
+import CommandPalette from "@/components/CommandPalette";
 import SignOutButton from "@/components/SignOutButton";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Toaster } from "@/components/Toaster";
 import { buttonVariants } from "@/components/ui/variants";
 import { cn } from "@/lib/cn";
@@ -18,7 +21,7 @@ const path = Astro.url.pathname;
 const links = [
   { href: "/", label: "Find jobs", Icon: Search },
   { href: "/resumes", label: "My resumes", Icon: FileText },
-  { href: "/profile", label: "My details", Icon: UserRound },
+  { href: "/profile", label: "Profile", Icon: UserRound },
 ];
 const isActive = (href: string) =>
   href === "/"
@@ -35,25 +38,52 @@ const isActive = (href: string) =>
     <meta name="theme-color" content="#191919" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/brand/icon.svg" />
     <title>{title ? `${title} · JobMatch` : "JobMatch"}</title>
+    <ClientRouter />
+    <script is:inline>
+      // Set the theme before the page paints: the saved choice, else the system setting.
+      // Page transitions replace <html>'s attributes, so it is applied again after each swap.
+      const applyTheme = (doc) => {
+        let dark = matchMedia("(prefers-color-scheme: dark)").matches;
+        try {
+          const saved = localStorage.getItem("theme");
+          if (saved) dark = saved === "dark";
+        } catch {}
+        doc.documentElement.dataset.theme = dark ? "dark" : "light";
+      };
+      applyTheme(document);
+      document.addEventListener("astro:before-swap", (e) => applyTheme(e.newDocument));
+    </script>
   </head>
   <body class="min-h-dvh">
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground">Skip to content</a>
 
-    <!-- Top bar -->
-    <header class="sticky top-0 z-30 border-b bg-background/90 backdrop-blur print:hidden">
-      <div class="flex h-11 items-center gap-1 px-2 sm:px-3">
-        <button
-          id="sidebar-toggle"
-          type="button"
-          aria-controls="sidebar"
-          aria-expanded="false"
-          aria-label="Open menu"
-          class="row-hover hidden size-8 items-center justify-center rounded-md text-muted-foreground md:inline-flex"
-        ><PanelLeft className="size-4" /></button>
-        <a href="/" class="row-hover flex h-8 items-center gap-2 rounded-md px-2 font-semibold">
+    <header class="sticky top-0 z-30 border-b bg-background/95 backdrop-blur print:hidden">
+      <div class="mx-auto flex h-12 max-w-[96rem] items-center gap-1 px-3 sm:px-6 lg:px-10">
+        <a href="/" class="row-hover mr-2 flex h-8 items-center gap-2 rounded-md px-2 font-semibold">
           <img src="/brand/icon.svg" alt="" class="size-5 rounded-[4px]" />JobMatch
         </a>
+        <nav aria-label="Main" class="hidden items-center gap-0.5 md:flex">
+          {links.map(({ href, label, Icon }) => (
+            <a
+              href={href}
+              aria-current={isActive(href) ? "page" : undefined}
+              class={cn(
+                "row-hover flex h-8 items-center gap-1.5 rounded-md px-2.5 text-muted-foreground",
+                isActive(href) && "bg-accent font-medium text-foreground",
+              )}
+            ><Icon className="size-4" />{label}</a>
+          ))}
+        </nav>
         <div class="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            id="palette-open"
+            class="row-hover hidden h-8 items-center gap-2 rounded-md border px-2.5 text-muted-foreground lg:flex"
+            aria-label="Quick jump"
+          >
+            <Search className="size-3.5" /> Jump to… <kbd class="rounded border px-1 text-xs">⌘K</kbd>
+          </button>
+          <ThemeToggle client:load />
           {user ? (
             <>
               <span class="hidden max-w-48 truncate text-xs text-muted-foreground sm:inline">{user.name || user.email}</span>
@@ -64,77 +94,41 @@ const isActive = (href: string) =>
           )}
         </div>
       </div>
-      <nav aria-label="Main" class="flex gap-1 overflow-x-auto px-2 pb-2 md:hidden">
-        {links.map(({ href, label, Icon }) => (
-          <a
-            href={href}
-            aria-current={isActive(href) ? "page" : undefined}
-            class={cn(
-              "flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-muted-foreground",
-              isActive(href) && "bg-accent font-medium text-foreground",
-            )}
-          ><Icon className="size-4" />{label}</a>
-        ))}
-      </nav>
     </header>
-
-    <!-- Sidebar drawer: hidden until opened -->
-    <div id="sidebar-backdrop" class="fixed inset-0 z-40 hidden bg-black/30 data-[open=true]:block print:hidden" data-open="false"></div>
-    <aside
-      id="sidebar"
-      inert
-      data-open="false"
-      class="fixed inset-y-0 left-0 z-50 hidden w-60 -translate-x-full flex-col border-r bg-sidebar p-2 shadow-[var(--shadow-pop)] transition-transform duration-200 data-[open=true]:translate-x-0 md:flex print:hidden"
-    >
-      <a href="/" class="row-hover mb-2 flex h-9 items-center gap-2 rounded-md px-2 font-semibold">
-        <img src="/brand/icon.svg" alt="" class="size-5 rounded-[4px]" />JobMatch
-      </a>
-      <nav aria-label="Sidebar" class="grid gap-0.5">
-        {links.map(({ href, label, Icon }) => (
-          <a
-            href={href}
-            aria-current={isActive(href) ? "page" : undefined}
-            class={cn(
-              "row-hover flex h-8 items-center gap-2 rounded-md px-2 text-muted-foreground",
-              isActive(href) && "bg-accent font-medium text-foreground",
-            )}
-          ><Icon className="size-4" />{label}</a>
-        ))}
-      </nav>
-    </aside>
 
     <main
       id="main"
       class={cn(
-        "mx-auto w-full px-4 pt-6 pb-24 sm:px-8 lg:px-12 md:pt-8 print:max-w-none print:p-0",
+        "mx-auto w-full px-4 pt-6 pb-28 sm:px-8 lg:px-12 md:pt-8 md:pb-24 print:max-w-none print:p-0",
         width === "wide" ? "max-w-[96rem]" : "max-w-4xl",
       )}
     >
-      <slot />
+      <div class="page-in"><slot /></div>
     </main>
-    <Toaster client:load />
-    <script>
-      const toggle = document.getElementById("sidebar-toggle");
-      const sidebar = document.getElementById("sidebar");
-      const backdrop = document.getElementById("sidebar-backdrop");
 
-      if (toggle && sidebar && backdrop) {
-        const set = (open: boolean) => {
-          sidebar.dataset.open = String(open);
-          backdrop.dataset.open = String(open);
-          toggle.setAttribute("aria-expanded", String(open));
-          toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
-          sidebar.toggleAttribute("inert", !open);
-          if (open) {
-            sidebar.querySelector("a")?.focus();
-          } else {
-            toggle.focus();
-          }
-        };
-        toggle.addEventListener("click", () => set(sidebar.dataset.open !== "true"));
-        backdrop.addEventListener("click", () => set(false));
-        addEventListener("keydown", (e) => e.key === "Escape" && sidebar.dataset.open === "true" && set(false));
-      }
+    <!-- Phones: the same three places, one thumb away. -->
+    <nav aria-label="Main" class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden print:hidden">
+      {links.map(({ href, label, Icon }) => (
+        <a
+          href={href}
+          aria-current={isActive(href) ? "page" : undefined}
+          class={cn(
+            "flex flex-col items-center gap-0.5 py-2 text-xs text-muted-foreground",
+            isActive(href) && "font-medium text-foreground",
+          )}
+        ><Icon className="size-5" strokeWidth={isActive(href) ? 2.25 : 1.75} />{label}</a>
+      ))}
+    </nav>
+
+    <Toaster client:load />
+    <CommandPalette client:idle signedIn={Boolean(user)} />
+    <script>
+      // One delegated listener survives page transitions.
+      document.addEventListener("click", (e) => {
+        if ((e.target as Element).closest("#palette-open")) {
+          dispatchEvent(new Event("open-palette"));
+        }
+      });
     </script>
   </body>
 </html>

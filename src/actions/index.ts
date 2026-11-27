@@ -1,9 +1,10 @@
 import { ActionError, defineAction } from "astro:actions";
 import { z } from "astro/zod";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { extractText, getDocumentProxy } from "unpdf";
 import { db, schema } from "@/db";
 import { resumeFromText, suggestSearches, tailorResume } from "@/lib/ai";
+import { jobDetail } from "@/lib/job-detail";
 import {
   defaultPrefs,
   emptyResume,
@@ -69,39 +70,23 @@ export const server = {
     },
   }),
 
+  /** Read pasted resume text and turn it into a structured resume. */
+  importResumeText: defineAction({
+    input: z.object({
+      text: z.string().trim().min(50, "Paste a bit more.").max(40_000),
+    }),
+    handler: async ({ text }, { locals }) => {
+      const user = requireUser(locals);
+      const resume = await resumeFromText(text);
+      await saveProfile(user.id, { resume });
+      return resume;
+    },
+  }),
+
   saveResume: defineAction({
     input: z.object({ resume: Resume }),
     handler: async ({ resume }, { locals }) => {
       await saveProfile(requireUser(locals).id, { resume });
-    },
-  }),
-
-  /** Save one section of the master resume, so separate forms never overwrite each other. */
-  saveResumeSection: defineAction({
-    input: z.object({
-      key: z.enum([
-        "basics",
-        "summaries",
-        "work",
-        "education",
-        "projects",
-        "skills",
-        "leadership",
-        "notes",
-      ]),
-      value: z.unknown(),
-    }),
-    handler: async ({ key, value }, { locals }) => {
-      const user = requireUser(locals);
-      const current = Resume.parse((await getProfile(user.id))?.resume ?? {});
-      const parsed = Resume.safeParse({ ...current, [key]: value });
-      if (!parsed.success) {
-        throw new ActionError({
-          code: "BAD_REQUEST",
-          message: "Some fields need a fix.",
-        });
-      }
-      await saveProfile(user.id, { resume: parsed.data });
     },
   }),
 
@@ -133,6 +118,34 @@ export const server = {
     input: z.object({ prefs: Prefs }),
     handler: async ({ prefs }, { locals }) => {
       await saveProfile(requireUser(locals).id, { prefs });
+    },
+  }),
+
+  /** The job panel for the search page's side view. */
+  jobDetail: defineAction({
+    input: z.object({ id: z.string().min(1) }),
+    handler: async ({ id }, { locals }) => {
+      const detail = await jobDetail(locals.user?.id ?? null, id);
+      if (!detail) {
+        throw new ActionError({
+          code: "NOT_FOUND",
+          message: "This job is no longer listed.",
+        });
+      }
+      return detail;
+    },
+  }),
+
+  /** Short list of the user's resumes, for quick jump. */
+  listResumes: defineAction({
+    handler: async (_input, { locals }) => {
+      const user = requireUser(locals);
+      return db.query.application.findMany({
+        where: eq(schema.application.userId, user.id),
+        columns: { id: true, role: true, company: true },
+        orderBy: desc(schema.application.createdAt),
+        limit: 50,
+      });
     },
   }),
 

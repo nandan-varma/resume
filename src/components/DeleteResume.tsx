@@ -1,4 +1,5 @@
 import { actions } from "astro:actions";
+import { navigate } from "astro:transitions/client";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,7 +18,7 @@ export default function DeleteResume({ id }: { id: string }) {
       toast.error(error.message);
       return;
     }
-    window.location.assign("/resumes");
+    navigate("/resumes");
   };
 
   return (

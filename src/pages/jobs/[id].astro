@@ -1,49 +1,20 @@
 ---
-import { and, eq } from "drizzle-orm";
-import { ArrowLeft, ExternalLink, FileX, Hand } from "lucide-react";
-import TailorButton from "@/components/TailorButton";
-import Callout from "@/components/ui/Callout.astro";
-import Property from "@/components/ui/Property.astro";
-import Tag from "@/components/ui/Tag.astro";
-import { buttonVariants, type TagColor } from "@/components/ui/variants";
-import { db, schema } from "@/db";
+import { ArrowLeft, FileX } from "lucide-react";
+import JobDetail from "@/components/JobDetail";
+import { buttonVariants } from "@/components/ui/variants";
 import Layout from "@/layouts/Layout.astro";
-import { cn } from "@/lib/cn";
-import { hasContent } from "@/lib/resume";
-import { getJob } from "@/lib/tallo";
+import { jobDetail } from "@/lib/job-detail";
 
-const { id } = Astro.params;
-const job = await getJob(id ?? "");
-if (!job) {
+const data = await jobDetail(
+  Astro.locals.user?.id ?? null,
+  Astro.params.id ?? "",
+);
+if (!data) {
   Astro.response.status = 404;
 }
-
-const { user } = Astro.locals;
-const profile = user
-  ? await db.query.profile.findFirst({
-      where: eq(schema.profile.userId, user.id),
-    })
-  : undefined;
-const existing =
-  user && job
-    ? await db.query.application.findFirst({
-        where: and(
-          eq(schema.application.userId, user.id),
-          eq(schema.application.talloId, job.id),
-        ),
-        columns: { id: true },
-      })
-    : undefined;
-const ready = profile ? hasContent(profile.resume) : false;
-const here = encodeURIComponent(Astro.url.pathname);
-const modeColor: Record<string, TagColor> = {
-  remote: "green",
-  hybrid: "blue",
-  onsite: "gray",
-};
 ---
-<Layout title={job?.title ?? "Job not found"}>
-  {!job ? (
+<Layout title={data?.job.title ?? "Job not found"}>
+  {!data ? (
     <div class="max-w-xl">
       <span class="mb-3 flex size-10 items-center justify-center rounded-lg border text-muted-foreground"><FileX className="size-5" strokeWidth={1.75} /></span>
       <h1 class="page-title">This job is no longer listed</h1>
@@ -51,47 +22,9 @@ const modeColor: Record<string, TagColor> = {
       <a href="/" class={buttonVariants()}>Back to search</a>
     </div>
   ) : (
-    <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <article class="min-w-0">
-        <a href="/" class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" /> Find jobs</a>
-        <h1 class="page-title mt-3">{job.title}</h1>
-        <p class="mt-1 text-base text-muted-foreground">{job.company}</p>
-        <h2 class="block-heading mt-6">About the job</h2>
-        <div class="max-w-3xl text-[0.9375rem] leading-7 whitespace-pre-wrap">{job.description}</div>
-      </article>
-
-      <aside class="lg:sticky lg:top-8 lg:self-start">
-        <div class="grid gap-4 rounded-lg border p-4">
-          {!user ? (
-            <a href={`/login?next=${here}`} class={cn(buttonVariants({ size: "lg" }), "w-full")}>Sign in to make a resume</a>
-          ) : !ready ? (
-            <>
-              <Callout Icon={Hand} tone="yellow">First, tell us about yourself. It takes a minute.</Callout>
-              <a href="/profile" class={cn(buttonVariants({ size: "lg" }), "w-full")}>Add my details</a>
-            </>
-          ) : existing ? (
-            <>
-              <a href={`/resumes/${existing.id}`} class={cn(buttonVariants({ size: "lg" }), "w-full")}>Open my resume</a>
-              <TailorButton client:load talloId={job.id} variant="outline" label="Make a fresh version" />
-            </>
-          ) : (
-            <TailorButton client:load talloId={job.id} />
-          )}
-          {job.applyUrl && (
-            <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" class={cn(buttonVariants({ variant: "outline" }), "w-full")}>
-              Apply on company site <ExternalLink className="size-4" />
-            </a>
-          )}
-          <dl class="grid gap-1 border-t pt-3">
-            {job.location && <Property label="Location">{job.location}</Property>}
-            {job.workMode && <Property label="Work mode"><Tag color={modeColor[job.workMode] ?? "gray"} class="capitalize">{job.workMode}</Tag></Property>}
-            {job.pay && <Property label="Pay">{job.pay}</Property>}
-            {job.employmentType && <Property label="Type">{job.employmentType}</Property>}
-            {job.department && <Property label="Team">{job.department}</Property>}
-            {job.postedAt && <Property label="Posted">{job.postedAt}</Property>}
-          </dl>
-        </div>
-      </aside>
-    </div>
+    <>
+      <a href="/" class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-3.5" /> Find jobs</a>
+      <div class="mt-3"><JobDetail client:load data={data} /></div>
+    </>
   )}
 </Layout>

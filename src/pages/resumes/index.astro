@@ -1,8 +1,7 @@
 ---
 import { desc, eq } from "drizzle-orm";
-import { Files, FileText, Sparkles } from "lucide-react";
+import { Files, Search, Sparkles } from "lucide-react";
 import AppliedToggle from "@/components/AppliedToggle";
-import Callout from "@/components/ui/Callout.astro";
 import PageHeader from "@/components/ui/PageHeader.astro";
 import Tag from "@/components/ui/Tag.astro";
 import { buttonVariants, type TagColor } from "@/components/ui/variants";
@@ -15,39 +14,41 @@ const rows = await db.query.application.findMany({
   orderBy: desc(schema.application.createdAt),
 });
 const level: Record<string, { color: TagColor; label: string }> = {
-  strong: { color: "green", label: "Strong" },
-  good: { color: "blue", label: "Good" },
-  stretch: { color: "yellow", label: "Stretch" },
+  strong: { color: "green", label: "Strong match" },
+  good: { color: "blue", label: "Good match" },
+  stretch: { color: "yellow", label: "A stretch" },
 };
-const columns = "md:grid-cols-[minmax(0,2fr)_8rem_6rem_9rem_6rem]";
+const applied = rows.filter((r) => r.applied).length;
 ---
 <Layout title="My resumes">
-  <PageHeader Icon={Files} title="My resumes" description="One tailored resume and cover letter for every job you picked." />
+  <PageHeader Icon={Files} title="My resumes" description={rows.length > 0 ? `${rows.length} written${applied > 0 ? `, ${applied} applied` : ""}. Open one to edit it or save it as a PDF.` : "One tailored resume and cover letter for every job you pick."} />
 
   {rows.length === 0 ? (
-    <Callout Icon={Sparkles}>
-      <strong>Nothing here yet.</strong> Find a job and we will write a resume for it.
-      <a href="/" class={cn(buttonVariants({ size: "sm" }), "mt-3 flex w-fit")}>Find jobs</a>
-    </Callout>
+    <div class="mx-auto mt-12 flex max-w-sm flex-col items-center gap-3 text-center [animation:rise_0.4s_backwards]">
+      <span class="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground"><Sparkles className="size-6" /></span>
+      <h2 class="text-lg font-semibold">No resumes yet</h2>
+      <p class="text-muted-foreground">Find a job you like and we will write a resume and cover letter for it in under a minute.</p>
+      <a href="/" class={cn(buttonVariants({ size: "lg" }), "mt-1")}><Search className="size-4" /> Find jobs</a>
+    </div>
   ) : (
-    <>
-      <div class={cn("hidden gap-4 border-b px-2 pb-2 text-xs text-muted-foreground md:grid", columns)} aria-hidden="true">
-        <span>Job</span><span>Match</span><span>Confidence</span><span>Created</span><span>Applied</span>
-      </div>
-      <ul>
-        {rows.map((row) => (
-          <li class={cn("row-hover grid items-center gap-x-4 gap-y-1 border-b px-2 py-3 last:border-0", columns)}>
-            <a href={`/resumes/${row.id}`} class="min-w-0 outline-none">
-              <span class="flex min-w-0 items-center gap-2 font-medium"><FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} /><span class="truncate">{row.role}</span></span>
-              <span class="block truncate pl-6 text-muted-foreground">{row.company}</span>
-            </a>
-            <span><Tag color={level[row.match.level]?.color ?? "gray"}>{level[row.match.level]?.label}</Tag></span>
-            <span class="text-muted-foreground">{row.match.confidence ?? ""}</span>
-            <span class="text-muted-foreground">{row.createdAt.toLocaleDateString("en-US", { dateStyle: "medium" })}</span>
-            <AppliedToggle client:load id={row.id} applied={row.applied} />
-          </li>
-        ))}
-      </ul>
-    </>
+    <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {rows.map((row, i) => (
+        <li class="stagger lift relative flex flex-col gap-3 rounded-xl border bg-card p-4" style={`--i:${Math.min(i, 8)}`}>
+          <a href={`/resumes/${row.id}`} class="absolute inset-0 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30" aria-label={`Open ${row.role} at ${row.company}`}></a>
+          <div class="min-w-0">
+            <p class="truncate font-semibold">{row.role}</p>
+            <p class="truncate text-muted-foreground">{row.company}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <Tag color={level[row.match.level]?.color ?? "gray"}>{level[row.match.level]?.label}</Tag>
+            {row.match.confidence && <span class="text-xs text-muted-foreground">{row.match.confidence} callback</span>}
+          </div>
+          <div class="mt-auto flex items-center justify-between text-xs text-muted-foreground">
+            <span>{row.createdAt.toLocaleDateString("en-US", { dateStyle: "medium" })}</span>
+            <span class="relative z-10"><AppliedToggle client:visible id={row.id} applied={row.applied} /></span>
+          </div>
+        </li>
+      ))}
+    </ul>
   )}
 </Layout>
