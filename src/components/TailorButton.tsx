@@ -1,7 +1,7 @@
 import { actions } from "astro:actions";
 import { navigate } from "astro:transitions/client";
 import { Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { DISCARD_EVENT } from "./useDoc";
@@ -27,19 +27,33 @@ export default function TailorButton({
     "idle",
   );
   const [target, setTarget] = useState<string>();
+  const busy = useRef(false);
 
   const run = async () => {
+    // One run at a time, however many times Enter or the button is pressed.
+    if (busy.current) {
+      return;
+    }
+    busy.current = true;
     // A new version replaces what is saved, so a pending autosave must not land after it.
     window.dispatchEvent(new Event(DISCARD_EVENT));
     setPhase("working");
-    const { data, error } = await actions.tailor({ talloId, shorter });
-    if (error) {
-      toast.error(error.message || "Something went wrong. Please try again.");
+    try {
+      const { data, error } = await actions.tailor({ talloId, shorter });
+      if (error) {
+        throw new Error(error.message);
+      }
+      setTarget(`/resumes/${data.id}?new=1`);
+      setPhase("done");
+    } catch (e) {
+      toast.error(
+        e instanceof Error && e.message
+          ? e.message
+          : "Something went wrong. Please try again.",
+      );
       setPhase("idle");
-      return;
+      busy.current = false;
     }
-    setTarget(`/resumes/${data.id}?new=1`);
-    setPhase("done");
   };
 
   if (phase === "asking") {
@@ -62,6 +76,7 @@ export default function TailorButton({
         size="lg"
         variant={variant}
         className="w-full"
+        disabled={phase === "working" || phase === "done"}
         onClick={() => (confirm ? setPhase("asking") : run())}
       >
         <Sparkles /> {label}

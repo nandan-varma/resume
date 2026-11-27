@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 
@@ -32,6 +32,14 @@ export default function WorkOverlay({
   onDone,
 }: Props) {
   const [seconds, setSeconds] = useState(0);
+  const dialog = useRef<HTMLDivElement>(null);
+
+  // Take focus so the keyboard cannot reach the page underneath.
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    dialog.current?.focus();
+    return () => previous?.focus?.();
+  }, []);
 
   useEffect(() => {
     const started = Date.now();
@@ -60,11 +68,13 @@ export default function WorkOverlay({
   }
   return createPortal(
     <div
+      ref={dialog}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label={title}
       aria-live="polite"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-4 backdrop-blur-md [animation:fade_0.25s_backwards]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 outline-none p-4 backdrop-blur-md [animation:fade_0.25s_backwards]"
     >
       <div className="grid w-full max-w-3xl gap-8 rounded-2xl border bg-card p-6 shadow-[var(--shadow-pop)] [animation:pop_0.35s_cubic-bezier(0.2,0.7,0.2,1)_backwards] sm:grid-cols-[11rem_1fr] sm:p-8">
         <div

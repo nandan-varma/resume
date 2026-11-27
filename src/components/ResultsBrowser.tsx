@@ -62,7 +62,9 @@ export default function ResultsBrowser({ jobs, made, next, capped }: Props) {
     }
     setDetail(null);
     setFailed(false);
-    const { data } = await actions.jobDetail({ id });
+    const { data } = await actions
+      .jobDetail({ id })
+      .catch(() => ({ data: undefined }));
     if (data) {
       cache.current.set(id, data);
       setDetail((current) => (selectedRef.current === id ? data : current));

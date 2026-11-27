@@ -74,35 +74,46 @@ export default function ProfileEditor({ resume, prefs, welcome }: Props) {
     setFinished(true);
   };
 
-  const readFile = async (file: File) => {
+  const reading = useRef(false);
+  /** Runs an import, once at a time, and always returns to a usable screen on failure. */
+  const importWith = async (
+    run: () => Promise<{ data?: Resume; error?: { message: string } }>,
+  ) => {
+    if (reading.current) {
+      return;
+    }
+    reading.current = true;
+    setPhase("reading");
+    setFinished(false);
+    try {
+      const { data, error } = await run();
+      if (error || !data) {
+        throw new Error(error?.message);
+      }
+      takeResult(data);
+    } catch (e) {
+      toast.error(
+        e instanceof Error && e.message
+          ? e.message
+          : "Something went wrong. Please try again.",
+      );
+      setPhase(welcome ? "welcome" : "editing");
+    } finally {
+      reading.current = false;
+    }
+  };
+
+  const readFile = (file: File) => {
     if (file.type !== "application/pdf") {
       toast.error("Please choose a PDF file.");
       return;
     }
-    setPhase("reading");
-    setFinished(false);
     const form = new FormData();
     form.set("file", file);
-    const { data, error } = await actions.importResume(form);
-    if (error) {
-      toast.error(error.message);
-      setPhase(welcome ? "welcome" : "editing");
-      return;
-    }
-    takeResult(data);
+    return importWith(() => actions.importResume(form));
   };
 
-  const readText = async () => {
-    setPhase("reading");
-    setFinished(false);
-    const { data, error } = await actions.importResumeText({ text });
-    if (error) {
-      toast.error(error.message);
-      setPhase("welcome");
-      return;
-    }
-    takeResult(data);
-  };
+  const readText = () => importWith(() => actions.importResumeText({ text }));
 
   const { doc } = master;
   const progress = completeness(doc);
