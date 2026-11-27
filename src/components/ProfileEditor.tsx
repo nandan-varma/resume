@@ -293,7 +293,12 @@ export default function ProfileEditor({ resume, prefs, welcome }: Props) {
             Click any text to edit it
           </span>
         </div>
-        <ResumeSheet resume={doc} edit={master.edit} mode="flow" />
+        <ResumeSheet
+          resume={doc}
+          edit={master.edit}
+          mode="flow"
+          paper={prefs.paper}
+        />
       </div>
 
       <aside className="grid content-start gap-4 lg:sticky lg:top-24 lg:self-start">

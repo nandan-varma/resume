@@ -2,7 +2,13 @@ import { env } from "cloudflare:workers";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, jsonSchema, type ModelMessage, Output } from "ai";
 import { z } from "zod";
-import { lineBreakdown, overflow, PAGE_LINES, trimToFit } from "./layout";
+import {
+  lineBreakdown,
+  overflow,
+  type Paper,
+  pageLines,
+  trimToFit,
+} from "./layout";
 import {
   importPrompt,
   suggestPrompt,
@@ -63,12 +69,12 @@ export async function suggestSearches(resume: Resume) {
 
 const MAX_ROUNDS = 3;
 
-const overflowFeedback = (resume: Resume, lines: number) => {
-  const breakdown = Object.entries(lineBreakdown(resume))
+const overflowFeedback = (resume: Resume, lines: number, paper: Paper) => {
+  const breakdown = Object.entries(lineBreakdown(resume, paper))
     .map(([name, n]) => `${name} ${Math.round(n)}`)
     .join(", ");
   return [
-    `That draft runs about ${lines} lines past one page. The limit is ${PAGE_LINES} lines of body text.`,
+    `That draft runs about ${lines} lines past one page. The limit is ${pageLines(paper)} lines of body text.`,
     `Estimated lines per section: ${breakdown}.`,
     "Return the complete JSON again, shorter. Make bullets one line where you can, drop the weakest bullets and the fourth project, and keep only the most relevant skill groups.",
     "Keep the strongest verified numbers. Do not change the match, the confidence or the cover letter.",
@@ -84,12 +90,20 @@ export async function tailorResume(input: TailorInput) {
   const { system, prompt } = tailorPrompt(input);
   const messages: ModelMessage[] = [{ role: "user", content: prompt }];
 
+  const paper = input.prefs.paper;
   let out = await generate(Tailored, system, messages);
   let resume = assemble(input.resume, out);
-  for (let round = 1; round < MAX_ROUNDS && overflow(resume) > 0; round++) {
+  for (
+    let round = 1;
+    round < MAX_ROUNDS && overflow(resume, paper) > 0;
+    round++
+  ) {
     messages.push(
       { role: "assistant", content: JSON.stringify(out) },
-      { role: "user", content: overflowFeedback(resume, overflow(resume)) },
+      {
+        role: "user",
+        content: overflowFeedback(resume, overflow(resume, paper), paper),
+      },
     );
     out = await generate(Tailored, system, messages);
     resume = assemble(input.resume, out);
@@ -97,7 +111,7 @@ export async function tailorResume(input: TailorInput) {
 
   return {
     match: out.match,
-    resume: trimToFit(resume),
+    resume: trimToFit(resume, paper),
     coverLetter: out.coverLetter,
   };
 }

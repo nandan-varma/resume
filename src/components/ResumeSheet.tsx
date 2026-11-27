@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/cn";
+import type { Paper } from "@/lib/layout";
 import { Resume } from "@/lib/resume";
 import { isReworded, originalProject, originalWork } from "@/lib/resume-diff";
 import { caretOffset, Editable, setCaret } from "./Editable";
@@ -23,8 +24,9 @@ export type Edit = (key: string, change: (draft: Resume) => void) => void;
 type Props = {
   resume: Resume;
   edit: Edit;
-  /** "page" is one US Letter page; "flow" grows with the content (the master resume). */
+  /** "page" is one page of paper; "flow" grows with the content (the master resume). */
   mode: "page" | "flow";
+  paper: Paper;
   /** The master resume. When given, reworded jobs and projects are marked and can be restored. */
   master?: Resume;
   /** Called after each change with how many lines are spare (negative: over the page). */
@@ -155,6 +157,7 @@ export default function ResumeSheet({
   resume,
   edit,
   mode,
+  paper,
   master,
   onFit,
 }: Props) {
@@ -390,7 +393,7 @@ export default function ResumeSheet({
   };
 
   return (
-    <Frame mode={mode} resume={resume} onFit={onFit}>
+    <Frame mode={mode} paper={paper} resume={resume} onFit={onFit}>
       {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys bubble up from the editable fields inside */}
       <div
         ref={root}
@@ -473,7 +476,7 @@ export default function ResumeSheet({
                 },
                 {
                   value: basics.phone,
-                  sep: "  ·  ",
+                  sep: " · ",
                   node: field(
                     "basics.phone",
                     basics.phone,
@@ -483,7 +486,7 @@ export default function ResumeSheet({
                 },
                 {
                   value: basics.location,
-                  sep: "  ·  ",
+                  sep: " · ",
                   node: field(
                     "basics.location",
                     basics.location,
@@ -493,7 +496,7 @@ export default function ResumeSheet({
                 },
                 ...basics.links.map((l, i) => ({
                   value: l.url,
-                  sep: "  ·  ",
+                  sep: " · ",
                   node: (
                     <span className="rs-link">
                       {field(
@@ -963,38 +966,46 @@ export default function ResumeSheet({
  */
 function Frame({
   mode,
+  paper: size,
   resume,
   onFit,
   children,
 }: {
   mode: "page" | "flow";
+  paper: Paper;
   resume: Resume;
   onFit?: (spareLines: number) => void;
   children: ReactNode;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState({ scale: 1, margin: 0, height: 0 });
+  const [view, setView] = useState({ scale: 1, width: 0, height: 0 });
 
   useLayoutEffect(() => {
     const el = wrap.current;
     const paper = sheet.current;
-    if (!(el && paper)) {
+    // The nearest ancestor that has a real box (wrappers like <astro-island> have none).
+    let host = el?.parentElement ?? null;
+    while (host && getComputedStyle(host).display === "contents") {
+      host = host.parentElement;
+    }
+    if (!(el && paper && host)) {
       return;
     }
+    // The frame hugs the paper (no empty white bands), centred in the space it has.
     const fit = () => {
       const scale = Math.min(
-        Math.max(el.clientWidth / paper.offsetWidth, 0.3),
+        Math.max(host.clientWidth / paper.offsetWidth, 0.3),
         1.15,
       );
       setView({
         scale,
-        margin: Math.max(0, (el.clientWidth - paper.offsetWidth * scale) / 2),
+        width: paper.offsetWidth * scale,
         height: paper.offsetHeight * scale,
       });
     };
     const observer = new ResizeObserver(fit);
-    observer.observe(el);
+    observer.observe(host);
     observer.observe(paper);
     fit();
     return () => observer.disconnect();
@@ -1024,17 +1035,18 @@ function Frame({
     <div
       ref={wrap}
       className="sheet-wrap"
-      style={{ height: view.height || undefined }}
+      style={{
+        width: view.width || undefined,
+        height: view.height || undefined,
+      }}
     >
       <div
         ref={sheet}
         id="resume-sheet"
         data-mode={mode}
+        data-paper={size}
         className="resume-sheet"
-        style={{
-          transform: `scale(${view.scale})`,
-          marginLeft: view.margin,
-        }}
+        style={{ transform: `scale(${view.scale})` }}
       >
         {children}
       </div>

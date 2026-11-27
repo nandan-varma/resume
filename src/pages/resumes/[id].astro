@@ -14,7 +14,7 @@ import Tag from "@/components/ui/Tag.astro";
 import type { TagColor } from "@/components/ui/variants";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
-import { Resume } from "@/lib/resume";
+import { Prefs, Resume } from "@/lib/resume";
 
 const userId = Astro.locals.user?.id ?? "";
 const row = await db.query.application.findFirst({
@@ -55,6 +55,7 @@ const level: Record<string, { color: TagColor; label: string }> = {
     resume={Resume.parse(row.resume)}
     coverLetter={row.coverLetter}
     master={Resume.parse(profile?.resume ?? {})}
+    paper={Prefs.parse(profile?.prefs ?? {}).paper}
     isNew={Astro.url.searchParams.has("new")}
   >
     <div slot="aside" class="grid gap-4">

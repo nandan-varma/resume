@@ -346,21 +346,30 @@
 
 /* The printable resume is always black on white, whatever the theme. US Letter. */
 .resume-sheet {
-  width: 8.5in;
-  height: 11in;
+  --paper-w: 210mm;
+  --paper-h: 297mm;
+  width: var(--paper-w);
+  height: var(--paper-h);
   padding: 0.42in 0.55in;
   overflow: hidden;
   background: #fff;
   color: #111;
+  /* Arial first: the same metrics on every computer, and the font ATS software knows best. */
   font:
-    9.5pt / 1.28 "Helvetica Neue",
+    10pt / 1.32 Arial,
+    "Helvetica Neue",
     Helvetica,
-    Arial,
+    "Liberation Sans",
     sans-serif;
   font-variant-numeric: tabular-nums;
   transform-origin: top left;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+}
+.resume-sheet[data-paper="letter"],
+.letter-sheet[data-paper="letter"] {
+  --paper-w: 8.5in;
+  --paper-h: 11in;
 }
 /* The master resume has no page limit, so it grows with its content. */
 .resume-sheet[data-mode="flow"] {
@@ -377,30 +386,31 @@
   margin-bottom: 7pt;
   text-align: center;
 }
+/* Light letter-spacing only: wide tracking makes some ATS parsers read "E X P E R I E N C E". */
 .resume-sheet h1 {
-  font-size: 19pt;
+  font-size: 20pt;
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 .resume-sheet .rs-headline {
   margin-top: 2pt;
-  font-size: 10.5pt;
-  color: #333;
+  font-size: 11pt;
+  color: #262626;
 }
 .resume-sheet .rs-contact {
   margin-top: 2pt;
-  font-size: 8.5pt;
-  color: #333;
+  font-size: 9pt;
+  color: #262626;
 }
 .resume-sheet h2 {
-  margin: 7pt 0 3pt;
+  margin: 8pt 0 3pt;
   border-bottom: 0.75pt solid #111;
   padding-bottom: 1.5pt;
-  font-size: 8.5pt;
+  font-size: 9.5pt;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 .resume-sheet article + article {
@@ -414,15 +424,15 @@
 }
 .resume-sheet .date {
   flex-shrink: 0;
-  color: #333;
-  font-size: 9pt;
+  color: #262626;
+  font-size: 9.5pt;
 }
 .resume-sheet .muted {
-  color: #444;
+  color: #333;
 }
 .resume-sheet .stack {
-  color: #333;
-  font-size: 8.5pt;
+  color: #262626;
+  font-size: 9.5pt;
   font-style: italic;
 }
 .resume-sheet ul {
@@ -434,7 +444,7 @@
   padding-left: 0.1em;
 }
 .resume-sheet li::marker {
-  font-size: 0.85em;
+  font-size: 0.95em;
 }
 .resume-sheet .skills {
   display: grid;
@@ -456,8 +466,9 @@
 
 /* ---- Editing the sheet in place. None of this prints. ---- */
 .sheet-wrap {
-  overflow-x: auto;
-  overflow-y: hidden;
+  max-width: 100%;
+  margin-inline: auto;
+  overflow: hidden;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: #fff;
@@ -757,6 +768,9 @@
   content: none !important;
 }
 
+.letter-sheet {
+  --paper-w: 210mm;
+}
 .letter-sheet textarea {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
@@ -770,7 +784,6 @@
     padding: 0.9in 1in !important;
   }
   @page {
-    size: letter;
     margin: 0;
   }
   body {
@@ -794,6 +807,7 @@
     display: none;
   }
   .sheet-wrap {
+    width: auto !important;
     height: auto !important;
     overflow: visible;
     border: 0;
@@ -808,6 +822,16 @@
   }
   .resume-sheet[data-mode="flow"] {
     height: auto;
+  }
+  /*
+   * Plain document order in the PDF. Positioned elements are painted after the
+   * rest, which would put the name after the summary in the PDF's text and
+   * confuse software that reads it top to bottom.
+   */
+  .resume-sheet *,
+  .resume-sheet *::before,
+  .resume-sheet *::after {
+    position: static !important;
   }
   .rs-ed:hover,
   .rs-ed:focus {

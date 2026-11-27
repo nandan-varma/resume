@@ -11,6 +11,7 @@ import {
 import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
+import type { Paper } from "@/lib/layout";
 import type { Resume } from "@/lib/resume";
 import { summarizeChanges } from "@/lib/resume-diff";
 import { SaveBadge, UndoRedo } from "./EditorBar";
@@ -30,6 +31,8 @@ type Props = {
   coverLetter: string;
   /** The profile this was written from, so changes can be shown and undone. */
   master: Resume;
+  /** The paper this resume is laid out and printed on. */
+  paper: Paper;
   isNew: boolean;
   /** Match notes, rendered on the server. */
   aside?: ReactNode;
@@ -46,6 +49,7 @@ export default function ApplicationEditor({
   resume,
   coverLetter,
   master,
+  paper,
   isNew,
   aside,
 }: Props) {
@@ -113,6 +117,8 @@ export default function ApplicationEditor({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:grid-rows-[auto_1fr] print:block">
+      {/* The page size of the PDF follows the paper setting. */}
+      <style>{`@page { size: ${paper === "a4" ? "A4" : "letter"}; margin: 0 }`}</style>
       {/* Actions */}
       <div className="grid content-start gap-2 lg:col-start-2 lg:row-start-1 print:hidden">
         <Button size="lg" onClick={() => window.print()}>
@@ -249,11 +255,15 @@ export default function ApplicationEditor({
               resume={app.doc.resume}
               edit={editResume}
               mode="page"
+              paper={paper}
               master={master}
               onFit={setSpare}
             />
           ) : (
-            <div className="letter-sheet mx-auto max-w-[8.5in] rounded-md border bg-white p-6 text-[#111] shadow-[var(--shadow-pop)] sm:px-14 sm:py-12">
+            <div
+              data-paper={paper}
+              className="letter-sheet mx-auto max-w-[var(--paper-w)] rounded-md border bg-white p-6 text-[#111] shadow-[var(--shadow-pop)] sm:px-14 sm:py-12"
+            >
               <p className="text-base font-bold">{basics.name}</p>
               {contact && <p className="text-[#444]">{contact}</p>}
               <textarea

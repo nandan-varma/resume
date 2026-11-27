@@ -105,7 +105,10 @@ export const Resume = z.object({
 });
 export type Resume = z.infer<typeof Resume>;
 
+export const PaperSize = z.enum(["a4", "letter"]);
+
 export const Prefs = z.object({
+  paper: PaperSize.default("a4").meta({ title: "Paper size" }),
   tone: z
     .enum(["plain", "confident", "warm"])
     .default("plain")

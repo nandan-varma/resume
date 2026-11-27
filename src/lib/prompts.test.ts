@@ -26,7 +26,7 @@ describe("tailorPrompt", () => {
     const custom = tailorPrompt({
       ...input,
       shorter: true,
-      prefs: { tone: "warm", rules: "No emojis" },
+      prefs: { ...defaultPrefs(), tone: "warm", rules: "No emojis" },
     });
     expect(custom.system).toContain("No emojis");
     expect(custom.system).toContain("past one page");
