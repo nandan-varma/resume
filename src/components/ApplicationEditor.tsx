@@ -5,24 +5,24 @@ import {
   FileText,
   Mail,
   Printer,
+  Scissors,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
-import type { Paper } from "@/lib/layout";
+import { estimateLines, type Paper, trimToFit } from "@/lib/layout";
 import type { Resume } from "@/lib/resume";
 import { summarizeChanges } from "@/lib/resume-diff";
+import CoverLetterWriter from "./CoverLetterWriter";
 import { SaveBadge, UndoRedo } from "./EditorBar";
 import ResumeSheet, { type Edit } from "./ResumeSheet";
-import TailorButton from "./TailorButton";
 import { Button } from "./ui/button";
 import { useDoc } from "./useDoc";
 
 type Props = {
   id: string;
-  talloId: string;
   role: string;
   company: string;
   applyUrl: string;
@@ -42,7 +42,6 @@ type Tab = "resume" | "letter";
 
 export default function ApplicationEditor({
   id,
-  talloId,
   company,
   applyUrl,
   applied: initialApplied,
@@ -69,6 +68,17 @@ export default function ApplicationEditor({
   useEffect(() => {
     if (isNew) {
       toast.success("Your resume is ready. Click any line to edit it.");
+      try {
+        const notes: string[] = JSON.parse(
+          sessionStorage.getItem("tailorNotes") ?? "[]",
+        );
+        sessionStorage.removeItem("tailorNotes");
+        if (notes.length > 0) {
+          toast.info(notes.join(" "), { duration: 12000 });
+        }
+      } catch {
+        // No notes to show.
+      }
       // So a reload does not repeat the welcome.
       const url = new URL(location.href);
       url.searchParams.delete("new");
@@ -94,6 +104,22 @@ export default function ApplicationEditor({
       removeEventListener("afterprint", after);
     };
   }, [app.doc.resume.basics.name, company, tab]);
+
+  // Trim the weakest content on the page as it is now, so your own edits stay. Undo brings it back.
+  const tighten = () => {
+    const before = estimateLines(app.doc.resume, paper);
+    const tight = trimToFit(app.doc.resume, paper);
+    if (estimateLines(tight, paper) >= before) {
+      toast.info(
+        "Nothing more can be trimmed automatically. Remove a line or two yourself.",
+      );
+      return;
+    }
+    app.edit(`tighten:${Date.now()}`, (d) => {
+      d.resume = tight;
+    });
+    toast.success("Trimmed the weakest content to fit. Undo brings it back.");
+  };
 
   const toggleApplied = async () => {
     const next = !applied;
@@ -121,7 +147,11 @@ export default function ApplicationEditor({
       <style>{`@page { size: ${paper === "a4" ? "A4" : "letter"}${tab === "letter" ? "; margin: 0.9in 1in" : ""} }`}</style>
       {/* Actions */}
       <div className="grid content-start gap-2 lg:col-start-2 lg:row-start-1 print:hidden">
-        <Button size="lg" onClick={() => window.print()}>
+        <Button
+          size="lg"
+          disabled={tab === "letter" && app.doc.coverLetter.trim() === ""}
+          onClick={() => window.print()}
+        >
           <Printer /> Download {tab === "letter" ? "cover letter" : "resume"} as
           PDF
         </Button>
@@ -227,20 +257,14 @@ export default function ApplicationEditor({
         </div>
 
         {tab === "resume" && over && (
-          <div className="mb-3 grid gap-2 rounded-xl bg-[var(--callout-yellow)] p-3 text-[var(--tag-yellow-fg)] [animation:rise_0.3s_backwards] sm:grid-cols-[1fr_auto] sm:items-center print:hidden">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--callout-yellow)] p-3 text-[var(--tag-yellow-fg)] [animation:rise_0.3s_backwards] print:hidden">
             <p>
-              This runs past one page. Trim a line or two, or let us tighten it
-              for you.
+              This runs past one page. Trim a line or two, or tighten it: we
+              drop the weakest content and you can undo it.
             </p>
-            <div className="w-full sm:w-56">
-              <TailorButton
-                talloId={talloId}
-                shorter
-                confirm
-                variant="outline"
-                label="Tighten it for me"
-              />
-            </div>
+            <Button variant="outline" onClick={tighten}>
+              <Scissors /> Tighten it for me
+            </Button>
           </div>
         )}
 
@@ -260,23 +284,57 @@ export default function ApplicationEditor({
               master={master}
               onFit={setSpare}
             />
-          ) : (
-            <div
-              data-paper={paper}
-              className="letter-sheet mx-auto max-w-[var(--paper-w)] rounded-md border bg-white p-6 text-[#111] shadow-[var(--shadow-pop)] sm:px-14 sm:py-12"
-            >
-              <p className="text-base font-bold">{basics.name}</p>
-              {contact && <p className="text-[#444]">{contact}</p>}
-              <textarea
-                value={app.doc.coverLetter}
-                onChange={(e) =>
-                  app.edit("letter", (d) => (d.coverLetter = e.target.value))
+          ) : app.doc.coverLetter.trim() === "" ? (
+            <div className="mx-auto grid max-w-md justify-items-center gap-3 rounded-xl border bg-card px-6 py-12 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Mail className="size-5" />
+              </span>
+              <h2 className="text-lg font-semibold">No cover letter yet</h2>
+              <p className="text-muted-foreground">
+                We write it from your resume and the posting, and check that
+                every fact in it is yours.
+              </p>
+              <CoverLetterWriter
+                id={id}
+                hasLetter={false}
+                onLetter={(letter) =>
+                  app.edit(
+                    `letter:${Date.now()}`,
+                    (d) => (d.coverLetter = letter),
+                  )
                 }
-                aria-label="Cover letter"
-                placeholder="Your cover letter"
-                className="mt-8 block min-h-[26rem] w-full resize-none bg-transparent text-[0.9375rem] leading-7 outline-none [field-sizing:content] focus-visible:rounded focus-visible:bg-primary/5 focus-visible:ring-4 focus-visible:ring-primary/10"
               />
             </div>
+          ) : (
+            <>
+              <div className="mx-auto mb-2 flex max-w-[var(--paper-w)] justify-end print:hidden">
+                <CoverLetterWriter
+                  id={id}
+                  hasLetter
+                  onLetter={(letter) =>
+                    app.edit(
+                      `letter:${Date.now()}`,
+                      (d) => (d.coverLetter = letter),
+                    )
+                  }
+                />
+              </div>
+              <div
+                data-paper={paper}
+                className="letter-sheet mx-auto max-w-[var(--paper-w)] rounded-md border bg-white p-6 text-[#111] shadow-[var(--shadow-pop)] sm:px-14 sm:py-12"
+              >
+                <p className="text-base font-bold">{basics.name}</p>
+                {contact && <p className="text-[#444]">{contact}</p>}
+                <textarea
+                  value={app.doc.coverLetter}
+                  onChange={(e) =>
+                    app.edit("letter", (d) => (d.coverLetter = e.target.value))
+                  }
+                  aria-label="Cover letter"
+                  className="mt-8 block min-h-[26rem] w-full resize-none bg-transparent text-[0.9375rem] leading-7 outline-none [field-sizing:content] focus-visible:rounded focus-visible:bg-primary/5 focus-visible:ring-4 focus-visible:ring-primary/10"
+                />
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -1,8 +1,8 @@
 // biome-ignore-all lint/a11y/useSemanticElements: contenteditable keeps line wrapping and the page layout that an <input> cannot
 import {
   type ClipboardEvent,
-  type FormEvent,
   type KeyboardEvent,
+  type SyntheticEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -150,7 +150,7 @@ export function Editable({
     insert(oneLine(e.clipboardData.getData("text/plain")));
   };
 
-  const onInput = (e: FormEvent<HTMLSpanElement>) => {
+  const onInput = (e: SyntheticEvent<HTMLSpanElement>) => {
     const el = e.currentTarget;
     let text = el.textContent ?? "";
     // Dropped text, spell-check and autofill can sneak in line breaks or a huge block.

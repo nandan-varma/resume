@@ -4,7 +4,7 @@ export const SORTS = [
   { value: "posted", label: "Newest (dated only)" },
   { value: "added", label: "Recently added" },
 ] as const;
-export type Sort = (typeof SORTS)[number]["value"];
+type Sort = (typeof SORTS)[number]["value"];
 
 export const WINDOWS = [
   { value: "", label: "Any time" },
@@ -53,4 +53,3 @@ export const parseSearch = (params: URLSearchParams) => {
     searchable: title.length > 0 || company.length > 0,
   };
 };
-export type SearchQuery = ReturnType<typeof parseSearch>;

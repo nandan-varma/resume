@@ -106,7 +106,7 @@ export const Resume = z.object({
 });
 export type Resume = z.infer<typeof Resume>;
 
-export const PaperSize = z.enum(["a4", "letter"]);
+const PaperSize = z.enum(["a4", "letter"]);
 
 /** Longest set of personal rules we send to the model. */
 export const RULES_MAX = 600;
@@ -149,100 +149,6 @@ export const Match = z.object({
     ),
 });
 export type Match = z.infer<typeof Match>;
-
-const Rewrite = z.object({
-  index: z.number().int().describe("Index of the item in the profile."),
-  highlights: z.array(z.string()).describe("Rewritten bullets for this item."),
-});
-
-/**
- * What the model returns. It only chooses items by index and rewords bullets;
- * `assemble` builds the resume from the profile, so names, dates, schools and
- * contact details can never be invented or dropped.
- */
-export const Tailored = z.object({
-  match: Match,
-  summary: z
-    .string()
-    .describe("Summary of three lines at most, shaped to the role."),
-  work: z
-    .array(Rewrite)
-    .describe(
-      "Every job in the profile, most relevant first, with rewritten bullets.",
-    ),
-  projects: z
-    .array(Rewrite)
-    .max(4)
-    .describe(
-      "The best three or four projects for this posting, most relevant first.",
-    ),
-  skillGroups: z
-    .array(z.number().int())
-    .describe(
-      "Indexes of the skill groups worth showing, most relevant first. Leave out irrelevant groups.",
-    ),
-  coverLetter: z.string(),
-});
-export type Tailored = z.infer<typeof Tailored>;
-
-const pick = <T>(items: T[], indexes: number[]) => {
-  const seen = new Set<number>();
-  return indexes.flatMap((i) => {
-    if (seen.has(i) || !items[i]) {
-      return [];
-    }
-    seen.add(i);
-    return [i];
-  });
-};
-
-/** Build the tailored resume from the profile plus the model's choices. */
-export const assemble = (source: Resume, out: Tailored): Resume => {
-  const reword = <T extends { highlights: string[] }>(
-    items: T[],
-    rewrites: Tailored["work"],
-  ) => {
-    const order = pick(
-      items,
-      rewrites.map((r) => r.index),
-    );
-    const rest = items.map((_, i) => i).filter((i) => !order.includes(i));
-    return [...order, ...rest].map((i) => {
-      const bullets =
-        rewrites
-          .find((r) => r.index === i)
-          ?.highlights.filter((h) => h.trim()) ?? [];
-      return {
-        ...items[i],
-        highlights: bullets.length > 0 ? bullets : items[i].highlights,
-      };
-    });
-  };
-
-  const chosen = pick(
-    source.projects,
-    out.projects.map((p) => p.index),
-  );
-  const projects = reword(
-    chosen.map((i) => source.projects[i]),
-    out.projects.map((p) => ({ ...p, index: chosen.indexOf(p.index) })),
-  );
-  const skillOrder = pick(source.skills, out.skillGroups);
-  const skills = (
-    skillOrder.length > 0 ? skillOrder : source.skills.map((_, i) => i)
-  ).map((i) => source.skills[i]);
-
-  return {
-    ...source,
-    basics: {
-      ...source.basics,
-      summary: out.summary.trim() || source.basics.summary,
-    },
-    work: reword(source.work, out.work),
-    projects: projects.length > 0 ? projects : source.projects.slice(0, 3),
-    skills,
-  };
-};
 
 export const emptyResume = (): Resume => Resume.parse({});
 export const defaultPrefs = (): Prefs => Prefs.parse({});
@@ -336,3 +242,14 @@ export const tidy = (r: Resume): Resume => {
     notes: r.notes.replace(/ /g, " ").trim(),
   };
 };
+
+/**
+ * An import replaces the structure of the profile, never the person's private
+ * notes or their summary versions.
+ */
+export const mergeImport = (existing: Resume, imported: Resume): Resume => ({
+  ...imported,
+  notes: existing.notes,
+  summaries:
+    existing.summaries.length > 0 ? existing.summaries : imported.summaries,
+});

@@ -40,3 +40,39 @@ describe("matchSkills", () => {
     expect(matchSkills(resume, "Great team, free lunch.").total).toBe(0);
   });
 });
+
+import { alignSkillNames, sortSkillItems, toolsIn } from "./skills";
+
+describe("alignSkillNames", () => {
+  it("uses the posting's spelling for tools the person already lists", () => {
+    expect(
+      alignSkillNames(
+        "Python, Postgres, K8s",
+        "We run PostgreSQL on Kubernetes.",
+      ),
+    ).toBe("Python, PostgreSQL, Kubernetes");
+  });
+
+  it("never adds a tool and leaves matching spellings alone", () => {
+    expect(
+      alignSkillNames("Python, Rust", "We use PostgreSQL and Kubernetes."),
+    ).toBe("Python, Rust");
+    expect(alignSkillNames("PostgreSQL, Postgres", "PostgreSQL required")).toBe(
+      "PostgreSQL, Postgres",
+    );
+  });
+});
+
+describe("sortSkillItems / toolsIn", () => {
+  it("puts what the posting names first, keeping the rest in order", () => {
+    expect(
+      sortSkillItems("Go, Rust, TypeScript, SQL", "TypeScript and SQL"),
+    ).toBe("TypeScript, SQL, Go, Rust");
+  });
+
+  it("lists the tools in a text", () => {
+    expect(toolsIn("Built it in Rust with Postgres and Kafka")).toEqual(
+      expect.arrayContaining(["Rust", "PostgreSQL", "Kafka"]),
+    );
+  });
+});

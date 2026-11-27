@@ -7,8 +7,8 @@ const same = (a: string[], b: string[]) =>
   a.length === b.length && a.every((line, i) => line === b[i]);
 
 const key = (...parts: string[]) => parts.join("|").trim().toLowerCase();
-export const workKey = (w: Work) => key(w.position, w.company);
-export const projectKey = (p: Project) => key(p.name);
+const workKey = (w: Work) => key(w.position, w.company);
+const projectKey = (p: Project) => key(p.name);
 
 /** The profile's version of a job or project, matched by title and company (or project name). */
 export const originalWork = (master: Resume, w: Work) =>
@@ -40,4 +40,3 @@ export const summarizeChanges = (master: Resume, tailored: Resume) => {
     skillGroupsTotal: master.skills.length,
   };
 };
-export type ChangeSummary = ReturnType<typeof summarizeChanges>;

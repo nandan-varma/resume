@@ -32,7 +32,6 @@ const COLORS = [
   "yellow",
   "red",
 ] as const;
-export type AvatarColor = (typeof COLORS)[number];
 
 /** A steady colour and initial for a company, so lists are easy to scan. */
 export const avatarFor = (name: string) => {

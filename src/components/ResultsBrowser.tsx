@@ -6,7 +6,7 @@ import type { JobDetail as Data } from "@/lib/job-detail";
 import JobDetail, { JobDetailSkeleton } from "./JobDetail";
 import CompanyAvatar from "./ui/CompanyAvatar";
 
-export type Row = {
+type Row = {
   id: string;
   title: string;
   company: string;

@@ -12,7 +12,12 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
-import { completeness, type Prefs, type Resume } from "@/lib/resume";
+import {
+  completeness,
+  mergeImport,
+  type Prefs,
+  type Resume,
+} from "@/lib/resume";
 import { SaveBadge, UndoRedo } from "./EditorBar";
 import ResumeSheet from "./ResumeSheet";
 import { Button } from "./ui/button";
@@ -64,16 +69,24 @@ export default function ProfileEditor({ resume, prefs, welcome }: Props) {
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
-  const takeResult = (data: Resume) => {
-    master.edit("import", (draft) => Object.assign(draft, data));
+  const takeResult = (data: { resume: Resume; notes: string[] }) => {
+    master.edit("import", (draft) =>
+      Object.assign(draft, mergeImport(draft, data.resume)),
+    );
     setImported(true);
     setFinished(true);
+    if (data.notes.length > 0) {
+      toast.info(data.notes.join(" "), { duration: 9000 });
+    }
   };
 
   const reading = useRef(false);
   /** Runs an import, once at a time, and always returns to a usable screen on failure. */
   const importWith = async (
-    run: () => Promise<{ data?: Resume; error?: { message: string } }>,
+    run: () => Promise<{
+      data?: { resume: Resume; notes: string[] };
+      error?: { message: string };
+    }>,
   ) => {
     if (reading.current) {
       return;

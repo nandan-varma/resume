@@ -9,7 +9,6 @@ import WorkOverlay, { TAILOR_STEPS } from "./WorkOverlay";
 
 type Props = {
   talloId: string;
-  shorter?: boolean;
   label?: string;
   variant?: "default" | "outline";
   /** Writing again replaces what is saved, so ask first. */
@@ -18,7 +17,6 @@ type Props = {
 
 export default function TailorButton({
   talloId,
-  shorter = false,
   label = "Make my resume",
   variant = "default",
   confirm = false,
@@ -39,9 +37,15 @@ export default function TailorButton({
     window.dispatchEvent(new Event(DISCARD_EVENT));
     setPhase("working");
     try {
-      const { data, error } = await actions.tailor({ talloId, shorter });
+      const { data, error } = await actions.tailor({ talloId });
       if (error) {
         throw new Error(error.message);
+      }
+      try {
+        // The new page shows these once, so the person knows if anything was simplified.
+        sessionStorage.setItem("tailorNotes", JSON.stringify(data.notes));
+      } catch {
+        // Private mode: the notes are just not shown.
       }
       setTarget(`/resumes/${data.id}?new=1`);
       setPhase("done");
@@ -83,7 +87,7 @@ export default function TailorButton({
       </Button>
       {(phase === "working" || phase === "done") && (
         <WorkOverlay
-          title={shorter ? "Tightening your resume" : "Writing your resume"}
+          title="Writing your resume"
           hint="This usually takes 30 to 60 seconds. You can't break anything: your profile stays as it is."
           steps={TAILOR_STEPS}
           done={phase === "done"}

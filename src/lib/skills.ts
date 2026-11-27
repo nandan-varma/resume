@@ -82,7 +82,8 @@ const VOCAB: string[][] = [
   ["BigQuery"],
   ["Microservices"],
   ["Distributed Systems"],
-  ["Agile", "Scrum"],
+  ["Agile"],
+  ["Scrum"],
   ["Figma"],
   ["Jest"],
   ["Cypress"],
@@ -141,4 +142,56 @@ export const matchSkills = (resume: Resume, posting: string) => {
     covered: have.length,
   };
 };
-export type SkillMatch = ReturnType<typeof matchSkills>;
+
+/** The well-known tools a text mentions, by their main name. */
+export const toolsIn = (text: string) =>
+  VOCAB.filter((names) => mentions(text, names) > 0).map((names) => names[0]);
+
+/**
+ * Spell skills the way the posting does. If the profile says "Postgres" and the
+ * posting asks for "PostgreSQL", an ATS matching keywords literally will miss
+ * it. Only tools the person already lists are renamed; nothing is added.
+ */
+export const alignSkillNames = (items: string, posting: string) => {
+  let out = items;
+  for (const names of VOCAB) {
+    if (names.length < 2) {
+      continue;
+    }
+    // The posting's preferred spelling is the one it uses most.
+    const wanted = names
+      .map((name) => ({ name, n: count(posting, name) }))
+      .sort((a, b) => b.n - a.n)[0];
+    if (wanted.n === 0) {
+      continue;
+    }
+    for (const alias of names) {
+      if (
+        alias === wanted.name ||
+        count(out, alias) === 0 ||
+        count(out, wanted.name) > 0
+      ) {
+        continue;
+      }
+      out = out.replace(
+        new RegExp(`(?<![\\w+#.])${escapeRegex(alias)}(?![\\w+#])`, "gi"),
+        wanted.name,
+      );
+    }
+  }
+  return out;
+};
+
+/** Skill items from a comma-separated list, the ones the posting mentions first. */
+export const sortSkillItems = (items: string, posting: string) => {
+  const parts = items
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const score = (part: string) => (count(posting, part) > 0 ? 1 : 0);
+  return parts
+    .map((part, index) => ({ part, index }))
+    .sort((a, b) => score(b.part) - score(a.part) || a.index - b.index)
+    .map((p) => p.part)
+    .join(", ");
+};

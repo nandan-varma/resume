@@ -172,6 +172,12 @@ export const TAILOR_STEPS: Step[] = [
   { label: "Writing your cover letter", at: 34 },
 ];
 
+export const LETTER_STEPS: Step[] = [
+  { label: "Reading the job posting", at: 0 },
+  { label: "Writing your letter", at: 3 },
+  { label: "Checking every fact against your resume", at: 12 },
+];
+
 export const IMPORT_STEPS: Step[] = [
   { label: "Reading your resume", at: 0 },
   { label: "Finding your jobs, projects and skills", at: 4 },

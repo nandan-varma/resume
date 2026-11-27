@@ -1,117 +1,70 @@
 import { env } from "cloudflare:workers";
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, jsonSchema, type ModelMessage, Output } from "ai";
-import { z } from "zod";
+import { generateText, type ModelMessage } from "ai";
+import { importPipeline } from "./pipeline/import";
+import type { Ask } from "./pipeline/json";
+import { suggestPipeline } from "./pipeline/suggest";
 import {
-  lineBreakdown,
-  overflow,
-  type Paper,
-  pageLines,
-  trimToFit,
-} from "./layout";
-import {
-  importPrompt,
-  suggestPrompt,
   type TailorInput,
-  tailorPrompt,
-} from "./prompts";
-import { assemble, Resume, Tailored } from "./resume";
-import { Suggestions } from "./suggestions";
-
-const openai = createOpenAI({ apiKey: env.OPENAI_API_KEY });
-const model = openai("gpt-6-luna");
+  tailorPipeline,
+  writeCoverLetter,
+} from "./pipeline/tailor";
+import type { Resume } from "./resume";
 
 /**
- * OpenAI's strict mode needs every key listed as required. Zod only does that
- * in "output" mode (defaulted fields are always present in parsed output),
- * so build the JSON Schema ourselves and still validate with Zod.
+ * The only file that talks to an AI provider. Everything else works on plain
+ * text in, text out (see ./pipeline), so adding another provider, or letting
+ * people bring their own key, means adding a branch to `createAsk`.
  */
-const strictSchema = <T extends z.ZodType>(schema: T) =>
-  jsonSchema<z.infer<T>>(
-    z.toJSONSchema(schema, { io: "output", target: "draft-7" }) as never,
-    {
-      validate: (value) => {
-        const result = schema.safeParse(value);
-        return result.success
-          ? { success: true, value: result.data }
-          : { success: false, error: result.error };
-      },
-    },
-  );
-
-async function generate<T extends z.ZodType>(
-  schema: T,
-  system: string,
-  messages: ModelMessage[],
-) {
-  const { output } = await generateText({
-    model,
-    output: Output.object({ schema: strictSchema(schema) }),
-    system,
-    messages,
-    abortSignal: AbortSignal.timeout(90_000),
-  });
-  return output as z.infer<T>;
-}
-
-export function resumeFromText(text: string) {
-  const { system, prompt } = importPrompt(text);
-  return generate(Resume, system, [{ role: "user", content: prompt }]);
-}
-
-export async function suggestSearches(resume: Resume) {
-  const { system, prompt } = suggestPrompt(resume);
-  const { searches } = await generate(Suggestions, system, [
-    { role: "user", content: prompt },
-  ]);
-  return searches.filter((s) => s.titles.length > 0);
-}
-
-const MAX_ROUNDS = 3;
-
-const overflowFeedback = (resume: Resume, lines: number, paper: Paper) => {
-  const breakdown = Object.entries(lineBreakdown(resume, paper))
-    .map(([name, n]) => `${name} ${Math.round(n)}`)
-    .join(", ");
-  return [
-    `That draft runs about ${lines} lines past one page. The limit is ${pageLines(paper)} lines of body text.`,
-    `Estimated lines per section: ${breakdown}.`,
-    "Return the complete JSON again, shorter. Make bullets one line where you can, drop the weakest bullets and the fourth project, and keep only the most relevant skill groups.",
-    "Keep the strongest verified numbers. Do not change the match, the confidence or the cover letter.",
-  ].join("\n");
+type ModelConfig = {
+  provider: "openai";
+  model: string;
+  apiKey: string;
+  baseURL?: string;
 };
 
-/**
- * Tailors a resume and guarantees it fits one page. If a draft runs long, it is
- * sent back to the model with the exact overflow; if the model still cannot
- * fit it, deterministic trimming removes the weakest content.
- */
-export async function tailorResume(input: TailorInput) {
-  const { system, prompt } = tailorPrompt(input);
-  const messages: ModelMessage[] = [{ role: "user", content: prompt }];
+const defaultConfig = (): ModelConfig => ({
+  provider: "openai",
+  model: "gpt-6-luna",
+  apiKey: env.OPENAI_API_KEY,
+});
 
-  const paper = input.prefs.paper;
-  let out = await generate(Tailored, system, messages);
-  let resume = assemble(input.resume, out);
-  for (
-    let round = 1;
-    round < MAX_ROUNDS && overflow(resume, paper) > 0;
-    round++
-  ) {
-    messages.push(
-      { role: "assistant", content: JSON.stringify(out) },
-      {
-        role: "user",
-        content: overflowFeedback(resume, overflow(resume, paper), paper),
-      },
-    );
-    out = await generate(Tailored, system, messages);
-    resume = assemble(input.resume, out);
-  }
+const CALL_TIMEOUT_MS = 50_000;
 
-  return {
-    match: out.match,
-    resume: trimToFit(resume, paper),
-    coverLetter: out.coverLetter,
+function createAsk(config: ModelConfig = defaultConfig()): Ask {
+  const provider = createOpenAI({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+  });
+  const model = provider(config.model);
+  return async ({ system, prompt, history }) => {
+    const messages: ModelMessage[] = [
+      { role: "user", content: prompt },
+      ...(history ?? []),
+    ];
+    const { text } = await generateText({
+      model,
+      system,
+      messages,
+      maxRetries: 1,
+      abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    });
+    return text;
   };
 }
+
+/** Read the text of a resume into a profile. */
+export const resumeFromText = (text: string, ask: Ask = createAsk()) =>
+  importPipeline(ask, text);
+
+/** Search ideas for a profile. */
+export const suggestSearches = (resume: Resume, ask: Ask = createAsk()) =>
+  suggestPipeline(ask, resume);
+
+/** A tailored resume and cover letter for one posting. */
+export const tailorResume = (input: TailorInput, ask: Ask = createAsk()) =>
+  tailorPipeline(ask, input);
+
+/** A cover letter for an existing resume, or "" if the model could not write a good one. */
+export const writeLetter = (input: TailorInput, ask: Ask = createAsk()) =>
+  writeCoverLetter(ask, input);

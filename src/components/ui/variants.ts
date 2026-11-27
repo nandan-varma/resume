@@ -24,7 +24,7 @@ export const buttonVariants = cva(
   },
 );
 
-export const tagColors = [
+const tagColors = [
   "gray",
   "brown",
   "orange",

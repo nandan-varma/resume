@@ -3,7 +3,12 @@ import { z } from "astro/zod";
 import { and, desc, eq } from "drizzle-orm";
 import { extractText, getDocumentProxy } from "unpdf";
 import { db, schema } from "@/db";
-import { resumeFromText, suggestSearches, tailorResume } from "@/lib/ai";
+import {
+  resumeFromText,
+  suggestSearches,
+  tailorResume,
+  writeLetter,
+} from "@/lib/ai";
 import { jobDetail } from "@/lib/job-detail";
 import {
   defaultPrefs,
@@ -40,6 +45,22 @@ const saveProfile = (
     .values({ userId, resume: emptyResume(), prefs: defaultPrefs(), ...values })
     .onConflictDoUpdate({ target: schema.profile.userId, set: values });
 
+/**
+ * Reading a resume only reads it: nothing is saved here. The editor applies the
+ * result as an undoable edit and autosaves, so there is one way a profile changes.
+ */
+const readResume = async (text: string) => {
+  try {
+    return await resumeFromText(text);
+  } catch {
+    throw new ActionError({
+      code: "BAD_REQUEST",
+      message:
+        "We couldn't read that resume. Try again, paste the text instead, or start from scratch.",
+    });
+  }
+};
+
 const ownedApplication = (userId: string, id: string) =>
   and(eq(schema.application.id, id), eq(schema.application.userId, userId));
 
@@ -54,7 +75,7 @@ export const server = {
         .refine((f) => f.size <= MAX_PDF_BYTES, "That file is over 5 MB."),
     }),
     handler: async ({ file }, { locals }) => {
-      const user = requireUser(locals);
+      requireUser(locals);
       const pdf = await getDocumentProxy(
         new Uint8Array(await file.arrayBuffer()),
       );
@@ -65,9 +86,7 @@ export const server = {
           message: "We couldn't read any text in that PDF. Is it a scan?",
         });
       }
-      const resume = await resumeFromText(text);
-      await saveProfile(user.id, { resume });
-      return resume;
+      return readResume(text);
     },
   }),
 
@@ -77,10 +96,8 @@ export const server = {
       text: z.string().trim().min(50, "Paste a bit more.").max(40_000),
     }),
     handler: async ({ text }, { locals }) => {
-      const user = requireUser(locals);
-      const resume = await resumeFromText(text);
-      await saveProfile(user.id, { resume });
-      return resume;
+      requireUser(locals);
+      return readResume(text);
     },
   }),
 
@@ -107,10 +124,13 @@ export const server = {
         return profile.suggestions.searches;
       }
       const searches = await suggestSearches(resume);
-      await db
-        .update(schema.profile)
-        .set({ suggestions: { key, searches } })
-        .where(eq(schema.profile.userId, user.id));
+      // An empty answer means the model failed; do not remember it as the answer.
+      if (searches.length > 0) {
+        await db
+          .update(schema.profile)
+          .set({ suggestions: { key, searches } })
+          .where(eq(schema.profile.userId, user.id));
+      }
       return searches;
     },
   }),
@@ -208,11 +228,8 @@ export const server = {
 
   /** Match the profile against a posting and write a tailored resume and letter. */
   tailor: defineAction({
-    input: z.object({
-      talloId: z.string().min(1),
-      shorter: z.boolean().default(false),
-    }),
-    handler: async ({ talloId, shorter }, { locals }) => {
+    input: z.object({ talloId: z.string().min(1) }),
+    handler: async ({ talloId }, { locals }) => {
       const user = requireUser(locals);
       const profile = await getProfile(user.id);
       if (!(profile && hasContent(profile.resume))) {
@@ -237,9 +254,9 @@ export const server = {
         },
         resume: Resume.parse(profile.resume),
         prefs: Prefs.parse(profile.prefs),
-        shorter,
       });
-      const { match, resume, coverLetter } = tailored;
+      const { match, resume: tailoredResume, coverLetter, notes } = tailored;
+      const resume = tidy(tailoredResume);
 
       const fields = {
         company: job.company,
@@ -262,7 +279,46 @@ export const server = {
           set: fields,
         })
         .returning({ id: schema.application.id });
-      return { id: row.id };
+      return { id: row.id, notes };
+    },
+  }),
+
+  /**
+   * Write the cover letter again for a resume. Nothing is saved here: the editor
+   * applies the letter as an undoable edit and autosaves it.
+   */
+  writeLetter: defineAction({
+    input: z.object({ id: z.string() }),
+    handler: async ({ id }, { locals }) => {
+      const user = requireUser(locals);
+      const row = await db.query.application.findFirst({
+        where: ownedApplication(user.id, id),
+      });
+      const job = row ? await getJob(row.talloId) : null;
+      if (!(row && job?.description)) {
+        throw new ActionError({
+          code: "NOT_FOUND",
+          message:
+            "This job is no longer listed, so we can't write a letter for it.",
+        });
+      }
+      const letter = await writeLetter({
+        posting: {
+          title: job.title,
+          company: job.company,
+          description: job.description,
+        },
+        resume: Resume.parse(row.resume),
+        prefs: Prefs.parse((await getProfile(user.id))?.prefs ?? {}),
+      });
+      if (!letter) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message:
+            "We couldn't write a letter that passed our checks. Please try again.",
+        });
+      }
+      return { letter };
     },
   }),
 

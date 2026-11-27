@@ -5,7 +5,7 @@ export const PAPERS: Record<Paper, { label: string; w: number; h: number }> = {
   a4: { label: "A4", w: 8.268, h: 11.693 },
   letter: { label: "US Letter", w: 8.5, h: 11 },
 };
-export const DEFAULT_PAPER: Paper = "a4";
+const DEFAULT_PAPER: Paper = "a4";
 
 /**
  * A page-fit model for the printable resume (10pt Arial, 0.55in side and 0.42in
@@ -83,7 +83,7 @@ const BULLET_INDENT_PT = 11;
 const DATE_GAP_PT = 14;
 
 /** Estimated lines per section, so feedback can say where the space went. */
-export const lineBreakdown = (r: Resume, paper: Paper = DEFAULT_PAPER) => {
+const lineBreakdown = (r: Resume, paper: Paper = DEFAULT_PAPER) => {
   const width = textWidthPt(paper);
   const { basics, work, education, projects, skills, leadership } = r;
   const bullets = (items: string[]) =>
