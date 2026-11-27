@@ -166,10 +166,20 @@ export default function ApplicationEditor({
             ).map(([value, label, Icon]) => (
               <button
                 key={value}
+                id={`tab-${value}`}
                 type="button"
                 role="tab"
                 aria-selected={tab === value}
+                aria-controls="doc-panel"
+                tabIndex={tab === value ? 0 : -1}
                 onClick={() => setTab(value)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                    const next = value === "resume" ? "letter" : "resume";
+                    setTab(next);
+                    document.getElementById(`tab-${next}`)?.focus();
+                  }
+                }}
                 className={cn(
                   "relative z-10 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                   tab === value ? "text-foreground" : "text-muted-foreground",
@@ -223,7 +233,13 @@ export default function ApplicationEditor({
           </div>
         )}
 
-        <div key={tab} className="[animation:rise_0.3s_backwards]">
+        <div
+          key={tab}
+          id="doc-panel"
+          role="tabpanel"
+          aria-labelledby={`tab-${tab}`}
+          className="[animation:rise_0.3s_backwards]"
+        >
           {tab === "resume" ? (
             <ResumeSheet
               resume={app.doc.resume}

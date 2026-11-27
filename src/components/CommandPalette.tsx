@@ -1,4 +1,5 @@
 import { actions } from "astro:actions";
+import { navigate } from "astro:transitions/client";
 import { FileText, Search, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -73,7 +74,12 @@ export default function CommandPalette({ signedIn }: { signedIn: boolean }) {
     );
   }, [query, resumes]);
 
-  const go = (item?: Item) => item && window.location.assign(item.href);
+  const go = (item?: Item) => {
+    if (item) {
+      setOpen(false);
+      navigate(item.href);
+    }
+  };
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: Escape already closes a dialog; the click only dismisses by the backdrop
@@ -123,6 +129,7 @@ export default function CommandPalette({ signedIn }: { signedIn: boolean }) {
           <li key={item.href}>
             <a
               href={item.href}
+              onClick={() => setOpen(false)}
               onMouseMove={() => setCursor(i)}
               className={cn(
                 "flex items-center gap-2 rounded-md px-2.5 py-2",
