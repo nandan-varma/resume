@@ -3,7 +3,7 @@ import { and, eq, lt, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 
 /** AI actions per account per UTC day: a resume, a letter, an import or fresh search ideas. */
-export const DAILY_AI_LIMIT = 25;
+const DAILY_AI_LIMIT = 25;
 
 const today = () => new Date().toISOString().slice(0, 10);
 

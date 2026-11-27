@@ -16,6 +16,17 @@
   "linter": { "enabled": true },
   "overrides": [
     {
+      // The printable resume must beat the screen styles and the editing aids, so print
+      // and measuring rules use !important on purpose; specificity order is deliberate.
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "complexity": { "noImportantStyles": "off" },
+          "style": { "noDescendingSpecificity": "off" }
+        }
+      }
+    },
+    {
       "includes": ["**/*.astro"],
       "linter": {
         "rules": {

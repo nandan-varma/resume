@@ -1028,7 +1028,7 @@ function Frame({
       return;
     }
     // The frame hugs the paper (no empty white bands), centred in the space it has.
-    const fit = () => {
+    const resize = () => {
       const scale = Math.min(
         Math.max(host.clientWidth / paper.offsetWidth, 0.3),
         1.15,
@@ -1039,10 +1039,10 @@ function Frame({
         height: paper.offsetHeight * scale,
       });
     };
-    const observer = new ResizeObserver(fit);
+    const observer = new ResizeObserver(resize);
     observer.observe(host);
     observer.observe(paper);
-    fit();
+    resize();
     return () => observer.disconnect();
   }, []);
 

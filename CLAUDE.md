@@ -14,7 +14,7 @@ Stack: **Astro 7** (SSR) on **Cloudflare Workers**, **D1** + Drizzle, **better-a
 pnpm dev                 # local dev (reads .dev.vars; copy .dev.vars.example)
 pnpm check               # Biome + astro check (the pre-commit hook runs this)
 pnpm fix                 # Biome auto-fix
-pnpm test                # Vitest (pure functions only)
+pnpm test                # Vitest (pure logic and the AI pipeline against fake models; no network)
 pnpm db:generate         # new Drizzle migration after editing src/db/schema.ts
 pnpm db:migrate:local    # apply migrations to the local D1
 pnpm db:migrate:remote   # apply migrations to production D1
@@ -46,6 +46,7 @@ pnpm deploy              # build + wrangler deploy
 ## Conventions and gotchas
 
 - Bindings come from `import { env } from "cloudflare:workers"`. Secrets live in `.dev.vars` locally and `wrangler secret` in production.
+- Biome allows `!important` and out-of-order specificity in `*.css` on purpose: the print and page-measuring rules must beat the screen and editing styles.
 - Biome is configured **not** to rewrite imports in `.astro` files (`useImportType` off): it cannot see template usage and would break them.
 - The editors save whole resumes; Zod fills blanks on the server, and `Editable` is plain text only (Enter and pasted line breaks never add a newline).
 - Email/password sign-in exists only in dev (`import.meta.env.DEV`) so the app can be tried without OAuth keys.

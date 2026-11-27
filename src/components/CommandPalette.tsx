@@ -94,7 +94,6 @@ export default function CommandPalette({ signedIn }: { signedIn: boolean }) {
       <div className="flex items-center gap-2 border-b px-3">
         <Search className="size-4 text-muted-foreground" />
         <input
-          // biome-ignore lint/a11y/noAutofocus: the palette exists to be typed into
           autoFocus
           value={query}
           onChange={(e) => {
