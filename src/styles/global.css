@@ -649,9 +649,112 @@
   }
 }
 
+/*
+ * What you see is what prints: optional fields that are empty take no room, so a
+ * line is exactly as wide as its printed version. Point at or edit a row and its
+ * empty optional fields appear so they can be filled in.
+ */
+.rs-ed[data-optional]:empty:not(:focus) {
+  display: inline-block;
+  width: 0;
+  min-width: 0;
+  height: 0;
+  overflow: hidden;
+  vertical-align: baseline;
+}
+.rs-ed[data-optional]:empty:not(:focus)::before {
+  content: none;
+}
+.resume-sheet article:hover .rs-ed[data-optional]:empty:not(:focus),
+.resume-sheet article:focus-within .rs-ed[data-optional]:empty:not(:focus),
+.resume-sheet .rs-item:hover .rs-ed[data-optional]:empty:not(:focus),
+.resume-sheet .rs-item:focus-within .rs-ed[data-optional]:empty:not(:focus) {
+  width: auto;
+  min-width: 3ch;
+  height: auto;
+  overflow: visible;
+}
+.resume-sheet article:hover .rs-ed[data-optional]:empty:not(:focus)::before,
+.resume-sheet
+  article:focus-within
+  .rs-ed[data-optional]:empty:not(:focus)::before,
+.resume-sheet .rs-item:hover .rs-ed[data-optional]:empty:not(:focus)::before,
+.resume-sheet
+  .rs-item:focus-within
+  .rs-ed[data-optional]:empty:not(:focus)::before {
+  content: attr(data-placeholder);
+}
+.rs-ghost {
+  display: none;
+}
+.resume-sheet article:hover .rs-ghost,
+.resume-sheet article:focus-within .rs-ghost,
+.resume-sheet .rs-item:hover .rs-ghost,
+.resume-sheet .rs-item:focus-within .rs-ghost {
+  display: inline;
+}
+.rs-header-add {
+  position: absolute;
+  top: -0.34in;
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.rs-head {
+  position: relative;
+}
+.resume-sheet:hover .rs-header-add,
+.resume-sheet:focus-within .rs-header-add {
+  opacity: 0.9;
+  pointer-events: auto;
+}
+.rs-header-add button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #2383e2;
+  font-size: 8pt;
+  font-weight: 600;
+}
+.rs-header-add button:hover {
+  background: rgba(35, 131, 226, 0.1);
+}
+.rs-header-add svg {
+  width: 11px;
+  height: 11px;
+}
+.resume-sheet,
+.resume-sheet .rs-ed {
+  overflow-wrap: anywhere;
+}
+/* A bullet with no text prints and measures as nothing. */
+.resume-sheet.rs-measure li:has(.rs-ed:empty) {
+  display: none;
+}
+
 /* Aids are hidden while measuring the page and when printing. */
-.resume-sheet.rs-measure .rs-np {
+.resume-sheet.rs-measure .rs-np,
+.resume-sheet.rs-measure .rs-ghost {
   display: none !important;
+}
+.resume-sheet.rs-measure .rs-ed[data-optional]:empty {
+  display: inline-block !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+.resume-sheet.rs-measure .rs-ed[data-optional]:empty::before {
+  content: none !important;
 }
 
 .letter-sheet textarea {
@@ -673,8 +776,22 @@
   body {
     background: #fff;
   }
-  .rs-np {
+  .rs-np,
+  .rs-ghost {
     display: none !important;
+  }
+  .rs-ed[data-optional]:empty {
+    display: inline-block !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+  .rs-ed[data-optional]:empty::before {
+    content: none !important;
+  }
+  .resume-sheet li:has(.rs-ed:empty) {
+    display: none;
   }
   .sheet-wrap {
     height: auto !important;

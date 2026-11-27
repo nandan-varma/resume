@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
+import { DISCARD_EVENT } from "./useDoc";
 import WorkOverlay, { TAILOR_STEPS } from "./WorkOverlay";
 
 type Props = {
@@ -28,6 +29,8 @@ export default function TailorButton({
   const [target, setTarget] = useState<string>();
 
   const run = async () => {
+    // A new version replaces what is saved, so a pending autosave must not land after it.
+    window.dispatchEvent(new Event(DISCARD_EVENT));
     setPhase("working");
     const { data, error } = await actions.tailor({ talloId, shorter });
     if (error) {

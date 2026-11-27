@@ -269,3 +269,65 @@ export const completeness = (r: Resume) => {
   ];
   return { steps, done: steps.filter((s) => s.done).length };
 };
+
+const squash = (s: string) => s.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+
+const blank = (values: string[]) => values.every((v) => v === "");
+
+/**
+ * What gets stored. The editor keeps empty bullets and half-filled rows while
+ * you work; this drops them and cleans stray spaces, so nothing blank is ever
+ * saved, printed or sent to the model. Private notes keep their line breaks.
+ */
+export const tidy = (r: Resume): Resume => {
+  const clean = <T extends Record<string, unknown>>(item: T): T =>
+    Object.fromEntries(
+      Object.entries(item).map(([k, v]) => [
+        k,
+        typeof v === "string"
+          ? squash(v)
+          : Array.isArray(v)
+            ? v
+                .map((x) => (typeof x === "string" ? squash(x) : x))
+                .filter((x) => x !== "")
+            : v,
+      ]),
+    ) as T;
+  const rows = <T extends Record<string, unknown>>(
+    items: T[],
+    keys: (keyof T)[],
+  ) =>
+    items
+      .map(clean)
+      .filter(
+        (i) =>
+          !(
+            blank(keys.map((k) => String(i[k] ?? ""))) &&
+            (!Array.isArray(i.highlights) || i.highlights.length === 0)
+          ),
+      );
+
+  return {
+    basics: {
+      ...clean(r.basics),
+      links: r.basics.links
+        .map((l) => ({ label: squash(l.label), url: squash(l.url) }))
+        .filter((l) => l.url !== "" || l.label !== ""),
+    },
+    summaries: r.summaries.map(squash).filter((s) => s !== ""),
+    work: rows(r.work, ["company", "position", "location", "start", "end"]),
+    education: rows(r.education, ["school", "degree", "end", "details"]),
+    projects: rows(r.projects, [
+      "name",
+      "url",
+      "year",
+      "stack",
+      "tier",
+      "status",
+      "roleFit",
+    ]),
+    skills: rows(r.skills, ["group", "items"]),
+    leadership: rows(r.leadership, ["role", "org", "dates", "details"]),
+    notes: r.notes.replace(/ /g, " ").trim(),
+  };
+};

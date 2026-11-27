@@ -2,13 +2,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type SaveStatus = "saved" | "saving" | "unsaved" | "error";
 
+/** Dispatch on `window` to drop unsaved edits, for example just before the page is replaced with a fresh version. */
+export const DISCARD_EVENT = "doc:discard";
+
 const SAVE_DELAY = 800;
+const RETRY_DELAY = 5000;
+/** Edits to one field within this gap undo as one step, up to MAX_RUN of typing. */
 const MERGE_WINDOW = 1000;
+const MAX_RUN = 15_000;
 const MAX_HISTORY = 100;
 
 /**
  * Editable document state: undo and redo, and an autosave that waits for you to
  * stop typing. `save` returns an error message, or null when it worked.
+ *
+ * Saves never overlap: edits made during a save go out right after it. A failed
+ * save keeps the edits, shows the error, and retries on its own and when the
+ * connection returns. Pending edits are sent when you leave the page or tab.
  */
 export function useDoc<T>(
   initial: T,
@@ -22,7 +32,7 @@ export function useDoc<T>(
   const current = useRef(doc);
   const past = useRef<T[]>([]);
   const future = useRef<T[]>([]);
-  const last = useRef({ key: "", at: 0 });
+  const last = useRef({ key: "", at: 0, since: 0 });
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const saving = useRef(false);
   const dirty = useRef(false);
@@ -37,12 +47,18 @@ export function useDoc<T>(
     saving.current = true;
     dirty.current = false;
     setStatus("saving");
-    const message = await saveRef.current(current.current);
+    let message: string | null;
+    try {
+      message = await saveRef.current(current.current);
+    } catch {
+      message = "Couldn't save. Check your connection.";
+    }
     saving.current = false;
     if (message) {
       dirty.current = true;
       setError(message);
       setStatus("error");
+      timer.current = setTimeout(flush, RETRY_DELAY);
       return;
     }
     setError(null);
@@ -72,13 +88,16 @@ export function useDoc<T>(
       const next = structuredClone(current.current);
       change(next);
       const now = Date.now();
-      if (!(last.current.key === key && now - last.current.at < MERGE_WINDOW)) {
+      const { key: lastKey, at, since } = last.current;
+      const merge =
+        lastKey === key && now - at < MERGE_WINDOW && now - since < MAX_RUN;
+      if (!merge) {
         past.current.push(current.current);
         if (past.current.length > MAX_HISTORY) {
           past.current.shift();
         }
       }
-      last.current = { key, at: now };
+      last.current = { key, at: now, since: merge ? since : now };
       future.current = [];
       commit(next);
       bump((n) => n + 1);
@@ -90,7 +109,7 @@ export function useDoc<T>(
     const prev = past.current.pop();
     if (prev !== undefined) {
       future.current.push(current.current);
-      last.current = { key: "", at: 0 };
+      last.current = { key: "", at: 0, since: 0 };
       commit(prev);
       bump((n) => n + 1);
     }
@@ -100,25 +119,38 @@ export function useDoc<T>(
     const next = future.current.pop();
     if (next !== undefined) {
       past.current.push(current.current);
-      last.current = { key: "", at: 0 };
+      last.current = { key: "", at: 0, since: 0 };
       commit(next);
       bump((n) => n + 1);
     }
   }, [commit]);
 
-  // Save when the tab is hidden, and warn before leaving with unsaved work.
   useEffect(() => {
-    const hide = () => document.visibilityState === "hidden" && void flush();
+    const send = () => void flush();
+    const hide = () => document.visibilityState === "hidden" && send();
     const warn = (e: BeforeUnloadEvent) => {
       if (dirty.current || saving.current) {
         e.preventDefault();
       }
     };
+    const discard = () => {
+      clearTimeout(timer.current);
+      dirty.current = false;
+      setStatus("saved");
+    };
     document.addEventListener("visibilitychange", hide);
+    window.addEventListener("pagehide", send);
+    window.addEventListener("online", send);
     window.addEventListener("beforeunload", warn);
+    window.addEventListener(DISCARD_EVENT, discard);
     return () => {
       document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("pagehide", send);
+      window.removeEventListener("online", send);
       window.removeEventListener("beforeunload", warn);
+      window.removeEventListener(DISCARD_EVENT, discard);
+      // Leaving through a page transition: send what is pending (the request outlives the page).
+      send();
     };
   }, [flush]);
 

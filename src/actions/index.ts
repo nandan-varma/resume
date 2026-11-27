@@ -11,6 +11,7 @@ import {
   hasContent,
   Prefs,
   Resume,
+  tidy,
 } from "@/lib/resume";
 import { fingerprint } from "@/lib/suggestions";
 import { getJob } from "@/lib/tallo";
@@ -86,7 +87,7 @@ export const server = {
   saveResume: defineAction({
     input: z.object({ resume: Resume }),
     handler: async ({ resume }, { locals }) => {
-      await saveProfile(requireUser(locals).id, { resume });
+      await saveProfile(requireUser(locals).id, { resume: tidy(resume) });
     },
   }),
 
@@ -219,7 +220,7 @@ export const server = {
       const user = requireUser(locals);
       await db
         .update(schema.application)
-        .set({ resume, coverLetter })
+        .set({ resume: tidy(resume), coverLetter })
         .where(ownedApplication(user.id, id));
     },
   }),

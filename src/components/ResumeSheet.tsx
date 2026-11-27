@@ -1,4 +1,11 @@
-import { ChevronDown, ChevronUp, Plus, RotateCcw, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  RotateCcw,
+  Wrench,
+  X,
+} from "lucide-react";
 import {
   type ReactNode,
   useEffect,
@@ -9,7 +16,7 @@ import {
 import { cn } from "@/lib/cn";
 import { Resume } from "@/lib/resume";
 import { isReworded, originalProject, originalWork } from "@/lib/resume-diff";
-import { Editable } from "./Editable";
+import { caretOffset, Editable, setCaret } from "./Editable";
 
 export type Edit = (key: string, change: (draft: Resume) => void) => void;
 
@@ -31,6 +38,10 @@ const blank = {
   education: () => Resume.parse({ education: [{}] }).education[0],
   leadership: () => Resume.parse({ leadership: [{}] }).leadership[0],
 };
+
+/** Fields that are simply left out of the printed line when empty. */
+const OPTIONAL =
+  /\.(email|phone|location|start|end|year|url|stack|dates|details)$/;
 
 const stamp = (what: string) => `${what}:${Date.now()}`;
 
@@ -58,7 +69,9 @@ function Join({
           // biome-ignore lint/suspicious/noArrayIndexKey: parts are a fixed list
           <span key={i}>
             {showSep && (
-              <span className={cn("rs-sep", !needed && "rs-np")}>{p.sep}</span>
+              <span className={cn("rs-sep", !needed && "rs-ghost")}>
+                {p.sep}
+              </span>
             )}
             {p.node}
           </span>
@@ -74,6 +87,8 @@ type ToolProps = {
   onAdd?: () => void;
   addLabel?: string;
   onRestore?: () => void;
+  onExtra?: () => void;
+  extraLabel?: string;
   onDelete: () => void;
 };
 
@@ -84,6 +99,8 @@ function Tools({
   onAdd,
   addLabel,
   onRestore,
+  onExtra,
+  extraLabel,
   onDelete,
 }: ToolProps) {
   const btn = (label: string, run: (() => void) | undefined, icon: ReactNode) =>
@@ -104,6 +121,7 @@ function Tools({
       {btn("Move down", onDown, <ChevronDown />)}
       {btn(addLabel ?? "Add", onAdd, <Plus />)}
       {btn("Use my original wording", onRestore, <RotateCcw />)}
+      {btn(extraLabel ?? "More", onExtra, <Wrench />)}
       {btn("Remove", onDelete, <X />)}
     </div>
   );
@@ -145,30 +163,90 @@ export default function ResumeSheet({
   // Once the summary is on the page it stays there while you edit it, even if you clear it.
   const [summaryOpen, setSummaryOpen] = useState(basics.summary !== "");
   const showSummary = summaryOpen || basics.summary !== "";
-  const focusNext = useRef<string | null>(null);
+  const focusNext = useRef<{ key: string; at: number | "end" } | null>(null);
+  // Lines that take a whole row (headline, project tools) only appear once there is text or you ask for them.
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const reveal = (key: string, on: boolean, value = "") => {
+    if (key !== "basics.headline" && !/\.stack$/.test(key)) {
+      return;
+    }
+    if (on === open.has(key) || (!on && value !== "")) {
+      return;
+    }
+    setOpen((s) => {
+      const next = new Set(s);
+      if (on) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
+  };
+  const showLine = (key: string, value: string) =>
+    value !== "" || open.has(key);
+  const askFor = (key: string) => {
+    focusNext.current = { key, at: "end" };
+    setOpen((s) => new Set(s).add(key));
+  };
 
-  // After a row is added, put the cursor in it.
+  // After a row is added or changed, put the cursor where it belongs.
   useEffect(() => {
-    const key = focusNext.current;
-    if (!key) {
+    const target = focusNext.current;
+    if (!target) {
       return;
     }
     focusNext.current = null;
-    const el = root.current?.querySelector<HTMLElement>(`[data-fk="${key}"]`);
+    const el = root.current?.querySelector<HTMLElement>(
+      `[data-fk="${target.key}"]`,
+    );
     if (el) {
       el.focus();
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      range.collapse(false);
-      const selection = getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
+      setCaret(el, target.at);
     }
   });
 
-  const add = (what: string, key: string, change: (r: Resume) => void) => {
-    focusNext.current = key;
+  const add = (
+    what: string,
+    key: string,
+    change: (r: Resume) => void,
+    at: number | "end" = "end",
+  ) => {
+    focusNext.current = { key, at };
     edit(stamp(what), change);
+  };
+
+  // Arrow keys move between lines when the cursor is at the very start or end of one.
+  const onArrow = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>(".rs-ed");
+    if (
+      !el ||
+      e.shiftKey ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.nativeEvent.isComposing
+    ) {
+      return;
+    }
+    const up = e.key === "ArrowUp";
+    if (!(up || e.key === "ArrowDown")) {
+      return;
+    }
+    const caret = caretOffset(el);
+    const length = (el.textContent ?? "").length;
+    if (caret === null || (up ? caret !== 0 : caret !== length)) {
+      return;
+    }
+    const fields = [
+      ...(root.current?.querySelectorAll<HTMLElement>(".rs-ed") ?? []),
+    ].filter((f) => f.offsetWidth > 0 || f.offsetHeight > 0);
+    const next = fields[fields.indexOf(el) + (up ? -1 : 1)];
+    if (next) {
+      e.preventDefault();
+      next.focus();
+      setCaret(next, up ? "end" : 0);
+    }
   };
 
   /** A text field wired to one place in the resume. */
@@ -184,7 +262,10 @@ export default function ResumeSheet({
       label={label}
       className={className}
       value={value}
+      optional={OPTIONAL.test(key)}
       onChange={(v) => edit(key, (r) => set(r, v))}
+      onFocus={() => reveal(key, true)}
+      onBlur={() => reveal(key, false, value)}
     />
   );
 
@@ -202,23 +283,39 @@ export default function ResumeSheet({
                 r[kind][i].highlights[j] = v;
               })
             }
-            onEnter={() =>
-              line.trim() &&
-              add("bullet", `${kind}.${i}.h.${j + 1}`, (r) => {
-                r[kind][i].highlights.splice(j + 1, 0, "");
-              })
+            // Enter splits the bullet at the cursor.
+            onEnter={(caret) =>
+              add(
+                "bullet",
+                `${kind}.${i}.h.${j + 1}`,
+                (r) => {
+                  const lines = r[kind][i].highlights;
+                  const text = lines[j] ?? "";
+                  lines[j] = text.slice(0, caret).trimEnd();
+                  lines.splice(j + 1, 0, text.slice(caret).trimStart());
+                },
+                0,
+              )
             }
-            onEmptyBackspace={() =>
-              add("bullet-del", `${kind}.${i}.h.${j - 1}`, (r) => {
-                r[kind][i].highlights.splice(j, 1);
-              })
-            }
-            onBlur={() =>
-              !line.trim() &&
-              edit(stamp("tidy"), (r) => {
-                r[kind][i].highlights.splice(j, 1);
-              })
-            }
+            // Backspace at the start joins this bullet onto the one above (or removes an empty one).
+            onBackspaceAtStart={(empty) => {
+              if (j === 0 && !empty) {
+                return;
+              }
+              const before = lines[j - 1] ?? "";
+              add(
+                "bullet-join",
+                `${kind}.${i}.h.${Math.max(j - 1, 0)}`,
+                (r) => {
+                  const list = r[kind][i].highlights;
+                  if (j > 0) {
+                    list[j - 1] = [before, list[j]].filter(Boolean).join(" ");
+                  }
+                  list.splice(j, 1);
+                },
+                j > 0 ? before.length : "end",
+              );
+            }}
           />
         </li>
       ))}
@@ -267,7 +364,7 @@ export default function ResumeSheet({
   const addSection = (name: string) => {
     switch (name) {
       case "Summary":
-        focusNext.current = "basics.summary";
+        focusNext.current = { key: "basics.summary", at: "end" };
         return setSummaryOpen(true);
       case "Experience":
         return add("section", "work.0.position", (r) =>
@@ -294,8 +391,56 @@ export default function ResumeSheet({
 
   return (
     <Frame mode={mode} resume={resume} onFit={onFit}>
-      <div ref={root} id="resume-content">
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys bubble up from the editable fields inside */}
+      <div
+        ref={root}
+        id="resume-content"
+        onKeyDown={onArrow}
+        role="presentation"
+      >
         <header className="rs-head">
+          <div className="rs-header-add rs-np">
+            {(
+              [
+                [
+                  "basics.headline",
+                  "Headline",
+                  basics.headline === "" && !open.has("basics.headline"),
+                ],
+                ["basics.email", "Email", basics.email === ""],
+                ["basics.phone", "Phone", basics.phone === ""],
+                ["basics.location", "Location", basics.location === ""],
+              ] as const
+            )
+              .filter(([, , missing]) => missing)
+              .map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    if (key === "basics.headline") {
+                      askFor(key);
+                    } else {
+                      root.current
+                        ?.querySelector<HTMLElement>(`[data-fk="${key}"]`)
+                        ?.focus();
+                    }
+                  }}
+                >
+                  <Plus /> {label}
+                </button>
+              ))}
+            <button
+              type="button"
+              onClick={() =>
+                add("link", `basics.links.${basics.links.length}`, (r) => {
+                  r.basics.links.push({ label: "", url: "" });
+                })
+              }
+            >
+              <Plus /> Link
+            </button>
+          </div>
           <h1>
             {field(
               "basics.name",
@@ -304,14 +449,16 @@ export default function ResumeSheet({
               "Your name",
             )}
           </h1>
-          <p className={cn("rs-headline", !basics.headline && "rs-np")}>
-            {field(
-              "basics.headline",
-              basics.headline,
-              (r, v) => (r.basics.headline = v),
-              "Headline, e.g. Backend engineer",
-            )}
-          </p>
+          {showLine("basics.headline", basics.headline) && (
+            <p className={cn("rs-headline", !basics.headline && "rs-np")}>
+              {field(
+                "basics.headline",
+                basics.headline,
+                (r, v) => (r.basics.headline = v),
+                "Headline, e.g. Backend engineer",
+              )}
+            </p>
+          )}
           <p className="rs-contact">
             <Join
               parts={[
@@ -373,17 +520,6 @@ export default function ResumeSheet({
                 })),
               ]}
             />
-            <button
-              type="button"
-              className="rs-add-link rs-np"
-              onClick={() =>
-                add("link", `basics.links.${basics.links.length}`, (r) => {
-                  r.basics.links.push({ label: "", url: "" });
-                })
-              }
-            >
-              <Plus /> Link
-            </button>
           </p>
         </header>
 
@@ -528,6 +664,10 @@ export default function ResumeSheet({
                   {itemTools("projects", i, {
                     onAdd: addBullet("projects", i),
                     addLabel: "Add a bullet",
+                    onExtra: showLine(`projects.${i}.stack`, p.stack)
+                      ? undefined
+                      : () => askFor(`projects.${i}.stack`),
+                    extraLabel: "Add tools used",
                     onRestore:
                       changed && original
                         ? () =>
@@ -583,14 +723,16 @@ export default function ResumeSheet({
                       )}
                     </span>
                   </div>
-                  <p className={cn("stack", !p.stack && "rs-np")}>
-                    {field(
-                      `projects.${i}.stack`,
-                      p.stack,
-                      (r, v) => (r.projects[i].stack = v),
-                      "Tools used, e.g. Rust, Postgres",
-                    )}
-                  </p>
+                  {showLine(`projects.${i}.stack`, p.stack) && (
+                    <p className={cn("stack", !p.stack && "rs-np")}>
+                      {field(
+                        `projects.${i}.stack`,
+                        p.stack,
+                        (r, v) => (r.projects[i].stack = v),
+                        "Tools used, e.g. Rust, Postgres",
+                      )}
+                    </p>
+                  )}
                   {bullets("projects", i, p.highlights)}
                   {mode === "flow" && (
                     <p className="rs-meta rs-np">
@@ -678,7 +820,7 @@ export default function ResumeSheet({
           >
             {leadership.map((l, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: rows have no id
-              <p key={i} className="lead rs-item">
+              <div key={i} className="lead rs-item">
                 {itemTools("leadership", i)}
                 <Join
                   parts={[
@@ -731,7 +873,7 @@ export default function ResumeSheet({
                     },
                   ]}
                 />
-              </p>
+              </div>
             ))}
           </Section>
         )}

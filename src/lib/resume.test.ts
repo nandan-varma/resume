@@ -9,6 +9,7 @@ import {
   Resume,
   type Tailored,
   Tailored as TailoredSchema,
+  tidy,
 } from "./resume";
 
 describe("Resume", () => {
@@ -131,5 +132,42 @@ describe("AI JSON Schema", () => {
     };
     check(z.toJSONSchema(Resume, { io: "output", target: "draft-7" }));
     check(z.toJSONSchema(TailoredSchema, { io: "output", target: "draft-7" }));
+  });
+});
+
+describe("tidy", () => {
+  it("drops blank bullets, blank rows and blank links", () => {
+    const messy = Resume.parse({
+      basics: {
+        name: "  Ada\u00a0 Lovelace ",
+        links: [{ url: "" }, { url: "ada.dev " }],
+      },
+      work: [
+        { company: "A", highlights: ["one", "  ", ""] },
+        { company: "", highlights: [""] },
+      ],
+      projects: [{ name: "" }],
+      skills: [{ group: "", items: "" }],
+      summaries: ["", " keep "],
+      notes: "line one\nline two\u00a0",
+    });
+    const clean = tidy(messy);
+    expect(clean.basics.name).toBe("Ada Lovelace");
+    expect(clean.basics.links).toEqual([{ label: "", url: "ada.dev" }]);
+    expect(clean.work).toHaveLength(1);
+    expect(clean.work[0].highlights).toEqual(["one"]);
+    expect(clean.projects).toEqual([]);
+    expect(clean.skills).toEqual([]);
+    expect(clean.summaries).toEqual(["keep"]);
+    expect(clean.notes).toBe("line one\nline two");
+  });
+
+  it("keeps a row that only has bullets, and leaves a clean resume unchanged", () => {
+    const r = Resume.parse({
+      work: [{ highlights: ["did a thing"] }],
+      basics: { name: "Ada" },
+    });
+    expect(tidy(r).work).toHaveLength(1);
+    expect(tidy(tidy(r))).toEqual(tidy(r));
   });
 });
