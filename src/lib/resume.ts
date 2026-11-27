@@ -113,6 +113,11 @@ export const RULES_MAX = 600;
 
 export const Prefs = z.object({
   paper: PaperSize.default("a4"),
+  /** One page suits early careers; two lets a long career keep its content. */
+  pages: z
+    .union([z.literal(1), z.literal(2)])
+    .catch(1)
+    .default(1),
   tone: z.enum(["plain", "confident", "warm"]).default("plain"),
   // Cut to size rather than rejected, so an old or edited value never breaks a page.
   rules: z

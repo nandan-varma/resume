@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -50,4 +51,18 @@ export const application = sqliteTable(
     uniqueIndex("application_user_job_idx").on(t.userId, t.talloId),
     index("application_user_idx").on(t.userId),
   ],
+);
+
+/** How many AI actions an account has used on a UTC day, so one account cannot run up the bill. */
+export const aiUsage = sqliteTable(
+  "ai_usage",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** UTC date, YYYY-MM-DD. */
+    day: text("day").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
 );

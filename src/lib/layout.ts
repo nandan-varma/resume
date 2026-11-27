@@ -71,9 +71,12 @@ const wrapLines = (text: string, widthPt: number, pt = 10) => {
   return lines;
 };
 
-/** Lines of body text that fit on one page. */
-export const pageLines = (paper: Paper = DEFAULT_PAPER) =>
-  Math.floor(((PAPERS[paper].h - MARGIN_Y_IN) * 72) / LINE_PT);
+export type Pages = 1 | 2;
+
+/** Lines of body text that fit on the page(s). A second page loses a few lines to entries that do not split. */
+export const pageLines = (paper: Paper = DEFAULT_PAPER, pages: Pages = 1) =>
+  Math.floor(((PAPERS[paper].h - MARGIN_Y_IN) * 72) / LINE_PT) * pages -
+  (pages - 1) * 3;
 
 const textWidthPt = (paper: Paper) => (PAPERS[paper].w - MARGIN_X_IN) * 72;
 
@@ -173,13 +176,12 @@ export const estimateLines = (
 ): number =>
   Object.values(lineBreakdown(r, paper)).reduce((sum, n) => sum + n, 0);
 
-/** How many lines the resume runs past one page (zero or less means it fits). */
+/** How many lines the resume runs past its page(s) (zero or less means it fits). */
 export const overflow = (
   r: Resume,
   paper: Paper = DEFAULT_PAPER,
-  /** Lines to keep free, for a tighter version. */
-  reserve = 0,
-) => Math.ceil(estimateLines(r, paper) - (pageLines(paper) - reserve));
+  pages: Pages = 1,
+) => Math.ceil(estimateLines(r, paper) - pageLines(paper, pages));
 
 /** Each step makes one small cut and reports whether it changed anything. */
 type Cut = (r: Resume) => boolean;
@@ -228,11 +230,11 @@ const cuts: Cut[] = [
 export const trimToFit = (
   resume: Resume,
   paper: Paper = DEFAULT_PAPER,
-  reserve = 0,
+  pages: Pages = 1,
 ): Resume => {
   const r = structuredClone(resume);
   for (const cut of cuts) {
-    while (overflow(r, paper, reserve) > 0 && cut(r)) {
+    while (overflow(r, paper, pages) > 0 && cut(r)) {
       // keep applying this cut while it still helps
     }
   }

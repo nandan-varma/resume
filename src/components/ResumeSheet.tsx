@@ -14,7 +14,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/cn";
-import type { Paper } from "@/lib/layout";
+import type { Pages, Paper } from "@/lib/layout";
 import { hrefFor } from "@/lib/links";
 import { Resume } from "@/lib/resume";
 import { isReworded, originalProject, originalWork } from "@/lib/resume-diff";
@@ -28,6 +28,8 @@ type Props = {
   /** "page" is one page of paper; "flow" grows with the content (the master resume). */
   mode: "page" | "flow";
   paper: Paper;
+  /** How many pages the resume may use. */
+  pages?: Pages;
   /** The master resume. When given, reworded jobs and projects are marked and can be restored. */
   master?: Resume;
   /** Called after each change with how many lines are spare (negative: over the page). */
@@ -159,6 +161,7 @@ export default function ResumeSheet({
   edit,
   mode,
   paper,
+  pages = 1,
   master,
   onFit,
 }: Props) {
@@ -409,7 +412,13 @@ export default function ResumeSheet({
   };
 
   return (
-    <Frame mode={mode} paper={paper} resume={resume} onFit={onFit}>
+    <Frame
+      mode={mode}
+      paper={paper}
+      pages={pages}
+      resume={resume}
+      onFit={onFit}
+    >
       {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys bubble up from the editable fields inside */}
       <div
         ref={root}
@@ -991,12 +1000,14 @@ export default function ResumeSheet({
 function Frame({
   mode,
   paper: size,
+  pages,
   resume,
   onFit,
   children,
 }: {
   mode: "page" | "flow";
   paper: Paper;
+  pages: Pages;
   resume: Resume;
   onFit?: (spareLines: number) => void;
   children: ReactNode;
@@ -1045,15 +1056,18 @@ function Frame({
     }
     paper.classList.add("rs-measure");
     const style = getComputedStyle(paper);
-    const room =
-      paper.clientHeight -
-      Number.parseFloat(style.paddingTop) -
-      Number.parseFloat(style.paddingBottom);
-    const used = content.offsetHeight;
     const line = Number.parseFloat(style.lineHeight) || 16;
+    // Each page keeps its own margins; a second page loses a few lines to entries that do not split.
+    const room =
+      pages *
+        (paper.clientHeight / pages -
+          Number.parseFloat(style.paddingTop) -
+          Number.parseFloat(style.paddingBottom)) -
+      (pages - 1) * 3 * line;
+    const used = content.offsetHeight;
     paper.classList.remove("rs-measure");
     onFit(Math.floor((room - used) / line));
-  }, [resume, onFit]);
+  }, [resume, onFit, pages]);
 
   return (
     <div
@@ -1073,6 +1087,7 @@ function Frame({
         id="resume-sheet"
         data-mode={mode}
         data-paper={size}
+        data-pages={pages}
         className="resume-sheet"
         style={{ transform: `scale(${view.scale})` }}
       >

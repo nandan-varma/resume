@@ -5,6 +5,7 @@ import SettingsPage from "@/components/SettingsPage";
 import PageHeader from "@/components/ui/PageHeader.astro";
 import { db, schema } from "@/db";
 import Layout from "@/layouts/Layout.astro";
+import { creditsToday } from "@/lib/credits";
 import { Prefs } from "@/lib/resume";
 
 const user = Astro.locals.user;
@@ -24,5 +25,6 @@ const [{ value: resumes }] = await db
     prefs={Prefs.parse(profile?.prefs ?? {})}
     user={{ name: user?.name ?? "", email: user?.email ?? "" }}
     resumes={resumes}
+    credits={await creditsToday(userId)}
   />
 </Layout>

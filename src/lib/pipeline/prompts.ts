@@ -67,7 +67,11 @@ const indexed = (r: Resume) => ({
 const postingBlock = (p: Posting, max = 6000) =>
   `<posting>\nTitle: ${p.title}\nCompany: ${p.company}\n\n${clip(p.description, max)}\n</posting>`;
 
-export const planPrompt = (resume: Resume, posting: Posting) => ({
+export const planPrompt = (
+  resume: Resume,
+  posting: Posting,
+  pages: 1 | 2 = 1,
+) => ({
   system: [
     "You are an experienced recruiter. You read one job posting and one candidate profile and decide how the candidate's resume should be shaped. You only choose from the profile; you never write new facts.",
     TRUST,
@@ -77,7 +81,7 @@ export const planPrompt = (resume: Resume, posting: Posting) => ({
       "2. level: 'strong' if the candidate meets most requirements, 'good' if they meet some and have gaps, 'stretch' if there are major gaps or a seniority mismatch.",
       "3. confidence: an honest range for getting a callback, like '35-50%'. Lower it for blockers.",
       "4. reasons: two or three specific strengths, each pointing to something real in the profile. gaps: specific things the posting wants that the profile lacks. blockers: only requirements the person cannot meet and cannot learn soon (citizenship, security clearance, a licence, a degree they lack). A missing skill is a gap, never a blocker.",
-      "5. projects: the indexes of the best three or four projects for THIS posting, best first. Prefer projects similar in kind to the work in the posting, finished over unfinished, and recent over old.",
+      `5. projects: the indexes of the best ${pages === 2 ? "five or six" : "three or four"} projects for THIS posting, best first. Prefer projects similar in kind to the work in the posting, finished over unfinished, and recent over old.`,
       "6. skillGroups: indexes of the skill groups worth showing, most relevant first. Leave out irrelevant groups.",
       "7. summaryVersion: the index of the summary version closest to this role.",
       "Respect privateNotes in the profile (for example work authorization, or roles to avoid).",

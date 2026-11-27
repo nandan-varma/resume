@@ -9,6 +9,7 @@ import {
   tailorResume,
   writeLetter,
 } from "@/lib/ai";
+import { withCredit } from "@/lib/credits";
 import { jobDetail } from "@/lib/job-detail";
 import {
   defaultPrefs,
@@ -49,17 +50,18 @@ const saveProfile = (
  * Reading a resume only reads it: nothing is saved here. The editor applies the
  * result as an undoable edit and autosaves, so there is one way a profile changes.
  */
-const readResume = async (text: string) => {
-  try {
-    return await resumeFromText(text);
-  } catch {
-    throw new ActionError({
-      code: "BAD_REQUEST",
-      message:
-        "We couldn't read that resume. Try again, paste the text instead, or start from scratch.",
-    });
-  }
-};
+const readResume = (userId: string, text: string) =>
+  withCredit(userId, async () => {
+    try {
+      return await resumeFromText(text);
+    } catch {
+      throw new ActionError({
+        code: "BAD_REQUEST",
+        message:
+          "We couldn't read that resume. Try again, paste the text instead, or start from scratch.",
+      });
+    }
+  });
 
 const ownedApplication = (userId: string, id: string) =>
   and(eq(schema.application.id, id), eq(schema.application.userId, userId));
@@ -75,7 +77,7 @@ export const server = {
         .refine((f) => f.size <= MAX_PDF_BYTES, "That file is over 5 MB."),
     }),
     handler: async ({ file }, { locals }) => {
-      requireUser(locals);
+      const user = requireUser(locals);
       const pdf = await getDocumentProxy(
         new Uint8Array(await file.arrayBuffer()),
       );
@@ -86,7 +88,7 @@ export const server = {
           message: "We couldn't read any text in that PDF. Is it a scan?",
         });
       }
-      return readResume(text);
+      return readResume(user.id, text);
     },
   }),
 
@@ -96,8 +98,8 @@ export const server = {
       text: z.string().trim().min(50, "Paste a bit more.").max(40_000),
     }),
     handler: async ({ text }, { locals }) => {
-      requireUser(locals);
-      return readResume(text);
+      const user = requireUser(locals);
+      return readResume(user.id, text);
     },
   }),
 
@@ -123,7 +125,7 @@ export const server = {
       if (!refresh && profile.suggestions?.key === key) {
         return profile.suggestions.searches;
       }
-      const searches = await suggestSearches(resume);
+      const searches = await withCredit(user.id, () => suggestSearches(resume));
       // An empty answer means the model failed; do not remember it as the answer.
       if (searches.length > 0) {
         await db
@@ -246,15 +248,14 @@ export const server = {
         });
       }
 
-      const tailored = await tailorResume({
-        posting: {
-          title: job.title,
-          company: job.company,
-          description: job.description,
-        },
-        resume: Resume.parse(profile.resume),
-        prefs: Prefs.parse(profile.prefs),
-      });
+      const { description } = job;
+      const tailored = await withCredit(user.id, () =>
+        tailorResume({
+          posting: { title: job.title, company: job.company, description },
+          resume: Resume.parse(profile.resume),
+          prefs: Prefs.parse(profile.prefs),
+        }),
+      );
       const { match, resume: tailoredResume, coverLetter, notes } = tailored;
       const resume = tidy(tailoredResume);
 
@@ -302,22 +303,27 @@ export const server = {
             "This job is no longer listed, so we can't write a letter for it.",
         });
       }
-      const letter = await writeLetter({
-        posting: {
-          title: job.title,
-          company: job.company,
-          description: job.description,
-        },
-        resume: Resume.parse(row.resume),
-        prefs: Prefs.parse((await getProfile(user.id))?.prefs ?? {}),
-      });
-      if (!letter) {
-        throw new ActionError({
-          code: "BAD_REQUEST",
-          message:
-            "We couldn't write a letter that passed our checks. Please try again.",
+      const prefs = Prefs.parse((await getProfile(user.id))?.prefs ?? {});
+      // Failing to produce a good letter throws, which gives the credit back.
+      const letter = await withCredit(user.id, async () => {
+        const written = await writeLetter({
+          posting: {
+            title: job.title,
+            company: job.company,
+            description: job.description ?? "",
+          },
+          resume: Resume.parse(row.resume),
+          prefs,
         });
-      }
+        if (!written) {
+          throw new ActionError({
+            code: "BAD_REQUEST",
+            message:
+              "We couldn't write a letter that passed our checks. Please try again.",
+          });
+        }
+        return written;
+      });
       return { letter };
     },
   }),

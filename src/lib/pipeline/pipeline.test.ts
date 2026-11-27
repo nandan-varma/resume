@@ -370,6 +370,27 @@ describe("tailorPipeline", () => {
     }
   });
 
+  it("uses a second page when allowed", async () => {
+    const long = Resume.parse({
+      ...resume,
+      projects: Array.from({ length: 9 }, (_, i) => ({
+        ...resume.projects[i % 4],
+        name: `Project ${i}`,
+      })),
+    });
+    const one = await tailorPipeline(ideal, { ...input, resume: long });
+    const two = await tailorPipeline(ideal, {
+      ...input,
+      resume: long,
+      prefs: { ...defaultPrefs(), pages: 2 },
+    });
+    expect(two.resume.projects.length).toBeGreaterThan(
+      one.resume.projects.length,
+    );
+    expect(overflow(two.resume, "a4", 2)).toBeLessThanOrEqual(0);
+    expect(overflow(one.resume, "a4", 1)).toBeLessThanOrEqual(0);
+  });
+
   it("handles an almost empty profile", async () => {
     const empty = Resume.parse({ basics: { name: "New Grad" } });
     const r = await tailorPipeline(ideal, { ...input, resume: empty });

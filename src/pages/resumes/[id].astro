@@ -61,6 +61,7 @@ const level: Record<string, { color: TagColor; label: string }> = {
     coverLetter={row.coverLetter}
     master={Resume.parse(profile?.resume ?? {})}
     paper={Prefs.parse(profile?.prefs ?? {}).paper}
+    pages={Prefs.parse(profile?.prefs ?? {}).pages}
     isNew={Astro.url.searchParams.has("new")}
   >
     <div slot="aside" class="grid gap-4">

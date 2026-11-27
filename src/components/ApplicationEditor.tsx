@@ -12,7 +12,7 @@ import {
 import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
-import { estimateLines, type Paper, trimToFit } from "@/lib/layout";
+import { estimateLines, type Pages, type Paper, trimToFit } from "@/lib/layout";
 import type { Resume } from "@/lib/resume";
 import { summarizeChanges } from "@/lib/resume-diff";
 import CoverLetterWriter from "./CoverLetterWriter";
@@ -33,6 +33,8 @@ type Props = {
   master: Resume;
   /** The paper this resume is laid out and printed on. */
   paper: Paper;
+  /** How many pages the resume may use. */
+  pages: Pages;
   isNew: boolean;
   /** Match notes, rendered on the server. */
   aside?: ReactNode;
@@ -49,6 +51,7 @@ export default function ApplicationEditor({
   coverLetter,
   master,
   paper,
+  pages,
   isNew,
   aside,
 }: Props) {
@@ -108,7 +111,7 @@ export default function ApplicationEditor({
   // Trim the weakest content on the page as it is now, so your own edits stay. Undo brings it back.
   const tighten = () => {
     const before = estimateLines(app.doc.resume, paper);
-    const tight = trimToFit(app.doc.resume, paper);
+    const tight = trimToFit(app.doc.resume, paper, pages);
     if (estimateLines(tight, paper) >= before) {
       toast.info(
         "Nothing more can be trimmed automatically. Remove a line or two yourself.",
@@ -248,10 +251,10 @@ export default function ApplicationEditor({
                 <Check className="size-3.5" strokeWidth={3} />
               )}
               {over
-                ? `${-spare} ${-spare === 1 ? "line" : "lines"} over one page`
+                ? `${-spare} ${-spare === 1 ? "line" : "lines"} over ${pages === 2 ? "two pages" : "one page"}`
                 : spare === 0
                   ? "Fills the page"
-                  : `One page · ${spare} ${spare === 1 ? "line" : "lines"} spare`}
+                  : `${pages === 2 ? "Two pages" : "One page"} · ${spare} ${spare === 1 ? "line" : "lines"} spare`}
             </span>
           )}
         </div>
@@ -259,8 +262,9 @@ export default function ApplicationEditor({
         {tab === "resume" && over && (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--callout-yellow)] p-3 text-[var(--tag-yellow-fg)] [animation:rise_0.3s_backwards] print:hidden">
             <p>
-              This runs past one page. Trim a line or two, or tighten it: we
-              drop the weakest content and you can undo it.
+              This runs past {pages === 2 ? "two pages" : "one page"}. Trim a
+              line or two, or tighten it: we drop the weakest content and you
+              can undo it.
             </p>
             <Button variant="outline" onClick={tighten}>
               <Scissors /> Tighten it for me
@@ -281,6 +285,7 @@ export default function ApplicationEditor({
               edit={editResume}
               mode="page"
               paper={paper}
+              pages={pages}
               master={master}
               onFit={setSpare}
             />

@@ -171,7 +171,7 @@ export async function tailorPipeline(
   input: TailorInput,
 ): Promise<TailorResult> {
   const { posting, resume, prefs } = input;
-  const paper = prefs.paper;
+  const { paper, pages } = prefs;
   const notes: string[] = [];
   const description = posting.description;
   const keywords = postingKeywords(`${posting.title}\n${description}`);
@@ -184,7 +184,7 @@ export async function tailorPipeline(
     const got = await askJson(ask, {
       label: "plan",
       schema: PlanSchema,
-      ...planPrompt(resume, posting),
+      ...planPrompt(resume, posting, pages),
       attempts: 2,
     });
     plan = mergePlan(got, fallback, resume);
@@ -199,7 +199,7 @@ export async function tailorPipeline(
   };
 
   // 2. Bullets for every job and each chosen project, a few calls at a time.
-  const chosen = plan.projects.slice(0, 4);
+  const chosen = plan.projects.slice(0, pages === 2 ? 6 : 4);
   const limits = { maxCount: 4, maxChars: 190 };
   let kept = 0;
 
@@ -316,7 +316,7 @@ export async function tailorPipeline(
   for (const i of rankProjects(resume, keywords, plan.roleType).filter(
     (i) => !chosen.includes(i),
   )) {
-    if (built.projects.length >= 5) {
+    if (built.projects.length >= (pages === 2 ? 8 : 5)) {
       break;
     }
     const projects = [
@@ -329,7 +329,10 @@ export async function tailorPipeline(
         ),
       },
     ];
-    if (estimateLines({ ...built, projects }, paper) > pageLines(paper) - 1) {
+    if (
+      estimateLines({ ...built, projects }, paper) >
+      pageLines(paper, pages) - 1
+    ) {
       break;
     }
     built.projects = projects;
@@ -344,7 +347,7 @@ export async function tailorPipeline(
       gaps: plan.gaps,
       blockers: plan.blockers,
     },
-    resume: trimToFit(built, paper),
+    resume: trimToFit(built, paper, pages),
     coverLetter,
     notes,
   };

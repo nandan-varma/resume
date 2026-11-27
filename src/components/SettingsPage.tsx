@@ -8,6 +8,7 @@ import {
   Palette,
   PenLine,
   ShieldAlert,
+  Sparkles,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -26,6 +27,7 @@ type Props = {
   prefs: Prefs;
   user: { name: string; email: string };
   resumes: number;
+  credits: { used: number; limit: number; resetsInHours: number };
 };
 
 const TONES: Record<Prefs["tone"], { label: string; example: string }> = {
@@ -99,7 +101,7 @@ const Kbd = ({ children }: { children: ReactNode }) => (
   </kbd>
 );
 
-export default function SettingsPage({ prefs, user, resumes }: Props) {
+export default function SettingsPage({ prefs, user, resumes, credits }: Props) {
   const doc = useDoc(prefs, async (p) => {
     const { error } = await actions.savePrefs({ prefs: p });
     return error?.message ?? null;
@@ -181,8 +183,8 @@ export default function SettingsPage({ prefs, user, resumes }: Props) {
 
       <Card
         Icon={FileText}
-        title="Paper size"
-        hint="Used for the page you edit, the page-fit meter and the PDF."
+        title="Paper and length"
+        hint="Used for the page you edit, the page-fit meter, the AI's budget and the PDF."
       >
         <Segmented<Prefs["paper"]>
           legend="Paper size"
@@ -198,9 +200,27 @@ export default function SettingsPage({ prefs, user, resumes }: Props) {
             },
           ]}
         />
+        <Segmented<"1" | "2">
+          legend="Length"
+          name="pages"
+          value={String(doc.doc.pages) as "1" | "2"}
+          onChange={(v) =>
+            doc.edit("pages", (d) => {
+              d.pages = v === "2" ? 2 : 1;
+            })
+          }
+          options={[
+            { value: "1", label: "One page", hint: "Best for early careers" },
+            {
+              value: "2",
+              label: "Up to two pages",
+              hint: "For 10+ years of experience",
+            },
+          ]}
+        />
         <p className="text-muted-foreground">
-          Resumes you already made are laid out again on the new paper. Check
-          the page meter on each one.
+          Resumes you already made are laid out again. Check the page meter on
+          each one.
         </p>
       </Card>
 
@@ -285,6 +305,39 @@ export default function SettingsPage({ prefs, user, resumes }: Props) {
             <LogOut /> Sign out
           </Button>
         </div>
+      </Card>
+
+      <Card
+        Icon={Sparkles}
+        title="AI use today"
+        hint="Writing a resume or letter, and reading an uploaded resume, each use one. Editing and downloading never do."
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuenow={credits.used}
+            aria-valuemin={0}
+            aria-valuemax={credits.limit}
+          >
+            <div
+              className={cn(
+                "h-full rounded-full transition-[width] duration-700",
+                credits.used >= credits.limit ? "bg-destructive" : "bg-primary",
+              )}
+              style={{
+                width: `${Math.min(100, (credits.used / credits.limit) * 100)}%`,
+              }}
+            />
+          </div>
+          <span className="text-muted-foreground tabular-nums">
+            {credits.used} of {credits.limit}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Resets at midnight UTC, in about {credits.resetsInHours}{" "}
+          {credits.resetsInHours === 1 ? "hour" : "hours"}.
+        </p>
       </Card>
 
       <Card Icon={Keyboard} title="Shortcuts">

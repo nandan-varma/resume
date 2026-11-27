@@ -50,6 +50,15 @@ describe("page fit", () => {
     expect(pageLines("letter")).toBe(55);
   });
 
+  it("gives a second page about twice the room, minus entries that do not split", () => {
+    expect(pageLines("a4", 2)).toBe(pageLines("a4") * 2 - 3);
+    expect(overflow(big, "a4", 2)).toBeLessThan(overflow(big, "a4", 1));
+    const one = trimToFit(big, "a4", 1);
+    const two = trimToFit(big, "a4", 2);
+    expect(estimateLines(two, "a4")).toBeGreaterThan(estimateLines(one, "a4"));
+    expect(overflow(two, "a4", 2)).toBeLessThanOrEqual(0);
+  });
+
   it("matches the real renderer on a calibration resume", () => {
     // Measured in Chrome at 10pt Arial: 36.76 lines of content on both A4 and Letter.
     const sample = Resume.parse({
