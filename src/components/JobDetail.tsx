@@ -28,6 +28,7 @@ export default function JobDetail({
     job.employmentType,
     job.department,
     job.postedAt && `Posted ${job.postedAt}`,
+    job.checked && `Checked ${job.checked}`,
   ].filter(Boolean);
 
   return (
@@ -151,6 +152,26 @@ export default function JobDetail({
         <p className="mt-6 max-w-2xl text-muted-foreground">
           Sign in to see how your skills line up with this job.
         </p>
+      )}
+
+      {job.elsewhere.length > 0 && (
+        <section className="mt-6 max-w-2xl" aria-label="Other locations">
+          <h3 className="font-semibold">Also open in</h3>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {job.elsewhere.map((v) => (
+              <li key={v.id}>
+                <a
+                  href={`/jobs/${v.id}`}
+                  className="tag tag-gray transition-colors hover:bg-accent"
+                >
+                  {v.location}
+                  {v.workMode && ` · ${v.workMode}`}
+                  {v.count > 1 && ` (${v.count})`}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <h3 className="block-heading">About the job</h3>

@@ -4,17 +4,31 @@ import JobDetail from "@/components/JobDetail";
 import { buttonVariants } from "@/components/ui/variants";
 import Layout from "@/layouts/Layout.astro";
 import { jobDetail } from "@/lib/job-detail";
+import { TalloError } from "@/lib/tallo";
 
-const data = await jobDetail(
-  Astro.locals.user?.id ?? null,
-  Astro.params.id ?? "",
-);
-if (!data) {
+let data: Awaited<ReturnType<typeof jobDetail>> = null;
+let trouble: string | undefined;
+try {
+  data = await jobDetail(Astro.locals.user?.id ?? null, Astro.params.id ?? "");
+} catch (e) {
+  if (!(e instanceof TalloError)) throw e;
+  trouble = e.message;
+}
+if (trouble) {
+  Astro.response.status = 503;
+} else if (!data) {
   Astro.response.status = 404;
 }
 ---
-<Layout title={data?.job.title ?? "Job not found"}>
-  {!data ? (
+<Layout title={data?.job.title ?? (trouble ? "Job unavailable" : "Job not found")}>
+  {trouble ? (
+    <div class="max-w-xl">
+      <span class="mb-3 flex size-10 items-center justify-center rounded-lg border text-muted-foreground"><FileX className="size-5" strokeWidth={1.75} /></span>
+      <h1 class="page-title">We couldn't load this job</h1>
+      <p class="mt-1 mb-5 text-muted-foreground">{trouble}</p>
+      <a href={Astro.url.pathname} class={buttonVariants()}>Try again</a>
+    </div>
+  ) : !data ? (
     <div class="max-w-xl">
       <span class="mb-3 flex size-10 items-center justify-center rounded-lg border text-muted-foreground"><FileX className="size-5" strokeWidth={1.75} /></span>
       <h1 class="page-title">This job is no longer listed</h1>

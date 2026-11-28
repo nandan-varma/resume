@@ -20,7 +20,7 @@ import {
   tidy,
 } from "@/lib/resume";
 import { fingerprint } from "@/lib/suggestions";
-import { getJob } from "@/lib/tallo";
+import { getJob, TalloError } from "@/lib/tallo";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
@@ -32,6 +32,21 @@ const requireUser = (locals: App.Locals) => {
     });
   }
   return locals.user;
+};
+
+/** A Tallo read that says "busy" or "down" when it is, instead of "no longer listed". */
+const fromTallo = async <T>(read: () => Promise<T>) => {
+  try {
+    return await read();
+  } catch (e) {
+    if (e instanceof TalloError) {
+      throw new ActionError({
+        code: e.kind === "busy" ? "TOO_MANY_REQUESTS" : "SERVICE_UNAVAILABLE",
+        message: e.message,
+      });
+    }
+    throw e;
+  }
 };
 
 const getProfile = (userId: string) =>
@@ -148,7 +163,9 @@ export const server = {
   jobDetail: defineAction({
     input: z.object({ id: z.string().min(1) }),
     handler: async ({ id }, { locals }) => {
-      const detail = await jobDetail(locals.user?.id ?? null, id);
+      const detail = await fromTallo(() =>
+        jobDetail(locals.user?.id ?? null, id),
+      );
       if (!detail) {
         throw new ActionError({
           code: "NOT_FOUND",
@@ -240,11 +257,18 @@ export const server = {
           message: "Add your details first.",
         });
       }
-      const job = await getJob(talloId);
-      if (!job?.description) {
+      const job = await fromTallo(() => getJob(talloId));
+      if (!job) {
         throw new ActionError({
           code: "NOT_FOUND",
           message: "This job is no longer listed.",
+        });
+      }
+      if (!job.description) {
+        throw new ActionError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "This posting has no description, so there is nothing to tailor your resume to.",
         });
       }
 
@@ -295,12 +319,19 @@ export const server = {
       const row = await db.query.application.findFirst({
         where: ownedApplication(user.id, id),
       });
-      const job = row ? await getJob(row.talloId) : null;
-      if (!(row && job?.description)) {
+      if (!row) {
         throw new ActionError({
           code: "NOT_FOUND",
-          message:
-            "This job is no longer listed, so we can't write a letter for it.",
+          message: "We couldn't find that resume.",
+        });
+      }
+      const job = await fromTallo(() => getJob(row.talloId));
+      if (!job?.description) {
+        throw new ActionError({
+          code: "NOT_FOUND",
+          message: job
+            ? "This posting has no description, so we can't write a letter for it."
+            : "This job is no longer listed, so we can't write a letter for it.",
         });
       }
       const prefs = Prefs.parse((await getProfile(user.id))?.prefs ?? {});

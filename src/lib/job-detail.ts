@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { ago } from "./ago";
+import { otherPlaces } from "./places";
 import { hasContent, Resume } from "./resume";
 import { matchSkills } from "./skills";
 import { getJob } from "./tallo";
@@ -41,6 +43,10 @@ export async function jobDetail(userId: string | null, id: string) {
       postedAt: job.postedAt,
       applyUrl: job.applyUrl,
       description: job.description ?? "",
+      /** When Tallo last saw the employer's whole board, so a person can judge how fresh the opening is. */
+      checked: ago(job.sourceLastListedAt),
+      /** The same role at other places, each a posting of its own. */
+      elsewhere: otherPlaces(job, job.variants),
     },
     state: !userId
       ? ("signed-out" as const)

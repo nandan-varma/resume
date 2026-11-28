@@ -35,7 +35,10 @@ export default function ResultsBrowser({ jobs, made, next, capped }: Props) {
   const [wide, setWide] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<Data | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<{
+    gone: boolean;
+    message: string;
+  } | null>(null);
   const cache = useRef(new Map<string, Data>());
   const pane = useRef<HTMLDivElement>(null);
 
@@ -62,15 +65,22 @@ export default function ResultsBrowser({ jobs, made, next, capped }: Props) {
       return;
     }
     setDetail(null);
-    setFailed(false);
-    const { data } = await actions
+    setFailed(null);
+    const { data, error } = await actions
       .jobDetail({ id })
-      .catch(() => ({ data: undefined }));
+      .catch(() => ({ data: undefined, error: undefined }));
     if (data) {
       cache.current.set(id, data);
       setDetail((current) => (selectedRef.current === id ? data : current));
     } else if (selectedRef.current === id) {
-      setFailed(true);
+      // "Gone" only when Tallo said so; a busy or failed lookup can be retried.
+      const gone = error?.code === "NOT_FOUND";
+      setFailed({
+        gone,
+        message: gone
+          ? "This job is no longer listed."
+          : (error?.message ?? "We couldn't load this job."),
+      });
     }
   }, []);
   const selectedRef = useRef(selected);
@@ -193,9 +203,18 @@ export default function ResultsBrowser({ jobs, made, next, capped }: Props) {
           className="sticky top-16 hidden max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-xl border bg-card p-6 lg:block"
         >
           {failed ? (
-            <p className="text-muted-foreground">
-              This job is no longer listed.
-            </p>
+            <div className="grid justify-items-start gap-3 text-muted-foreground">
+              <p>{failed.message}</p>
+              {selected && !failed.gone && (
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                  onClick={() => load(selected)}
+                >
+                  Try again
+                </button>
+              )}
+            </div>
           ) : detail && detail.job.id === selected ? (
             <JobDetail key={detail.job.id} data={detail} heading="h2" />
           ) : (
